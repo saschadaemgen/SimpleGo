@@ -42,6 +42,11 @@ void ui_chat_set_contact(const char *name);
  * @param contact_idx   Contact index (0-127) this message belongs to
  */
 void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx);
+void ui_chat_add_history_message(const char *text, bool is_outgoing, int contact_idx,
+                                  int64_t timestamp, uint8_t delivery_status);
+void ui_chat_show_loading(void);
+void ui_chat_hide_loading(void);
+void ui_chat_scroll_to_bottom(void);
 
 /**
  * @brief Switch chat view to show only messages for given contact
@@ -61,6 +66,7 @@ void ui_chat_set_send_callback(ui_chat_send_cb_t cb);
  * @param kb_indev  LVGL keyboard input device from tdeck_keyboard_register_lvgl()
  */
 void ui_chat_set_keyboard_indev(lv_indev_t *kb_indev);
+lv_indev_t *ui_chat_get_keyboard_indev(void);
 
 /**
  * @brief Update delivery status on an outgoing message bubble
@@ -86,32 +92,6 @@ uint32_t ui_chat_get_last_seq(void);
  * @param contact_idx  Contact index (0-127) whose bubbles to delete
  */
 void ui_chat_clear_contact(int contact_idx);
-
-/**
- * @brief Session 37: Add a history message bubble with stored timestamp and delivery status.
- *        Used when loading encrypted chat history from SD card on chat open.
- * @param text            Message text
- * @param is_outgoing     true = our message, false = theirs
- * @param contact_idx     Contact index (0-127)
- * @param timestamp       Unix timestamp from history record
- * @param delivery_status 0 = sent (v), 1 = delivered (vv). Only meaningful for outgoing.
- */
-void ui_chat_add_history_message(const char *text, bool is_outgoing, int contact_idx,
-                                  int64_t timestamp, uint8_t delivery_status);
-
-/**
- * @brief Session 37: Scroll chat message area to the bottom.
- *        Called after loading a batch of history messages.
- */
-void ui_chat_scroll_to_bottom(void);
-
-/**
- * Session 37b: Loading indicator — shown while history loads from SD.
- * show_loading() creates centered "Loading..." in msg_container.
- * hide_loading() removes it (called before first history chunk).
- */
-void ui_chat_show_loading(void);
-void ui_chat_hide_loading(void);
 
 #ifdef __cplusplus
 }

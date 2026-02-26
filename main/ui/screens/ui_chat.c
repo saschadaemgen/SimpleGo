@@ -635,6 +635,11 @@ void ui_chat_set_keyboard_indev(lv_indev_t *kb_indev)
     }
 }
 
+lv_indev_t *ui_chat_get_keyboard_indev(void)
+{
+    return pending_kb_indev;
+}
+
 /* ============== Delivery Status API ============== */
 
 void ui_chat_update_status(uint32_t msg_seq, int status)
@@ -711,6 +716,15 @@ void ui_chat_switch_contact(int contact_idx, const char *name)
 void ui_chat_clear_contact(int contact_idx)
 {
     if (!msg_container) return;
+
+    /* -1 = clear ALL bubbles (used on contact switch) */
+    if (contact_idx < 0) {
+        lv_obj_clean(msg_container);
+        s_loading_box = NULL;  /* was a child of msg_container, now deleted */
+        ESP_LOGI("UI_CHAT", "36d: Cleared ALL bubbles");
+        return;
+    }
+
     uint32_t i = 0;
     while (i < lv_obj_get_child_count(msg_container)) {
         lv_obj_t *child = lv_obj_get_child(msg_container, i);
