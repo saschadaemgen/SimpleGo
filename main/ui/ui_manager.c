@@ -92,6 +92,11 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
     if (screen == UI_SCREEN_CONTACTS) {
         ui_contacts_refresh();
     }
+
+    // Refresh main screen unread list when navigating to it
+    if (screen == UI_SCREEN_MAIN) {
+        ui_main_refresh();
+    }
     
     // Alten Splash loeschen
     if (prev == UI_SCREEN_SPLASH && screens[UI_SCREEN_SPLASH]) {
@@ -125,6 +130,11 @@ void ui_manager_go_back(void)
     // Refresh contacts list when navigating back to it
     if (target == UI_SCREEN_CONTACTS) {
         ui_contacts_refresh();
+    }
+
+    // Refresh main screen unread list when navigating back to it
+    if (target == UI_SCREEN_MAIN) {
+        ui_main_refresh();
     }
     // NOTE: go_back does NOT push to stack
 }
