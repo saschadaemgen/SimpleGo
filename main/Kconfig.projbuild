@@ -1,0 +1,317 @@
+# Kconfig
+# SimpleGo Main Configuration
+# Copyright (c) 2025-2026 Sascha
+# SPDX-License-Identifier: AGPL-3.0
+
+mainmenu "SimpleGo Configuration"
+
+# ============================================================================
+# DEVICE SELECTION
+# ============================================================================
+
+menu "Device Selection"
+
+    choice SIMPLEGO_DEVICE
+        prompt "Target Device"
+        default SIMPLEGO_DEVICE_T_DECK_PLUS
+        help
+            Select the target device for this build.
+            Each device has specific HAL implementations for its hardware.
+
+        config SIMPLEGO_DEVICE_T_DECK_PLUS
+            bool "LILYGO T-Deck Plus"
+            help
+                T-Deck Plus with 320x240 display, QWERTY keyboard,
+                trackball, touch screen, and optional LoRa/GPS.
+
+        config SIMPLEGO_DEVICE_T_DECK_PRO
+            bool "LILYGO T-Deck Pro"
+            help
+                T-Deck Pro with 320x240 display, QWERTY keyboard,
+                trackball, touch screen, and enhanced features.
+
+        config SIMPLEGO_DEVICE_T_LORA_PAGER
+            bool "LILYGO T-Lora Pager"
+            help
+                T-Lora Pager with 128x64 OLED display, encoder,
+                buttons, and LoRa radio.
+
+        config SIMPLEGO_DEVICE_RASPBERRY_PI
+            bool "Raspberry Pi"
+            help
+                Raspberry Pi with framebuffer display.
+                Uses SDL for desktop testing.
+
+        config SIMPLEGO_DEVICE_CUSTOM
+            bool "Custom Device"
+            help
+                Custom device configuration.
+                You need to provide your own device_config.h
+
+    endchoice
+
+    config SIMPLEGO_DEVICE_NAME
+        string
+        default "t_deck_plus" if SIMPLEGO_DEVICE_T_DECK_PLUS
+        default "t_deck_pro" if SIMPLEGO_DEVICE_T_DECK_PRO
+        default "t_lora_pager" if SIMPLEGO_DEVICE_T_LORA_PAGER
+        default "raspberry_pi" if SIMPLEGO_DEVICE_RASPBERRY_PI
+        default "custom" if SIMPLEGO_DEVICE_CUSTOM
+
+endmenu
+
+# ============================================================================
+# SIMPLEGO CORE CONFIGURATION
+# ============================================================================
+
+menu "SimpleGo Core"
+
+    config SIMPLEGO_MAX_CONTACTS
+        int "Maximum contacts"
+        default 50
+        range 10 500
+        help
+            Maximum number of contacts/conversations.
+
+    config SIMPLEGO_MAX_MESSAGES
+        int "Messages per conversation"
+        default 100
+        range 50 1000
+        help
+            Maximum messages to keep per conversation.
+            Older messages are deleted.
+
+    config SIMPLEGO_MESSAGE_MAX_LEN
+        int "Maximum message length"
+        default 4096
+        range 256 16384
+        help
+            Maximum length of a single message in bytes.
+
+    config SIMPLEGO_AUTO_RECONNECT
+        bool "Auto-reconnect on disconnect"
+        default y
+        help
+            Automatically reconnect to SMP server if connection is lost.
+
+    config SIMPLEGO_RECONNECT_INTERVAL
+        int "Reconnect interval (seconds)"
+        depends on SIMPLEGO_AUTO_RECONNECT
+        default 30
+        range 5 300
+        help
+            Time to wait before attempting reconnection.
+
+endmenu
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
+
+menu "Network Configuration"
+
+    config SIMPLEGO_WIFI_SSID
+        string "WiFi SSID"
+        default ""
+        help
+            Default WiFi network SSID.
+            Can be changed in settings.
+
+    config SIMPLEGO_WIFI_PASSWORD
+        string "WiFi Password"
+        default ""
+        help
+            Default WiFi network password.
+            Can be changed in settings.
+
+    config SIMPLEGO_DEFAULT_SMP_SERVER
+        string "Default SMP Server"
+        default "smp1.simplexonflux.com"
+        help
+            Default SimpleX SMP server hostname.
+
+    config SIMPLEGO_DEFAULT_SMP_PORT
+        int "Default SMP Port"
+        default 5223
+        range 1 65535
+        help
+            Default SMP server port.
+
+    config SIMPLEGO_TLS_VERIFY
+        bool "Verify TLS certificates"
+        default y
+        help
+            Verify server TLS certificates.
+            Disable only for testing!
+
+endmenu
+
+# ============================================================================
+# UI CONFIGURATION
+# ============================================================================
+
+menu "UI Configuration"
+
+    choice SIMPLEGO_UI_THEME
+        prompt "Default Theme"
+        default SIMPLEGO_UI_THEME_DARK
+
+        config SIMPLEGO_UI_THEME_DARK
+            bool "Dark"
+
+        config SIMPLEGO_UI_THEME_LIGHT
+            bool "Light"
+
+        config SIMPLEGO_UI_THEME_AUTO
+            bool "Auto (follow system)"
+
+    endchoice
+
+    config SIMPLEGO_UI_ANIMATION
+        bool "Enable UI animations"
+        default y
+        help
+            Enable smooth animations in UI.
+            Disable to save CPU/power.
+
+    config SIMPLEGO_UI_ANIMATION_SPEED
+        int "Animation duration (ms)"
+        depends on SIMPLEGO_UI_ANIMATION
+        default 200
+        range 50 500
+        help
+            Duration of UI animations in milliseconds.
+
+    config SIMPLEGO_SHOW_TYPING
+        bool "Show typing indicator"
+        default y
+        help
+            Show indicator when contact is typing.
+
+    config SIMPLEGO_SHOW_READ_RECEIPTS
+        bool "Show read receipts"
+        default y
+        help
+            Show when messages are read.
+
+endmenu
+
+# ============================================================================
+# SECURITY CONFIGURATION
+# ============================================================================
+
+menu "Security Configuration"
+
+    config SIMPLEGO_REQUIRE_PIN
+        bool "Require PIN/Password"
+        default n
+        help
+            Require PIN or password to unlock device.
+
+    config SIMPLEGO_PIN_LENGTH
+        int "PIN length"
+        depends on SIMPLEGO_REQUIRE_PIN
+        default 6
+        range 4 12
+        help
+            Length of PIN code.
+
+    config SIMPLEGO_AUTO_LOCK_TIMEOUT
+        int "Auto-lock timeout (seconds)"
+        depends on SIMPLEGO_REQUIRE_PIN
+        default 300
+        range 30 3600
+        help
+            Auto-lock after this many seconds of inactivity.
+
+    config SIMPLEGO_WIPE_ON_FAILED_PIN
+        bool "Wipe data after failed attempts"
+        depends on SIMPLEGO_REQUIRE_PIN
+        default n
+        help
+            Wipe all data after multiple failed PIN attempts.
+
+    config SIMPLEGO_WIPE_ATTEMPTS
+        int "Failed attempts before wipe"
+        depends on SIMPLEGO_WIPE_ON_FAILED_PIN
+        default 10
+        range 3 20
+
+endmenu
+
+# ============================================================================
+# POWER MANAGEMENT
+# ============================================================================
+
+menu "Power Management"
+
+    config SIMPLEGO_SLEEP_ENABLED
+        bool "Enable sleep mode"
+        default y
+        help
+            Allow device to enter sleep mode.
+
+    config SIMPLEGO_LIGHT_SLEEP_TIMEOUT
+        int "Light sleep timeout (seconds)"
+        depends on SIMPLEGO_SLEEP_ENABLED
+        default 60
+        range 10 600
+        help
+            Enter light sleep after this many seconds.
+
+    config SIMPLEGO_DEEP_SLEEP_TIMEOUT
+        int "Deep sleep timeout (seconds)"
+        depends on SIMPLEGO_SLEEP_ENABLED
+        default 300
+        range 60 3600
+        help
+            Enter deep sleep after this many seconds.
+
+    config SIMPLEGO_BATTERY_SAVER
+        bool "Enable battery saver mode"
+        default y
+        help
+            Reduce functionality when battery is low.
+
+    config SIMPLEGO_BATTERY_SAVER_LEVEL
+        int "Battery saver trigger level (%)"
+        depends on SIMPLEGO_BATTERY_SAVER
+        default 20
+        range 5 50
+
+endmenu
+
+# ============================================================================
+# DEBUG OPTIONS
+# ============================================================================
+
+menu "Debug Options"
+
+    config SIMPLEGO_DEBUG_LOG
+        bool "Enable debug logging"
+        default n
+        help
+            Enable verbose debug logging.
+
+    config SIMPLEGO_LOG_CRYPTO
+        bool "Log crypto operations"
+        depends on SIMPLEGO_DEBUG_LOG
+        default n
+        help
+            Log cryptographic operations (WARNING: may leak keys!)
+
+    config SIMPLEGO_LOG_NETWORK
+        bool "Log network traffic"
+        depends on SIMPLEGO_DEBUG_LOG
+        default n
+        help
+            Log raw network traffic.
+
+    config SIMPLEGO_FAKE_SERVER
+        bool "Use fake SMP server"
+        default n
+        help
+            Connect to local test server instead of real server.
+            For development only!
+
+endmenu

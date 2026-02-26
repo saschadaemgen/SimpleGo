@@ -1,0 +1,16 @@
+# SimpleGo - Component Dependencies
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# This file declares external component dependencies that will be
+# automatically downloaded and managed by ESP-IDF's component manager.
+#
+# CRITICAL: libsodium is required for Ed25519 signature compatibility
+# with SimpleX servers. DO NOT substitute with Monocypher or other
+# Ed25519 implementations - they produce incompatible signatures!
+
+dependencies:
+  # libsodium - Cryptographic library (Ed25519, X25519)
+  # Used for: Signing commands, key exchange
+  # Why: SimpleX servers use crypton library (libsodium-compatible)
+  espressif/libsodium: ^1.0.20
+  wolfssl/wolfssl: ^5.8.0

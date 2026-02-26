@@ -1,0 +1,38 @@
+# ESP-IDF Build
+build/
+sdkconfig.old
+
+# ESP-IDF Config (contains WiFi credentials!)
+sdkconfig
+
+# Dependencies
+managed_components/
+dependencies.lock
+
+# VS Code
+.vscode/
+
+# Windows
+*.Zone.Identifier
+Thumbs.db
+
+# Compiled
+*.o
+*.elf
+*.bin
+*.map
+
+
+# Third-party components (managed by ESP-IDF)
+components/wolfssl__wolfssl/
+components/wolfssl_config/
+components/zstd/
+
+# Git submodules
+.gitmodules
+
+# GitHub workflows (not yet needed)
+.github/workflows/
+
+# LVGL (install via ESP-IDF component manager)
+components/lvgl/
