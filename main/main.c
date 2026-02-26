@@ -4,10 +4,10 @@
  * github.com/cannatoshi/SimpleGo
  * Autor: cannatoshi
  *
- * Phase 1 Refactoring: main.c contains only:
+ * main.c contains:
  * - Config, app_main(), smp_connect()
  * - TLS/Handshake (Steps 1-5)
- * - Message Receive Loop with transport parsing
+ * - UI poll timer + progressive history rendering
  * - Post-confirmation orchestration (42d: KEY/HELLO/read reply)
  *
  * Extracted to modules:
@@ -15,6 +15,7 @@
  * - smp_ack.c        (ACK consolidation)
  * - smp_e2e.c        (Reply Queue E2E decrypt pipeline)
  * - smp_agent.c      (Agent protocol: PrivHeader dispatch, ratchet, Zstd)
+ * - smp_tasks.c      (FreeRTOS multi-task: Network, App, receive loop)
  */
 
 #include <string.h>
@@ -27,6 +28,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
@@ -60,9 +62,6 @@
 #include "smp_tasks.h"
 #include "smp_history.h"   // Session 37: history_message_t, HISTORY_DIR_SENT
 
-extern bool peer_send_hello(contact_t *contact);
-extern int queue_raw_tls_read(uint8_t *buf, int buf_size, int timeout_ms);
-extern bool queue_has_pending_msg(int *out_len);
 #include "smp_x448.h"
 #include "smp_queue.h"
 #include "smp_handshake.h"  // Auftrag 50d: handshake_load_state
@@ -77,68 +76,24 @@ extern bool queue_has_pending_msg(int *out_len);
 // UI System
 #include "ui_manager.h"
 #include "ui/screens/ui_connect.h"
+#include "ui_chat.h"
 #include "ui_theme.h"
-#include "simplego_fonts.h"  // Session 37c: RAM fonts with umlaut fallback
+#include "simplego_fonts.h"
 
 static const char *TAG = "SMP";
 
-// Auftrag 50b: Session restoration flag (set in app_main, read in smp_connect)
-static bool session_restored = false;
-
-// Auftrag 50d: Keyboard → SMP thread communication via FreeRTOS Queue
-#include "freertos/queue.h"
-static QueueHandle_t kbd_msg_queue = NULL;   // char[256] messages from kbd task
-
-/* Session 37c: RAM copies of Montserrat with umlaut fallback */
+// Session 37c: RAM copies of Montserrat with German umlaut fallback
 lv_font_t simplego_font_14;
 lv_font_t simplego_font_12;
 lv_font_t simplego_font_10;
 
-#if 0  // Session 32: Replaced by LVGL keyboard indev
-static void keyboard_task(void *arg)
-{
-    (void)arg;
-    static char buf[256] = {0};
-    int pos = 0;
+// Auftrag 50b: Session restoration flag (set in app_main, read in smp_connect)
+static bool session_restored = false;
 
-    ESP_LOGI("KBD_TASK", "⌨️ Keyboard task started (polling every 50ms)");
+// Keyboard → SMP thread communication via FreeRTOS Queue
+static QueueHandle_t kbd_msg_queue = NULL;   // char[256] messages from kbd task
 
-    while (1) {
-        char key = tdeck_keyboard_read();
-
-        if (key != 0) {
-            if (key == '\r' || key == '\n') {
-                // Enter → send buffered message
-                if (pos > 0) {
-                    buf[pos] = '\0';
-                    ESP_LOGI("KBD_TASK", "⌨️ ENTER → \"%s\"", buf);
-                    // Send copy to main loop via queue (don't block)
-                    xQueueSend(kbd_msg_queue, buf, 0);
-                    pos = 0;
-                    buf[0] = '\0';
-                }
-            } else if (key == 0x08) {
-                // Backspace
-                if (pos > 0) {
-                    pos--;
-                    buf[pos] = '\0';
-                }
-                ESP_LOGI("KBD_TASK", "⌨️ Buffer: \"%s\"", buf);
-            } else if (key >= 0x20 && key < 0x7F && pos < 254) {
-                // Printable character
-                buf[pos++] = key;
-                buf[pos] = '\0';
-                ESP_LOGI("KBD_TASK", "⌨️ Buffer: \"%s\"", buf);
-            }
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(50));
-    }
-}
-#endif
-
-// Session 32: Chat send callback (LVGL thread -> kbd_msg_queue -> smp_app_run)
-#include "ui_chat.h"
+// Chat send callback (LVGL thread -> kbd_msg_queue -> smp_app_run)
 
 static void chat_send_cb(const char *text)
 {
@@ -251,8 +206,7 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                 if (smp_history_batch && smp_history_batch_count > 0
                     && smp_history_batch_slot == evt.contact_idx) {
 
-                    // Clear ALL bubbles before loading new contact history
-                    // (prevents bubble accumulation across contact switches)
+                    // 37d: Clear ALL bubbles (not just target contact) to prevent accumulation
                     ui_chat_clear_contact(-1);
 
                     // Start chunked rendering — first chunk happens next timer tick
@@ -286,10 +240,6 @@ static void smp_connect(void) {
 
     uint8_t session_id[32];
     uint8_t ca_hash[32];
-
-    // Peer's sender auth key from received Confirmation
-    uint8_t peer_sender_auth_key[44];
-    bool has_peer_sender_auth = false;
 
     uint8_t *block = (uint8_t *)heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
     if (!block) {
@@ -448,317 +398,6 @@ static void smp_connect(void) {
     // This blocks forever (ring buffer read loop)
     smp_app_run(kbd_msg_queue);
 
-#if 0  // Phase 3 T1: Original receive loop — Network Task reads SSL now
-    while (1) {
-        // Auftrag 50d: Check keyboard queue (non-blocking)
-        char kbd_msg[256];
-        while (kbd_msg_queue && xQueueReceive(kbd_msg_queue, kbd_msg, 0) == pdTRUE) {
-            ESP_LOGI(TAG, "⌨️ Sending: \"%s\"", kbd_msg);
-            contact_t *msg_contact = &contacts_db.contacts[0];
-            if (peer_send_chat_message(msg_contact, kbd_msg)) {
-                ESP_LOGI(TAG, "   ✅ Keyboard message sent!");
-            } else {
-                ESP_LOGE(TAG, "   ❌ Keyboard message send failed!");
-            }
-        }
-
-        content_len = smp_read_block(&ssl, block, 5000);
-
-        if (content_len == -2) {
-            // Timeout — loop back to poll keyboard
-            continue;
-        }
-
-        ESP_LOGW(TAG, "47b: MAIN LOOP received block, content_len=%d", content_len);
-
-        // 47e: Dump first 64 bytes of EVERY received block
-        if (content_len > 0) {
-            ESP_LOGW(TAG, "47e: First 64 bytes of block:");
-            for (int i = 0; i < 64 && i < content_len + 2; i += 16) {
-                char hex[64] = {0}; int hx = 0;
-                for (int j = 0; j < 16 && (i+j) < content_len + 2; j++)
-                    hx += sprintf(&hex[hx], "%02x ", block[i+j]);
-                ESP_LOGW(TAG, "  +%04d: %s", i, hex);
-            }
-        }
-
-        if (content_len < 0) {
-            ESP_LOGW(TAG, "   Connection closed");
-            break;
-        }
-
-        uint8_t *resp = block + 2;
-
-        // Parse transport format
-        int p = 0;
-        // txCount is a sequence counter, increments per transaction on TLS session
-        uint8_t tx_count = resp[p];
-        ESP_LOGD(TAG, "   txCount: %d", tx_count);
-        p++;
-        p += 2;
-
-        int authLen = resp[p++]; p += authLen;
-        // v7: no sessLen in response
-        int corrLen = resp[p++]; p += corrLen;
-
-        int entLen = resp[p++];
-        uint8_t entity_id[24];
-        if (entLen > 24) entLen = 24;
-        memcpy(entity_id, &resp[p], entLen);
-        p += entLen;
-
-        int contact_idx = find_contact_by_recipient_id(entity_id, entLen);
-        contact_t *contact = (contact_idx >= 0) ? &contacts_db.contacts[contact_idx] : NULL;
-
-        // Check if this is our Reply Queue
-        bool is_reply_queue = (our_queue.rcv_id_len > 0 &&
-                               entLen == our_queue.rcv_id_len &&
-                               memcmp(entity_id, our_queue.rcv_id, entLen) == 0);
-        if (is_reply_queue) {
-            ESP_LOGI(TAG, "   Message on REPLY QUEUE from peer!");
-        }
-
-        // Parse command
-        ESP_LOGW(TAG, "47b: entity=%02x%02x%02x%02x, contact=%s, reply_q=%d, cmd=%c%c%c",
-                 entity_id[0], entity_id[1], entity_id[2], entity_id[3],
-                 contact ? contact->name : "NULL", is_reply_queue,
-                 (p < content_len) ? resp[p] : '?',
-                 (p+1 < content_len) ? resp[p+1] : '?',
-                 (p+2 < content_len) ? resp[p+2] : '?');
-        if (p + 1 < content_len && resp[p] == 'O' && resp[p+1] == 'K') {
-            ESP_LOGI(TAG, "   OK");
-        }
-        else if (p + 2 < content_len && resp[p] == 'E' && resp[p+1] == 'N' && resp[p+2] == 'D') {
-            if (contact) {
-                ESP_LOGI(TAG, "   END [%s] - No more messages", contact->name);
-            } else {
-                ESP_LOGI(TAG, "   END - No more messages");
-            }
-        }
-        else if (p + 3 < content_len && resp[p] == 'M' && resp[p+1] == 'S' && resp[p+2] == 'G' && resp[p+3] == ' ') {
-            p += 4;
-
-            uint8_t msgIdLen = resp[p++];
-            uint8_t msg_id[24];
-            memset(msg_id, 0, 24);
-            if (msgIdLen > 24) msgIdLen = 24;
-            memcpy(msg_id, &resp[p], msgIdLen);
-            p += msgIdLen;
-
-            int enc_len = content_len - p;
-
-            if (contact) {
-                ESP_LOGI(TAG, "");
-                ESP_LOGI(TAG, "+----------------------------------------------------------+");
-                ESP_LOGI(TAG, "|   MESSAGE RECEIVED for [%s]!", contact->name);
-                ESP_LOGI(TAG, "+----------------------------------------------------------+");
-            } else if (is_reply_queue) {
-                ESP_LOGI(TAG, "");
-                ESP_LOGI(TAG, "+----------------------------------------------------------+");
-                ESP_LOGI(TAG, "|   MESSAGE on REPLY QUEUE!                                |");
-                ESP_LOGI(TAG, "+----------------------------------------------------------+");
-            } else {
-                ESP_LOGI(TAG, "   MESSAGE (unknown contact)!");
-            }
-            ESP_LOGD(TAG, "   MsgId: %02x%02x%02x%02x...", msg_id[0], msg_id[1], msg_id[2], msg_id[3]);
-            ESP_LOGD(TAG, "   Encrypted: %d bytes", enc_len);
-
-            // ==============================================================
-            // REPLY QUEUE: E2E Decrypt + Agent Process
-            // ==============================================================
-            if (is_reply_queue && our_queue.valid && enc_len > crypto_box_MACBYTES) {
-                ESP_LOGI(TAG, "   Decrypting REPLY QUEUE message...");
-
-                uint8_t *e2e_plain = NULL;
-                size_t e2e_plain_len = 0;
-
-                int e2e_ret = smp_e2e_decrypt_reply_message(
-                    &resp[p], enc_len, msg_id, msgIdLen,
-                    &e2e_plain, &e2e_plain_len);
-
-                if (e2e_ret == 0 && e2e_plain) {
-                    smp_agent_process_message(e2e_plain, e2e_plain_len,
-                           &contacts_db.contacts[0],
-                           peer_sender_auth_key, &has_peer_sender_auth);
-                    free(e2e_plain);
-                }
-
-                // === Post-Confirmation: KEY + HELLO + Read Reply (42d) ===
-                if (has_peer_sender_auth) {
-                    ESP_LOGI(TAG, "   Reconnecting to Reply Queue for KEY...");
-
-                    if (!queue_reconnect()) {
-                        ESP_LOGE(TAG, "   Reconnect failed!");
-                        goto skip_42d;
-                    }
-                    if (!queue_subscribe()) {
-                        ESP_LOGE(TAG, "   SUB failed!");
-                        goto skip_42d;
-                    }
-                    if (!queue_send_key(peer_sender_auth_key, 44)) {
-                        ESP_LOGE(TAG, "   KEY failed!");
-                        goto skip_42d;
-                    }
-                    ESP_LOGI(TAG, "   KEY accepted!");
-
-                    // Send HELLO on Contact Queue Q_A
-                    ESP_LOGI(TAG, "   Sending HELLO on Contact Queue Q_A...");
-                    {
-                        contact_t *hello_contact = &contacts_db.contacts[0];
-                        if (peer_send_hello(hello_contact)) {
-                            ESP_LOGI(TAG, "   HELLO sent!");
-                        } else {
-                            ESP_LOGE(TAG, "   HELLO send failed!");
-                        }
-                    }
-
-                    // Read + Decrypt Reply Queue response
-                    ESP_LOGI(TAG, "   Reading Reply Queue message...");
-                    {
-                        uint8_t *rq_block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
-                        if (!rq_block) goto skip_42d;
-
-                        for (int rq_try = 0; rq_try < 3; rq_try++) {
-                            int rq_len = queue_read_raw(rq_block, SMP_BLOCK_SIZE, 15000);
-                            if (rq_len < 0) break;
-
-                            uint8_t *rq_resp = rq_block + 2;
-
-                            // Parse SMP transport
-                            int rp = 0;
-                            rp++;  // txCount (sequence counter, always consume)
-                            rp += 2;
-                            int rq_authLen = rq_resp[rp++]; rp += rq_authLen;
-                            // v7: no sessLen in response
-                            int rq_corrLen = rq_resp[rp++]; rp += rq_corrLen;
-                            int rq_entLen  = rq_resp[rp++]; rp += rq_entLen;
-
-                            // Skip OK / END
-                            if (rp + 1 < rq_len && rq_resp[rp] == 'O' && rq_resp[rp+1] == 'K') continue;
-                            if (rp + 2 < rq_len && rq_resp[rp] == 'E' && rq_resp[rp+1] == 'N' && rq_resp[rp+2] == 'D') continue;
-                            if (!(rp + 3 < rq_len && rq_resp[rp] == 'M' && rq_resp[rp+1] == 'S' && rq_resp[rp+2] == 'G')) continue;
-
-                            // MSG received on Reply Queue
-                            rp += 4;
-                            uint8_t rq_msgIdLen = rq_resp[rp++];
-                            uint8_t rq_msg_id[24] = {0};
-                            if (rq_msgIdLen > 24) rq_msgIdLen = 24;
-                            memcpy(rq_msg_id, &rq_resp[rp], rq_msgIdLen);
-                            rp += rq_msgIdLen;
-
-                            int rq_enc_len = rq_len - rp;
-                            ESP_LOGI(TAG, "   Reply Queue MSG received! (%d bytes)", rq_enc_len);
-
-                            // Decrypt + process using extracted modules
-                            uint8_t *rq_plain = NULL;
-                            size_t rq_plain_len = 0;
-
-                            if (smp_e2e_decrypt_reply_message(&rq_resp[rp], rq_enc_len,
-                                    rq_msg_id, rq_msgIdLen, &rq_plain, &rq_plain_len) == 0 && rq_plain) {
-                                // Dummy params — auth key already extracted above
-                                uint8_t dummy_key[44];
-                                bool dummy_auth = false;
-                                smp_agent_process_message(rq_plain, rq_plain_len,
-                                                            &contacts_db.contacts[0],
-                                                            dummy_key, &dummy_auth);
-                                free(rq_plain);
-                            }
-
-                            queue_send_ack(rq_msg_id, rq_msgIdLen);
-                            break;
-                        }
-                        free(rq_block);
-                    }
-
-                    // Send first chat message
-                    ESP_LOGI(TAG, "   Sending first chat message in 3 seconds...");
-                    vTaskDelay(pdMS_TO_TICKS(3000));
-                    {
-                        contact_t *msg_contact = &contacts_db.contacts[0];
-                        if (peer_send_chat_message(msg_contact, "Hello from ESP32!")) {
-                            ESP_LOGI(TAG, "   ✅ Chat message sent!");
-                        } else {
-                            ESP_LOGE(TAG, "   ❌ Chat message send failed!");
-                        }
-                    }
-
-                    ESP_LOGI(TAG, "   Returning to main loop for incoming messages...");
-                    has_peer_sender_auth = false;  // Don't re-trigger 42d
-
-                    skip_42d: ;
-                    // 47c Fix 2: Re-subscribe to Q_A after handshake to ensure we receive App messages
-                    ESP_LOGW(TAG, "47c: Re-subscribing to Q_A after handshake...");
-                    subscribe_all_contacts(&ssl, block, session_id);
-                    ESP_LOGW(TAG, "47c: Re-SUB done, waiting for App messages on Q_A...");
-                }
-
-                // ACK Reply Queue message on main connection
-                smp_send_ack(&ssl, block, session_id,
-                             our_queue.rcv_id, our_queue.rcv_id_len,
-                             msg_id, msgIdLen,
-                             our_queue.rcv_auth_private);
-            }
-
-            // ==============================================================
-            // CONTACT QUEUE: SMP Decrypt + Agent Parse
-            // ==============================================================
-            if (contact && contact->have_srv_dh && enc_len > crypto_box_MACBYTES) {
-                ESP_LOGW(TAG, "47b: Contact Queue decrypt attempt! contact=%s, enc_len=%d", contact->name, enc_len);
-                uint8_t *plain = malloc(enc_len);
-                if (plain) {
-                    int plain_len = 0;
-                    if (decrypt_smp_message(contact, &resp[p], enc_len, msg_id, msgIdLen, plain, &plain_len)) {
-                        ESP_LOGI(TAG, "   SMP-Level Decryption OK! (%d bytes)", plain_len);
-
-                        // Extract e2ePubKey from Contact Queue (for reference only)
-                        // 47f: Do NOT cache as reply_queue key — Q_B has its own key!
-                        if (contact && plain_len > 60) {
-                            const uint8_t x25519_spki[] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03,
-                                                           0x2b, 0x65, 0x6e, 0x03, 0x21, 0x00};
-
-                            if (memcmp(&plain[14], x25519_spki, 12) == 0) {
-                                ESP_LOGI(TAG, "   47f: Contact Queue E2E key at offset 14 (NOT caching for reply queue)");
-                                ESP_LOGI(TAG, "        Key: %02x%02x%02x%02x...",
-                                         plain[26], plain[27], plain[28], plain[29]);
-                            } else {
-                                for (int i = 0; i < 100 && i < plain_len - 44; i++) {
-                                    if (memcmp(&plain[i], x25519_spki, 12) == 0) {
-                                        ESP_LOGI(TAG, "   47f: Contact Queue E2E key at offset %d (NOT caching)", i);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        parse_agent_message(contact, plain, plain_len);
-
-                        smp_send_ack(&ssl, block, session_id,
-                                     contact->recipient_id, contact->recipient_id_len,
-                                     msg_id, msgIdLen,
-                                     contact->rcv_auth_secret);
-                    } else {
-                        ESP_LOGE(TAG, "   Decryption failed!");
-                    }
-                    free(plain);
-                }
-            } else if (!is_reply_queue) {
-                ESP_LOGW(TAG, "      Cannot decrypt - no contact keys");
-            }
-            ESP_LOGI(TAG, "");
-        }
-        else if (p + 2 < content_len && resp[p] == 'E' && resp[p+1] == 'R' && resp[p+2] == 'R') {
-            ESP_LOGE(TAG, "   ERR: %.*s",
-                     (content_len - p > 20) ? 20 : content_len - p, &resp[p]);
-        }
-        else {
-            ESP_LOGW(TAG, "   Unknown: %c%c%c",
-                     (p < content_len) ? resp[p] : '?',
-                     (p+1 < content_len) ? resp[p+1] : '?',
-                     (p+2 < content_len) ? resp[p+2] : '?');
-        }
-    }
-#endif  // Phase 3 T1: End of disabled receive loop
-
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "+--------------------------------------+");
     ESP_LOGI(TAG, "|       Session ended                  |");
@@ -862,7 +501,7 @@ void app_main(void) {
 
             ESP_LOGI(TAG, "Initializing UI...");
 
-            /* Session 37c: Create RAM copies of Montserrat with umlaut fallback */
+            // Session 37c: Init RAM font copies with umlaut fallback
             memcpy(&simplego_font_14, &lv_font_montserrat_14, sizeof(lv_font_t));
             memcpy(&simplego_font_12, &lv_font_montserrat_12, sizeof(lv_font_t));
             memcpy(&simplego_font_10, &lv_font_montserrat_10, sizeof(lv_font_t));

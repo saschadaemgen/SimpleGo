@@ -498,12 +498,31 @@ static void on_send_click(lv_event_t *e)
     do_send_message();
 }
 
+/* Chat header name truncation (same pattern as ui_contacts.c) */
+#define CHAT_NAME_MAX  20
+
+static void truncate_chat_name(char *dst, const char *src, size_t dst_size)
+{
+    if (!src || !dst || dst_size < 4) { dst[0] = '\0'; return; }
+    size_t len = strlen(src);
+    if (len <= CHAT_NAME_MAX) {
+        strncpy(dst, src, dst_size - 1);
+        dst[dst_size - 1] = '\0';
+    } else {
+        size_t copy = (CHAT_NAME_MAX < dst_size - 4) ? CHAT_NAME_MAX : dst_size - 4;
+        memcpy(dst, src, copy);
+        dst[copy] = '.'; dst[copy+1] = '.'; dst[copy+2] = '.'; dst[copy+3] = '\0';
+    }
+}
+
 /* ============== Public API ============== */
 
 void ui_chat_set_contact(const char *name)
 {
     if (header_label && name) {
-        lv_label_set_text(header_label, name);
+        char trunc[CHAT_NAME_MAX + 4];
+        truncate_chat_name(trunc, name, sizeof(trunc));
+        lv_label_set_text(header_label, trunc);
     }
 }
 
@@ -688,7 +707,9 @@ void ui_chat_switch_contact(int contact_idx, const char *name)
 
     // Update header
     if (header_label && name) {
-        lv_label_set_text(header_label, name);
+        char trunc[CHAT_NAME_MAX + 4];
+        truncate_chat_name(trunc, name, sizeof(trunc));
+        lv_label_set_text(header_label, trunc);
     }
 
     // Filter bubbles: show matching, hide others
