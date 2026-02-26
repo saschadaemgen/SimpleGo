@@ -53,7 +53,7 @@ extern "C" {
 
 /* Fonts — RAM copies with German umlaut fallback (Session 37c) */
 #define UI_FONT               &simplego_font_14
-#define UI_FONT_MD            &lv_font_montserrat_12
+#define UI_FONT_MD            &simplego_font_12
 #define UI_FONT_SM            &simplego_font_10
 
 /* Legacy widget helpers */

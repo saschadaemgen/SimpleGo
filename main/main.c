@@ -85,6 +85,7 @@ static const char *TAG = "SMP";
 // Session 37c: RAM copies of Montserrat fonts with German umlaut fallback
 // (const LVGL fonts live in flash — cannot modify fallback pointer in-place)
 lv_font_t simplego_font_14;
+lv_font_t simplego_font_12;
 lv_font_t simplego_font_10;
 
 // Auftrag 50b: Session restoration flag (set in app_main, read in smp_connect)
@@ -864,6 +865,8 @@ void app_main(void) {
             // then set fallback on the RAM copy. Glyph bitmaps stay in flash (referenced by pointer).
             memcpy(&simplego_font_14, &lv_font_montserrat_14, sizeof(lv_font_t));
             simplego_font_14.fallback = &simplego_umlauts_14;
+            memcpy(&simplego_font_12, &lv_font_montserrat_12, sizeof(lv_font_t));
+            simplego_font_12.fallback = &simplego_umlauts_12;
             memcpy(&simplego_font_10, &lv_font_montserrat_10, sizeof(lv_font_t));
             simplego_font_10.fallback = &simplego_umlauts_10;
             ESP_LOGI(TAG, "German umlaut fonts registered (RAM copy + fallback)");
