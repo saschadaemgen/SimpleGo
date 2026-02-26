@@ -78,15 +78,9 @@ extern bool queue_has_pending_msg(int *out_len);
 #include "ui_manager.h"
 #include "ui/screens/ui_connect.h"
 #include "ui_theme.h"
-#include "simplego_fonts.h"   // Session 37c: German umlaut fallback fonts
+#include "simplego_fonts.h"  // Session 37c: RAM fonts with umlaut fallback
 
 static const char *TAG = "SMP";
-
-// Session 37c: RAM copies of Montserrat fonts with German umlaut fallback
-// (const LVGL fonts live in flash — cannot modify fallback pointer in-place)
-lv_font_t simplego_font_14;
-lv_font_t simplego_font_12;
-lv_font_t simplego_font_10;
 
 // Auftrag 50b: Session restoration flag (set in app_main, read in smp_connect)
 static bool session_restored = false;
@@ -94,6 +88,11 @@ static bool session_restored = false;
 // Auftrag 50d: Keyboard → SMP thread communication via FreeRTOS Queue
 #include "freertos/queue.h"
 static QueueHandle_t kbd_msg_queue = NULL;   // char[256] messages from kbd task
+
+/* Session 37c: RAM copies of Montserrat with umlaut fallback */
+lv_font_t simplego_font_14;
+lv_font_t simplego_font_12;
+lv_font_t simplego_font_10;
 
 #if 0  // Session 32: Replaced by LVGL keyboard indev
 static void keyboard_task(void *arg)
@@ -252,8 +251,9 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                 if (smp_history_batch && smp_history_batch_count > 0
                     && smp_history_batch_slot == evt.contact_idx) {
 
-                    // Clear existing bubbles for this contact first
-                    ui_chat_clear_contact(evt.contact_idx);
+                    // Clear ALL bubbles before loading new contact history
+                    // (prevents bubble accumulation across contact switches)
+                    ui_chat_clear_contact(-1);
 
                     // Start chunked rendering — first chunk happens next timer tick
                     s_hist_render_idx = 0;
@@ -860,18 +860,16 @@ void app_main(void) {
                 ESP_LOGW(TAG, "Keyboard init failed - continuing without keyboard");
             }
 
-            // Session 37c: German umlaut fallback fonts (Ä Ö Ü ä ö ü ß)
-            // Built-in LVGL fonts are const in flash — copy descriptor to RAM,
-            // then set fallback on the RAM copy. Glyph bitmaps stay in flash (referenced by pointer).
-            memcpy(&simplego_font_14, &lv_font_montserrat_14, sizeof(lv_font_t));
-            simplego_font_14.fallback = &simplego_umlauts_14;
-            memcpy(&simplego_font_12, &lv_font_montserrat_12, sizeof(lv_font_t));
-            simplego_font_12.fallback = &simplego_umlauts_12;
-            memcpy(&simplego_font_10, &lv_font_montserrat_10, sizeof(lv_font_t));
-            simplego_font_10.fallback = &simplego_umlauts_10;
-            ESP_LOGI(TAG, "German umlaut fonts registered (RAM copy + fallback)");
-
             ESP_LOGI(TAG, "Initializing UI...");
+
+            /* Session 37c: Create RAM copies of Montserrat with umlaut fallback */
+            memcpy(&simplego_font_14, &lv_font_montserrat_14, sizeof(lv_font_t));
+            memcpy(&simplego_font_12, &lv_font_montserrat_12, sizeof(lv_font_t));
+            memcpy(&simplego_font_10, &lv_font_montserrat_10, sizeof(lv_font_t));
+            simplego_font_14.fallback = &simplego_umlauts_14;
+            simplego_font_12.fallback = &simplego_umlauts_12;
+            simplego_font_10.fallback = &simplego_umlauts_10;
+
             ui_manager_init();
 
             tdeck_lvgl_start();
