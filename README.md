@@ -1,13 +1,13 @@
 <p align="center">
-  <img src=".github/assets/simplego_banner.png" alt="SimpleGo — Dedicated Secure Communication Devices" width="1200" height="230">
+  <img src=".github/assets/simplego_banner.png" alt="SimpleGo — Dedicated Secure Communication Devices" width="1500" height="230">
 </p>
 
 # SimpleGo
 
 **The first native implementation of the SimpleX Messaging Protocol for dedicated secure communication hardware.**
 
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
-[![Hardware: CERN-OHL-S-2.0](https://img.shields.io/badge/Hardware-CERN--OHL--S--2.0-green.svg)](#license)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![Hardware: CERN-OHL-W-2.0](https://img.shields.io/badge/Hardware-CERN--OHL--W--2.0-green.svg)](#license)
 [![Version](https://img.shields.io/badge/version-0.1.17--alpha-orange.svg)](#project-status)
 [![Platform](https://img.shields.io/badge/platform-ESP32--S3-lightgrey.svg)](#supported-platforms)
 
@@ -318,10 +318,10 @@ SimpleGo does not claim to protect against:
 
 | Component | License |
 |-----------|---------|
-| Software | [AGPL-3.0](LICENSE) |
-| Hardware designs | CERN-OHL-S-2.0 |
+| Software | [GPL-3.0](LICENSE) |
+| Hardware designs | CERN-OHL-W-2.0 |
 
-AGPL-3.0 is required for compatibility with the SimpleX protocol libraries. Hardware designs are published under the CERN Open Hardware License to enable community manufacturing and modification.
+GPL-3.0 ensures the open-source core remains open while enabling an open-core business model: Tier 1 firmware is fully open, while proprietary additions for Tier 2 and 3 devices (secure element drivers, tamper detection firmware, premium features) are developed separately under a commercial license. Hardware designs are published under the CERN Open Hardware License to enable community manufacturing and modification.
 
 ---
 
