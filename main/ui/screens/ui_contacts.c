@@ -1,6 +1,6 @@
 /**
  * @file ui_contacts.c
- * @brief Contacts Screen - Rectangular Blue Card Design
+ * @brief Contacts Screen - Matches Chat Layout Pixel-for-Pixel
  *
  * Layout (320x240, identical to ui_chat.c):
  *   +-----------------------------------------+
@@ -8,18 +8,12 @@
  *   | ~~~~~~ glow line ~~~~~~~~~~~~~~~~   1px  |
  *   | [<]  Contacts              2/128  26px  |
  *   | ~~~~~~ dim line ~~~~~~~~~~~~~~~~~   1px  |
- *   | Contact cards (scrollable)        160px  |
+ *   | Contact rows (scrollable)        160px  |
  *   | < Back                     + New  36px  |
  *   +-----------------------------------------+
  *   Total: 16+1+26+1+160+36 = 240
  *
- * Contact Card Design (rectangular, no radius):
- *   +------------------------------------------+
- *   |  Alice                    [OK] connected  |  <- Name + Status
- *   |  X3DH + Ratchet              Slot 0       |  <- Encryption + Meta
- *   +------------------------------------------+
- *
- * Session 37: Redesign + encrypted chat history integration
+ * Session 36: Full redesign matching chat bubble aesthetic
  *
  * SimpleGo UI
  * Copyright (c) 2025-2026 Sascha
@@ -34,7 +28,7 @@
 #include "smp_tasks.h"
 #include "smp_contacts.h"
 #include "smp_storage.h"   // 36a: smp_storage_delete for NVS key cleanup
-#include "smp_history.h"   // Session 37: encrypted chat history on SD
+#include "smp_history.h"   // 37d: smp_history_get_counts for unread badge
 extern void smp_clear_42d(int idx);  // 36b: reset 42d bitmap on delete
 #include "esp_log.h"
 #include <string.h>
@@ -50,22 +44,22 @@ static const char *TAG = "UI_CONTACTS";
 #define BAR_H           36
 #define BAR_Y           (UI_SCREEN_H - BAR_H)    /* 204 */
 #define LIST_Y          (DIM_Y + 1)              /* 44 */
-#define LIST_H          (BAR_Y - LIST_Y)          /* 160 */
+#define SG_LIST_H          (BAR_Y - LIST_Y)          /* 160 */
 
-/* Card styling — rectangular blue cards, matching incoming bubble palette */
-#define CARD_H          44
-#define CARD_GAP        3
-#define CARD_PAD_L      10
-#define CARD_PAD_R      8
+/* Row styling */
+#define ROW_H           28
+#define ROW_RADIUS      0
+#define ROW_GAP         2
+#define ACCENT_W        3
+#define ACCENT_H        18
 
-/* Colors — matching chat incoming bubble aesthetic */
-#define CARD_BG         lv_color_hex(0x000010)   /* same as BUBBLE_BG_IN  */
-#define CARD_BG_PRESS   lv_color_hex(0x001420)   /* subtle highlight      */
-#define CARD_BORDER_OPA ((lv_opa_t)50)           /* slightly more than bubbles */
-#define NAME_ACTIVE     lv_color_hex(0xD0E8E8)   /* light cyan-white      */
-#define NAME_PENDING    lv_color_hex(0x607878)   /* muted                 */
-#define STATUS_CONN     UI_COLOR_SECONDARY       /* green glow            */
-#define STATUS_WAIT     UI_COLOR_TEXT_DIM         /* dim gray              */
+/* Colors - same palette as chat bubbles */
+#define ROW_BG          lv_color_hex(0x000810)
+#define ROW_BG_PRESS    lv_color_hex(0x001420)
+#define ROW_BORDER_OPA  ((lv_opa_t)40)
+#define NAME_ACTIVE     lv_color_hex(0xD0E8E8)
+#define NAME_PENDING    lv_color_hex(0x607878)
+#define POPUP_BG        lv_color_hex(0x000A10)
 
 /* ============== State ============== */
 
@@ -73,6 +67,7 @@ static lv_obj_t *screen = NULL;
 static lv_obj_t *list_container = NULL;
 static lv_obj_t *empty_label = NULL;
 static lv_obj_t *count_label = NULL;
+static lv_obj_t *bottom_bar = NULL;
 
 /* Long-press popup */
 static lv_obj_t *popup_overlay = NULL;
@@ -84,6 +79,9 @@ static void on_go_back(lv_event_t *e);
 static void on_hdr_back(lv_event_t *e);
 static void on_bar_back(lv_event_t *e);
 static void on_bar_new(lv_event_t *e);
+static void on_bar_search(lv_event_t *e);
+static void on_search_cancel(lv_event_t *e);
+static void on_search_input_changed(lv_event_t *e);
 static void on_contact_click(lv_event_t *e);
 static void on_contact_long_press(lv_event_t *e);
 static void popup_close(void);
@@ -91,8 +89,9 @@ static void on_popup_delete(lv_event_t *e);
 static void on_popup_info(lv_event_t *e);
 static void on_popup_cancel(lv_event_t *e);
 static void on_popup_overlay_click(lv_event_t *e);
+static void rebuild_bottom_bar(void);
 
-/* ============== Style Helper ============== */
+/* ============== Style Helpers (from ui_chat.c) ============== */
 
 static void style_black(lv_obj_t *obj)
 {
@@ -105,6 +104,32 @@ static void style_black(lv_obj_t *obj)
 }
 
 /* ============== Helpers ============== */
+
+/* Truncate name to max display length — hard cut with "..." */
+#define NAME_MAX_DISPLAY  25
+static void truncate_name(const char *src, char *dst, size_t dst_len)
+{
+    size_t len = strlen(src);
+    if (len <= NAME_MAX_DISPLAY) {
+        strncpy(dst, src, dst_len);
+        dst[dst_len - 1] = '\0';
+    } else {
+        size_t copy = NAME_MAX_DISPLAY - 3;  /* room for "..." */
+        if (copy >= dst_len) copy = dst_len - 4;
+        memcpy(dst, src, copy);
+        dst[copy] = '.';
+        dst[copy + 1] = '.';
+        dst[copy + 2] = '.';
+        dst[copy + 3] = '\0';
+    }
+}
+
+/* Search state (37d): filter string for live search in bottom bar */
+static lv_obj_t *search_input = NULL;
+static lv_obj_t *search_x_btn = NULL;
+static lv_group_t *search_group = NULL;
+static bool search_active = false;
+static char search_query[32] = {0};
 
 static void generate_contact_name(char *buf, size_t buf_len)
 {
@@ -170,14 +195,14 @@ static void create_contacts_header(lv_obj_t *parent)
     lv_obj_center(arrow);
     lv_obj_add_event_cb(back_btn, on_hdr_back, LV_EVENT_CLICKED, NULL);
 
-    /* "Contacts" title */
+    /* "Contacts" title - white, same position as chat contact name */
     lv_obj_t *title = lv_label_create(hdr);
     lv_label_set_text(title, "Contacts");
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT_WHITE, 0);
     lv_obj_set_style_text_font(title, UI_FONT, 0);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 28, 0);
 
-    /* Contact count */
+    /* Contact count - dim, right side (like "Post-Quantum E2E" position) */
     count_label = lv_label_create(hdr);
     lv_obj_set_style_text_color(count_label, UI_COLOR_TEXT_DIM, 0);
     lv_obj_set_style_text_font(count_label, UI_FONT_SM, 0);
@@ -195,128 +220,185 @@ static void create_contacts_header(lv_obj_t *parent)
     lv_obj_clear_flag(dim, LV_OBJ_FLAG_CLICKABLE);
 }
 
-/* ============== Bottom Bar ============== */
+/* Thin vertical separator between nav buttons */
+static void create_bar_separator(lv_obj_t *parent, lv_coord_t x)
+{
+    lv_obj_t *sep = lv_obj_create(parent);
+    lv_obj_set_size(sep, 1, BAR_H - 10);
+    lv_obj_set_pos(sep, x, 5);
+    lv_obj_set_style_bg_color(sep, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_bg_opa(sep, (lv_opa_t)50, 0);
+    lv_obj_set_style_border_width(sep, 0, 0);
+    lv_obj_set_style_radius(sep, 0, 0);
+    lv_obj_clear_flag(sep, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+}
+
+/* ============== Bottom Bar (37d: proper buttons + search) ============== */
 
 static void create_bottom_bar(lv_obj_t *parent)
 {
-    lv_obj_t *bar = lv_obj_create(parent);
-    lv_obj_set_width(bar, LV_PCT(100));
-    lv_obj_set_height(bar, BAR_H);
-    lv_obj_set_pos(bar, 0, BAR_Y);
-    style_black(bar);
+    bottom_bar = lv_obj_create(parent);
+    lv_obj_set_width(bottom_bar, LV_PCT(100));
+    lv_obj_set_height(bottom_bar, BAR_H);
+    lv_obj_set_pos(bottom_bar, 0, BAR_Y);
+    style_black(bottom_bar);
 
-    lv_obj_set_style_border_width(bar, 1, 0);
-    lv_obj_set_style_border_color(bar, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_border_opa(bar, (lv_opa_t)38, 0);
-    lv_obj_set_style_border_side(bar, LV_BORDER_SIDE_TOP, 0);
+    lv_obj_set_style_border_width(bottom_bar, 1, 0);
+    lv_obj_set_style_border_color(bottom_bar, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_border_opa(bottom_bar, (lv_opa_t)38, 0);
+    lv_obj_set_style_border_side(bottom_bar, LV_BORDER_SIDE_TOP, 0);
 
-    lv_obj_t *back_lbl = lv_label_create(bar);
+    #define BTN_W  100
+
+    /* --- Back Button (left) --- */
+    lv_obj_t *back_btn = lv_btn_create(bottom_bar);
+    lv_obj_set_size(back_btn, BTN_W, BAR_H);
+    lv_obj_align(back_btn, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_bg_opa(back_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(back_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(back_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(back_btn, 0, 0);
+    lv_obj_set_style_radius(back_btn, 0, 0);
+    lv_obj_set_style_shadow_width(back_btn, 0, 0);
+
+    lv_obj_t *back_lbl = lv_label_create(back_btn);
     lv_label_set_text(back_lbl, LV_SYMBOL_LEFT " Back");
     lv_obj_set_style_text_color(back_lbl, UI_COLOR_PRIMARY, 0);
     lv_obj_set_style_text_font(back_lbl, UI_FONT, 0);
-    lv_obj_align(back_lbl, LV_ALIGN_LEFT_MID, 8, 0);
-    lv_obj_add_flag(back_lbl, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(back_lbl, on_bar_back, LV_EVENT_CLICKED, NULL);
+    lv_obj_center(back_lbl);
+    lv_obj_add_event_cb(back_btn, on_bar_back, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *new_lbl = lv_label_create(bar);
-    lv_label_set_text(new_lbl, LV_SYMBOL_PLUS " New");
-    lv_obj_set_style_text_color(new_lbl, UI_COLOR_SECONDARY, 0);
+    create_bar_separator(bottom_bar, BTN_W + 3);
+    /* --- Search Button (center) --- */
+    lv_obj_t *search_btn = lv_btn_create(bottom_bar);
+    lv_obj_set_size(search_btn, BTN_W, BAR_H);
+    lv_obj_align(search_btn, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_opa(search_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(search_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(search_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(search_btn, 0, 0);
+    lv_obj_set_style_radius(search_btn, 0, 0);
+    lv_obj_set_style_shadow_width(search_btn, 0, 0);
+
+    lv_obj_t *search_lbl = lv_label_create(search_btn);
+    lv_label_set_text(search_lbl, LV_SYMBOL_LIST " Search");
+    lv_obj_set_style_text_color(search_lbl, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(search_lbl, UI_FONT, 0);
+    lv_obj_center(search_lbl);
+    lv_obj_add_event_cb(search_btn, on_bar_search, LV_EVENT_CLICKED, NULL);
+
+    create_bar_separator(bottom_bar, UI_SCREEN_W - BTN_W - 3);
+    /* --- New Button (right) --- */
+    lv_obj_t *new_btn = lv_btn_create(bottom_bar);
+    lv_obj_set_size(new_btn, BTN_W, BAR_H);
+    lv_obj_align(new_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_set_style_bg_opa(new_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(new_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(new_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(new_btn, 0, 0);
+    lv_obj_set_style_radius(new_btn, 0, 0);
+    lv_obj_set_style_shadow_width(new_btn, 0, 0);
+
+    lv_obj_t *new_lbl = lv_label_create(new_btn);
+    lv_label_set_text(new_lbl, "New " LV_SYMBOL_RIGHT);
+    lv_obj_set_style_text_color(new_lbl, UI_COLOR_PRIMARY, 0);
     lv_obj_set_style_text_font(new_lbl, UI_FONT, 0);
-    lv_obj_align(new_lbl, LV_ALIGN_RIGHT_MID, -8, 0);
-    lv_obj_add_flag(new_lbl, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(new_lbl, on_bar_new, LV_EVENT_CLICKED, NULL);
+    lv_obj_center(new_lbl);
+    lv_obj_add_event_cb(new_btn, on_bar_new, LV_EVENT_CLICKED, NULL);
 }
 
-/* ============== Contact Card ============== */
-/*
- * Rectangular blue card, two-line layout:
- *
- *   +------------------------------------------+
- *   |  Alice                    [OK] connected  |
- *   |  X3DH + Ratchet              Slot 0       |
- *   +------------------------------------------+
- *
- * No border-radius, no accent bar hacks.
- * Clean rectangular card matching incoming bubble palette.
- */
+/* ============== Contact Row ============== */
 
-static lv_obj_t *create_contact_card(lv_obj_t *parent, int idx, contact_t *c)
+static lv_obj_t *create_contact_row(lv_obj_t *parent, int idx, contact_t *c,
+                                     uint16_t total, uint16_t unread)
 {
     bool conn = c->have_srv_dh;
 
-    /* === Card container === */
-    lv_obj_t *card = lv_obj_create(parent);
-    lv_obj_set_size(card, LV_PCT(100), CARD_H);
+    lv_obj_t *row = lv_obj_create(parent);
+    lv_obj_set_size(row, LV_PCT(100), ROW_H);
+    lv_obj_set_style_bg_color(row, ROW_BG, 0);
+    lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(row, ROW_BG_PRESS, LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(row, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_border_width(row, 0, 0);
+    lv_obj_set_style_border_opa(row, ROW_BORDER_OPA, 0);
+    lv_obj_set_style_border_side(row, LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_set_style_radius(row, 0, 0);
+    lv_obj_set_style_pad_left(row, 8, 0);
+    lv_obj_set_style_pad_right(row, 8, 0);
+    lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_user_data(row, (void *)(intptr_t)idx);
 
-    /* Rectangular: radius 0, clean blue background */
-    lv_obj_set_style_radius(card, 0, 0);
-    lv_obj_set_style_bg_color(card, CARD_BG, 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+    /* Pre-fetched counts used directly */
+    bool has_unread = (unread > 0);
 
-    /* Subtle border — primary color at low opacity */
-    lv_obj_set_style_border_color(card, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_border_width(card, 1, 0);
-    lv_obj_set_style_border_opa(card, CARD_BORDER_OPA, 0);
+    /* Accent bar — green if unread, cyan if connected, dim otherwise */
+    lv_obj_t *accent = lv_obj_create(row);
+    lv_obj_set_size(accent, ACCENT_W, ACCENT_H);
+    lv_obj_align(accent, LV_ALIGN_LEFT_MID, -2, 0);
+    if (has_unread) {
+        lv_obj_set_style_bg_color(accent, UI_COLOR_SECONDARY, 0);
+        lv_obj_set_style_bg_opa(accent, (lv_opa_t)220, 0);
+    } else if (conn) {
+        lv_obj_set_style_bg_color(accent, UI_COLOR_PRIMARY, 0);
+        lv_obj_set_style_bg_opa(accent, (lv_opa_t)200, 0);
+    } else {
+        lv_obj_set_style_bg_color(accent, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_bg_opa(accent, (lv_opa_t)80, 0);
+    }
+    lv_obj_set_style_radius(accent, 0, 0);
+    lv_obj_set_style_border_width(accent, 0, 0);
+    lv_obj_clear_flag(accent, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
-    /* Press state */
-    lv_obj_set_style_bg_color(card, CARD_BG_PRESS, LV_STATE_PRESSED);
-
-    /* Internal padding */
-    lv_obj_set_style_pad_left(card, CARD_PAD_L, 0);
-    lv_obj_set_style_pad_right(card, CARD_PAD_R, 0);
-    lv_obj_set_style_pad_top(card, 5, 0);
-    lv_obj_set_style_pad_bottom(card, 4, 0);
-    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-
-    /* === Line 1: Contact Name (left) + Status (right) === */
-
-    /* Name — prominent, 14pt */
-    lv_obj_t *name_lbl = lv_label_create(card);
-    lv_label_set_text(name_lbl, c->name);
-    lv_label_set_long_mode(name_lbl, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(name_lbl, 170);
+    /* Name — hard truncated */
+    char display_name[32];
+    truncate_name(c->name, display_name, sizeof(display_name));
+    lv_obj_t *name_lbl = lv_label_create(row);
+    lv_label_set_text(name_lbl, display_name);
+    lv_label_set_long_mode(name_lbl, LV_LABEL_LONG_CLIP);
     lv_obj_set_style_text_font(name_lbl, UI_FONT, 0);
     lv_obj_set_style_text_color(name_lbl, conn ? NAME_ACTIVE : NAME_PENDING, 0);
-    lv_obj_align(name_lbl, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_align(name_lbl, LV_ALIGN_LEFT_MID, 8, 0);
 
-    /* Status text — right aligned, top line */
-    lv_obj_t *status_lbl = lv_label_create(card);
-    lv_obj_set_style_text_font(status_lbl, UI_FONT_SM, 0);
+    /* Status check — directly after name */
+    lv_obj_t *check_lbl = lv_label_create(row);
+    lv_obj_set_style_text_font(check_lbl, UI_FONT_SM, 0);
     if (conn) {
-        lv_label_set_text(status_lbl, LV_SYMBOL_OK " connected");
-        lv_obj_set_style_text_color(status_lbl, STATUS_CONN, 0);
+        lv_label_set_text(check_lbl, LV_SYMBOL_OK);
+        lv_obj_set_style_text_color(check_lbl,
+            has_unread ? UI_COLOR_SECONDARY : UI_COLOR_PRIMARY, 0);
     } else {
-        lv_label_set_text(status_lbl, "waiting...");
-        lv_obj_set_style_text_color(status_lbl, STATUS_WAIT, 0);
+        lv_label_set_text(check_lbl, "...");
+        lv_obj_set_style_text_color(check_lbl, UI_COLOR_TEXT_DIM, 0);
     }
-    lv_obj_align(status_lbl, LV_ALIGN_TOP_RIGHT, 0, 1);
+    lv_obj_align_to(check_lbl, name_lbl, LV_ALIGN_OUT_RIGHT_MID, 4, 0);
 
-    /* === Line 2: Encryption badge (left) + Slot info (right) === */
-
-    /* Encryption — the signature look */
-    lv_obj_t *enc_lbl = lv_label_create(card);
-    if (conn) {
-        lv_label_set_text(enc_lbl, "X3DH + Double Ratchet");
+    /* Message count — "total ✉ unread", always both numbers */
+    lv_obj_t *count_lbl = lv_label_create(row);
+    lv_obj_set_style_text_font(count_lbl, &lv_font_montserrat_10, 0);
+    lv_label_set_text_fmt(count_lbl, "%u " LV_SYMBOL_ENVELOPE " %u", total, unread);
+    if (has_unread) {
+        lv_obj_set_style_text_color(count_lbl, UI_COLOR_SECONDARY, 0);
     } else {
-        lv_label_set_text(enc_lbl, "handshake pending");
+        lv_obj_set_style_text_color(count_lbl, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_opa(count_lbl, (lv_opa_t)120, 0);
     }
-    lv_obj_set_style_text_font(enc_lbl, UI_FONT_SM, 0);
-    lv_obj_set_style_text_color(enc_lbl, conn ? UI_COLOR_ENCRYPT : UI_COLOR_TEXT_DIM, 0);
-    lv_obj_align(enc_lbl, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(count_lbl, LV_ALIGN_RIGHT_MID, -34, 0);
 
-    /* Slot info — dim, right side */
-    lv_obj_t *slot_lbl = lv_label_create(card);
-    lv_label_set_text_fmt(slot_lbl, "Slot %d", idx);
-    lv_obj_set_style_text_font(slot_lbl, UI_FONT_SM, 0);
-    lv_obj_set_style_text_color(slot_lbl, UI_COLOR_TEXT_DIM, 0);
-    lv_obj_align(slot_lbl, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+    /* E2EE badge — far right end */
+    lv_obj_t *e2ee_lbl = lv_label_create(row);
+    lv_label_set_text(e2ee_lbl, "E2EE");
+    lv_obj_set_style_text_font(e2ee_lbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(e2ee_lbl, UI_COLOR_ENCRYPT, 0);
+    lv_obj_set_style_opa(e2ee_lbl, (lv_opa_t)160, 0);
+    lv_obj_align(e2ee_lbl, LV_ALIGN_RIGHT_MID, -2, 0);
 
-    /* === Events === */
-    lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(card, on_contact_click, LV_EVENT_CLICKED, (void *)(intptr_t)idx);
-    lv_obj_add_event_cb(card, on_contact_long_press, LV_EVENT_LONG_PRESSED, (void *)(intptr_t)idx);
+    /* Events */
+    lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(row, on_contact_click, LV_EVENT_CLICKED, (void *)(intptr_t)idx);
+    lv_obj_add_event_cb(row, on_contact_long_press, LV_EVENT_LONG_PRESSED, (void *)(intptr_t)idx);
 
-    return card;
+    return row;
 }
 
 /* ============== Fullscreen Popup ============== */
@@ -333,7 +415,7 @@ static lv_obj_t *create_popup_action(lv_obj_t *parent, const char *icon,
     lv_obj_set_style_border_color(row, color, 0);
     lv_obj_set_style_border_width(row, 1, 0);
     lv_obj_set_style_border_opa(row, (lv_opa_t)50, 0);
-    lv_obj_set_style_radius(row, 0, 0);   /* rectangular, matching cards */
+    lv_obj_set_style_radius(row, 8, 0);
     lv_obj_set_style_pad_left(row, 16, 0);
     lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -385,7 +467,7 @@ static void show_popup(int contact_idx)
     lv_label_set_text_fmt(status_lbl, "%s  |  Slot %d",
         c->have_srv_dh ? "connected" : "waiting...", contact_idx);
     lv_obj_set_style_text_color(status_lbl,
-        c->have_srv_dh ? UI_COLOR_SECONDARY : UI_COLOR_TEXT_DIM, 0);
+        c->have_srv_dh ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
     lv_obj_set_style_text_font(status_lbl, UI_FONT_SM, 0);
     lv_obj_set_pos(status_lbl, 20, 44);
 
@@ -422,7 +504,7 @@ static void show_popup(int contact_idx)
     create_popup_action(actions, LV_SYMBOL_EYE_OPEN, "Contact info",
                         UI_COLOR_PRIMARY, on_popup_info);
 
-    /* Cancel */
+    /* Cancel - plain text at bottom */
     lv_obj_t *cancel = lv_label_create(popup_overlay);
     lv_label_set_text(cancel, LV_SYMBOL_LEFT " Back");
     lv_obj_set_style_text_color(cancel, UI_COLOR_TEXT_DIM, 0);
@@ -478,7 +560,7 @@ static void show_info_popup(int idx)
 
     lv_obj_t *s1 = lv_label_create(popup_overlay);
     lv_label_set_text_fmt(s1, "Status      %s", c->have_srv_dh ? "connected" : "waiting...");
-    lv_obj_set_style_text_color(s1, c->have_srv_dh ? UI_COLOR_SECONDARY : UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_color(s1, c->have_srv_dh ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
     lv_obj_set_style_text_font(s1, UI_FONT_SM, 0);
     lv_obj_set_pos(s1, 20, y); y += line_h;
 
@@ -557,9 +639,6 @@ static void on_popup_delete(lv_event_t *e)
     // 36d: Clear chat bubbles for deleted contact
     ui_chat_clear_contact(idx);
 
-    // Session 37: Delete encrypted chat history from SD
-    smp_history_delete(idx);
-
     // 36d: Reset QR cache
     ui_connect_reset();
 
@@ -594,12 +673,209 @@ static void on_popup_overlay_click(lv_event_t *e)
     popup_close();
 }
 
+/* ============== Inline Search (37d v2: text input in bottom bar) ============== */
+
+/* Case-insensitive substring match helper */
+static bool name_matches(const char *name, const char *query)
+{
+    if (!query[0]) return true;
+    size_t qlen = strlen(query);
+    for (size_t j = 0; name[j]; j++) {
+        bool match = true;
+        for (size_t k = 0; k < qlen && match; k++) {
+            char nc = name[j + k];
+            char qc = query[k];
+            if (nc >= 'A' && nc <= 'Z') nc += 32;
+            if (qc >= 'A' && qc <= 'Z') qc += 32;
+            if (nc != qc) match = false;
+        }
+        if (match) return true;
+    }
+    return false;
+}
+
+/* Hide/show contact rows based on search query */
+static void filter_contact_list(const char *query)
+{
+    if (!list_container) return;
+    uint32_t child_count = lv_obj_get_child_count(list_container);
+    for (uint32_t i = 0; i < child_count; i++) {
+        lv_obj_t *row = lv_obj_get_child(list_container, i);
+        if (row == empty_label) continue;  /* skip "no contacts" label */
+        int idx = (int)(intptr_t)lv_obj_get_user_data(row);
+        if (idx >= 0 && idx < MAX_CONTACTS && contacts_db.contacts[idx].active) {
+            if (name_matches(contacts_db.contacts[idx].name, query)) {
+                lv_obj_clear_flag(row, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+    /* Always keep empty_label hidden when contacts exist */
+    if (empty_label && count_active() > 0) {
+        lv_obj_add_flag(empty_label, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+/* Rebuild normal 3-button bottom bar */
+static void rebuild_bottom_bar(void)
+{
+    if (!bottom_bar) return;
+
+    /* Restore keyboard to chat group */
+    lv_indev_t *kb = ui_chat_get_keyboard_indev();
+    if (kb && search_group) {
+        /* Switch back: chat's group will reclaim on next screen show */
+        lv_indev_set_group(kb, NULL);
+    }
+
+    /* Cleanup search group */
+    if (search_group) {
+        lv_group_delete(search_group);
+        search_group = NULL;
+    }
+
+    search_active = false;
+    search_query[0] = '\0';
+    search_input = NULL;
+    search_x_btn = NULL;
+
+    /* Remove all children */
+    lv_obj_clean(bottom_bar);
+
+    /* --- Back Button (left) --- */
+    lv_obj_t *back_btn = lv_btn_create(bottom_bar);
+    lv_obj_set_size(back_btn, BTN_W, BAR_H);
+    lv_obj_align(back_btn, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_bg_opa(back_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(back_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(back_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(back_btn, 0, 0);
+    lv_obj_set_style_radius(back_btn, 0, 0);
+    lv_obj_set_style_shadow_width(back_btn, 0, 0);
+
+    lv_obj_t *back_lbl = lv_label_create(back_btn);
+    lv_label_set_text(back_lbl, LV_SYMBOL_LEFT " Back");
+    lv_obj_set_style_text_color(back_lbl, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(back_lbl, UI_FONT, 0);
+    lv_obj_center(back_lbl);
+    lv_obj_add_event_cb(back_btn, on_bar_back, LV_EVENT_CLICKED, NULL);
+
+    create_bar_separator(bottom_bar, BTN_W + 3);
+    /* --- Search Button (center) --- */
+    lv_obj_t *search_btn = lv_btn_create(bottom_bar);
+    lv_obj_set_size(search_btn, BTN_W, BAR_H);
+    lv_obj_align(search_btn, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_opa(search_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(search_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(search_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(search_btn, 0, 0);
+    lv_obj_set_style_radius(search_btn, 0, 0);
+    lv_obj_set_style_shadow_width(search_btn, 0, 0);
+
+    lv_obj_t *search_lbl = lv_label_create(search_btn);
+    lv_label_set_text(search_lbl, LV_SYMBOL_LIST " Search");
+    lv_obj_set_style_text_color(search_lbl, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(search_lbl, UI_FONT, 0);
+    lv_obj_center(search_lbl);
+    lv_obj_add_event_cb(search_btn, on_bar_search, LV_EVENT_CLICKED, NULL);
+
+    create_bar_separator(bottom_bar, UI_SCREEN_W - BTN_W - 3);
+    /* --- New Button (right) --- */
+    lv_obj_t *new_btn = lv_btn_create(bottom_bar);
+    lv_obj_set_size(new_btn, BTN_W, BAR_H);
+    lv_obj_align(new_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_set_style_bg_opa(new_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(new_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(new_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(new_btn, 0, 0);
+    lv_obj_set_style_radius(new_btn, 0, 0);
+    lv_obj_set_style_shadow_width(new_btn, 0, 0);
+
+    lv_obj_t *new_lbl = lv_label_create(new_btn);
+    lv_label_set_text(new_lbl, "New " LV_SYMBOL_RIGHT);
+    lv_obj_set_style_text_color(new_lbl, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(new_lbl, UI_FONT, 0);
+    lv_obj_center(new_lbl);
+    lv_obj_add_event_cb(new_btn, on_bar_new, LV_EVENT_CLICKED, NULL);
+
+    /* Un-hide all rows */
+    filter_contact_list("");
+}
+
+static void on_search_input_changed(lv_event_t *e)
+{
+    lv_obj_t *ta = lv_event_get_target(e);
+    const char *text = lv_textarea_get_text(ta);
+    if (text) {
+        strncpy(search_query, text, sizeof(search_query) - 1);
+        search_query[sizeof(search_query) - 1] = '\0';
+    }
+    filter_contact_list(search_query);
+}
+
+static void on_search_cancel(lv_event_t *e)
+{
+    (void)e;
+    rebuild_bottom_bar();
+}
+
+static void on_bar_search(lv_event_t *e)
+{
+    (void)e;
+    if (popup_overlay || !bottom_bar) return;
+    search_active = true;
+
+    /* Clear existing buttons */
+    lv_obj_clean(bottom_bar);
+
+    /* Full-width textarea — no radius, edge to edge */
+    search_input = lv_textarea_create(bottom_bar);
+    lv_obj_set_size(search_input, UI_SCREEN_W, BAR_H);
+    lv_obj_align(search_input, LV_ALIGN_CENTER, 0, 0);
+    lv_textarea_set_one_line(search_input, true);
+    lv_textarea_set_placeholder_text(search_input, "Search contacts...");
+    lv_textarea_set_max_length(search_input, 24);
+    lv_obj_set_style_bg_color(search_input, lv_color_hex(0x000818), 0);
+    lv_obj_set_style_bg_opa(search_input, LV_OPA_COVER, 0);
+    lv_obj_set_style_text_color(search_input, UI_COLOR_TEXT_WHITE, 0);
+    lv_obj_set_style_text_font(search_input, UI_FONT, 0);
+    lv_obj_set_style_border_width(search_input, 0, 0);
+    lv_obj_set_style_radius(search_input, 0, 0);
+    lv_obj_set_style_pad_left(search_input, 6, 0);
+    lv_obj_set_style_pad_right(search_input, 28, 0);  /* room for X */
+    lv_obj_add_event_cb(search_input, on_search_input_changed,
+                        LV_EVENT_VALUE_CHANGED, NULL);
+
+    /* Neon X overlaid inside textarea at right edge */
+    search_x_btn = lv_label_create(bottom_bar);
+    lv_label_set_text(search_x_btn, LV_SYMBOL_CLOSE);
+    lv_obj_set_style_text_color(search_x_btn, lv_color_hex(0xFF0040), 0);  /* neon red */
+    lv_obj_set_style_text_font(search_x_btn, UI_FONT, 0);
+    lv_obj_align(search_x_btn, LV_ALIGN_RIGHT_MID, -12, 0);
+    lv_obj_add_flag(search_x_btn, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(search_x_btn, 14);  /* bigger touch target */
+    lv_obj_add_event_cb(search_x_btn, on_search_cancel, LV_EVENT_CLICKED, NULL);
+
+    /* Create dedicated search input group + switch T-Deck keyboard to it */
+    search_group = lv_group_create();
+    lv_group_add_obj(search_group, search_input);
+    lv_group_focus_obj(search_input);
+
+    lv_indev_t *kb = ui_chat_get_keyboard_indev();
+    if (kb) {
+        lv_indev_set_group(kb, search_group);
+    }
+    lv_obj_add_state(search_input, LV_STATE_FOCUSED);
+}
+
 /* ============== Event Handlers ============== */
 
 static void on_go_back(lv_event_t *e)
 {
     (void)e;
     if (popup_overlay) { popup_close(); return; }
+    if (search_active) rebuild_bottom_bar();
     ui_manager_go_back();
 }
 
@@ -607,6 +883,7 @@ static void on_hdr_back(lv_event_t *e)
 {
     (void)e;
     if (popup_overlay) { popup_close(); return; }
+    if (search_active) rebuild_bottom_bar();
     ui_manager_go_back();
 }
 
@@ -614,6 +891,7 @@ static void on_bar_back(lv_event_t *e)
 {
     (void)e;
     if (popup_overlay) { popup_close(); return; }
+    if (search_active) rebuild_bottom_bar();
     ui_manager_go_back();
 }
 
@@ -639,16 +917,14 @@ static void on_contact_click(lv_event_t *e)
     if (popup_overlay) return;
     int idx = (int)(intptr_t)lv_event_get_user_data(e);
     if (idx >= 0 && idx < MAX_CONTACTS && contacts_db.contacts[idx].active) {
+        /* Clean up search keyboard before navigating */
+        if (search_active) rebuild_bottom_bar();
         smp_set_active_contact(idx);
         ui_chat_set_contact(contacts_db.contacts[idx].name);
-
-        // Session 37: Clear old bubbles and request history load from App Task
-        ui_chat_clear_contact(idx);
-        ui_chat_show_loading();  // Session 37b: show "Loading..." until history arrives
-        ui_chat_switch_contact(idx, contacts_db.contacts[idx].name);
         smp_request_load_history(idx);
-
         ui_manager_show_screen(UI_SCREEN_CHAT, LV_SCR_LOAD_ANIM_NONE);
+        /* show_loading called AFTER screen switch — safe for widget access */
+        ui_chat_show_loading();
     }
 }
 
@@ -668,24 +944,24 @@ lv_obj_t *ui_contacts_create(void)
     screen = lv_obj_create(NULL);
     ui_theme_apply(screen);
 
-    /* Status Bar (16px) */
+    /* Status Bar (16px) - same as chat */
     lv_obj_t *go_btn = ui_create_status_bar(screen);
     lv_obj_add_event_cb(go_btn, on_go_back, LV_EVENT_CLICKED, NULL);
 
-    /* Header (26px) */
+    /* Header (26px) - same structure as chat */
     create_contacts_header(screen);
 
     /* List area (160px) */
     list_container = lv_obj_create(screen);
     lv_obj_set_width(list_container, LV_PCT(100));
-    lv_obj_set_height(list_container, LIST_H);
+    lv_obj_set_height(list_container, SG_LIST_H);
     lv_obj_set_pos(list_container, 0, LIST_Y);
     style_black(list_container);
-    lv_obj_set_style_pad_left(list_container, 6, 0);
-    lv_obj_set_style_pad_right(list_container, 6, 0);
-    lv_obj_set_style_pad_top(list_container, 5, 0);
-    lv_obj_set_style_pad_bottom(list_container, 4, 0);
-    lv_obj_set_style_pad_row(list_container, CARD_GAP, 0);
+    lv_obj_set_style_pad_left(list_container, 0, 0);
+    lv_obj_set_style_pad_right(list_container, 0, 0);
+    lv_obj_set_style_pad_top(list_container, 4, 0);
+    lv_obj_set_style_pad_bottom(list_container, 2, 0);
+    lv_obj_set_style_pad_row(list_container, ROW_GAP, 0);
     lv_obj_set_flex_flow(list_container, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(list_container, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scrollbar_mode(list_container, LV_SCROLLBAR_MODE_OFF);
@@ -699,7 +975,7 @@ lv_obj_t *ui_contacts_create(void)
     lv_obj_set_style_pad_top(empty_label, 50, 0);
     lv_obj_set_width(empty_label, LV_PCT(100));
 
-    /* Bottom bar (36px) */
+    /* Bottom bar (36px) - plain text */
     create_bottom_bar(screen);
 
     /* Populate */
@@ -712,6 +988,11 @@ lv_obj_t *ui_contacts_create(void)
 void ui_contacts_refresh(void)
 {
     if (!list_container) return;
+
+    /* Reset search if active */
+    if (search_active && bottom_bar) {
+        rebuild_bottom_bar();
+    }
 
     /* Remove old rows (keep empty_label) */
     uint32_t cnt = lv_obj_get_child_count(list_container);
@@ -731,8 +1012,18 @@ void ui_contacts_refresh(void)
     }
     lv_obj_add_flag(empty_label, LV_OBJ_FLAG_HIDDEN);
 
+    /* Pre-fetch SD card counts BEFORE entering LVGL render loop
+     * to avoid SPI mutex deadlock with display task */
+    uint16_t totals[MAX_CONTACTS] = {0};
+    uint16_t unreads[MAX_CONTACTS] = {0};
     for (int i = 0; i < MAX_CONTACTS; i++) {
         if (!contacts_db.contacts[i].active) continue;
-        create_contact_card(list_container, i, &contacts_db.contacts[i]);
+        smp_history_get_counts(i, &totals[i], &unreads[i]);
+    }
+
+    for (int i = 0; i < MAX_CONTACTS; i++) {
+        if (!contacts_db.contacts[i].active) continue;
+        create_contact_row(list_container, i, &contacts_db.contacts[i],
+                           totals[i], unreads[i]);
     }
 }
