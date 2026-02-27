@@ -178,15 +178,18 @@
 
 /*============================================================================
  * SD CARD CONFIGURATION
+ *
+ * Session 38e/f: SD card shares SPI2_HOST with Display (physical wiring).
+ * MOSI = GPIO 41, SCLK = GPIO 40 (shared with display, not re-defined here)
+ * MISO = GPIO 38 (display doesn't use MISO, but it's on the same bus)
+ * CS   = GPIO 39 (SD card's own chip select)
+ * Previous values (35/37/36) were LoRa pins, NOT SD pins.
  *==========================================================================*/
 
 #define SD_CARD_ENABLED         true
 #define SD_CARD_MODE            "SPI"       // SPI or SDMMC
-#define SD_SPI_HOST             SPI3_HOST
-#define SD_PIN_MOSI             35
-#define SD_PIN_MISO             37
-#define SD_PIN_SCK              36
-#define SD_PIN_CS               39
+#define SD_SPI_HOST             SPI2_HOST   // Shares bus with display!
+#define SD_PIN_CS               39          // SD card chip select
 
 /*============================================================================
  * WIFI/BLUETOOTH
