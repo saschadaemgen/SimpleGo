@@ -41,6 +41,14 @@ lv_indev_t *tdeck_keyboard_register_lvgl(void);
  */
 lv_indev_t *tdeck_keyboard_get_indev(void);
 
+/* Session 38h: Keyboard Backlight */
+void tdeck_kbd_backlight_init(void);
+void tdeck_kbd_backlight_set(uint8_t brightness);  /* 0=off, 1-255 */
+void tdeck_kbd_backlight_toggle(void);
+void tdeck_kbd_backlight_notify_keypress(void);
+bool tdeck_kbd_backlight_is_on(void);
+uint8_t tdeck_kbd_backlight_get_current(void);
+
 #ifdef __cplusplus
 }
 #endif

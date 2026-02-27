@@ -21,6 +21,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 
 static const char *TAG = "KBD";
 
@@ -29,6 +30,9 @@ static const char *TAG = "KBD";
 
 static bool initialized = false;
 static lv_indev_t *indev = NULL;
+
+/* Session 38h: Forward declaration for backlight */
+void tdeck_kbd_backlight_notify_keypress(void);
 static char last_key = 0;
 static bool key_pressed = false;
 
@@ -120,6 +124,7 @@ static void kbd_read_cb(lv_indev_t *drv, lv_indev_data_t *data)
     if (c != 0) {
         uint32_t lvgl_key = ascii_to_lvgl_key(c);
         if (lvgl_key != 0) {
+            tdeck_kbd_backlight_notify_keypress();  /* Session 38h: reset auto-off timer */
             last_key = c;
             key_pressed = true;
             data->key = lvgl_key;
@@ -154,4 +159,80 @@ lv_indev_t *tdeck_keyboard_register_lvgl(void)
 lv_indev_t *tdeck_keyboard_get_indev(void)
 {
     return indev;
+}
+
+/* ===== Session 38h: Keyboard Backlight ===== */
+
+static TimerHandle_t bl_timer = NULL;
+static uint8_t bl_current = 0;
+static uint8_t bl_last_nonzero = 128;  /* Default 50% */
+
+#define BL_TIMEOUT_MS   (2 * 60 * 1000)  /* 2 minutes auto-off */
+
+static void bl_timer_cb(TimerHandle_t xTimer)
+{
+    (void)xTimer;
+    if (bl_current > 0) {
+        uint8_t data[2] = { 0x01, 0x00 };
+        i2c_master_write_to_device(I2C_PORT, KBD_ADDR, data, 2, pdMS_TO_TICKS(50));
+        bl_last_nonzero = bl_current;
+        bl_current = 0;
+        ESP_LOGI(TAG, "Backlight auto-off");
+    }
+}
+
+void tdeck_kbd_backlight_init(void)
+{
+    bl_timer = xTimerCreate("bl_off", pdMS_TO_TICKS(BL_TIMEOUT_MS),
+                            pdFALSE, NULL, bl_timer_cb);
+    if (!bl_timer) {
+        ESP_LOGE(TAG, "Backlight timer create failed");
+    }
+}
+
+void tdeck_kbd_backlight_set(uint8_t brightness)
+{
+    uint8_t data[2] = { 0x01, brightness };
+    esp_err_t err = i2c_master_write_to_device(
+        I2C_PORT, KBD_ADDR, data, 2, pdMS_TO_TICKS(50));
+    if (err == ESP_OK) {
+        if (brightness > 0 && bl_current == 0) {
+            bl_last_nonzero = brightness;
+        }
+        bl_current = brightness;
+        if (brightness > 0 && bl_timer) {
+            xTimerReset(bl_timer, pdMS_TO_TICKS(50));
+        } else if (bl_timer) {
+            xTimerStop(bl_timer, pdMS_TO_TICKS(50));
+        }
+    } else {
+        ESP_LOGW(TAG, "Backlight I2C failed: %s", esp_err_to_name(err));
+    }
+}
+
+void tdeck_kbd_backlight_toggle(void)
+{
+    if (bl_current > 0) {
+        bl_last_nonzero = bl_current;
+        tdeck_kbd_backlight_set(0);
+    } else {
+        tdeck_kbd_backlight_set(bl_last_nonzero);
+    }
+}
+
+void tdeck_kbd_backlight_notify_keypress(void)
+{
+    if (bl_current > 0 && bl_timer) {
+        xTimerReset(bl_timer, 0);
+    }
+}
+
+bool tdeck_kbd_backlight_is_on(void)
+{
+    return bl_current > 0;
+}
+
+uint8_t tdeck_kbd_backlight_get_current(void)
+{
+    return bl_current;
 }

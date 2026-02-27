@@ -499,6 +499,9 @@ void app_main(void) {
                 ESP_LOGW(TAG, "Keyboard init failed - continuing without keyboard");
             }
 
+            // Session 38h: Keyboard backlight init
+            tdeck_kbd_backlight_init();
+
             ESP_LOGI(TAG, "Initializing UI...");
 
             // Session 37c: Init RAM font copies with umlaut fallback
