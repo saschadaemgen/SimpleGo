@@ -96,7 +96,7 @@ static esp_err_t spi_bus_init(void)
         .miso_io_num = TDECK_SPI_MISO,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = TFT_WIDTH * TFT_HEIGHT * sizeof(uint16_t),
+        .max_transfer_sz = 320 * 20 * sizeof(uint16_t),  /* Session 38d: match LVGL 20-line buffer, not full screen */
     };
     return spi_bus_initialize(TDECK_SPI_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
 }
@@ -110,7 +110,7 @@ static esp_err_t panel_init(void)
         .lcd_cmd_bits = 8,
         .lcd_param_bits = 8,
         .spi_mode = 0,
-        .trans_queue_depth = 10,
+        .trans_queue_depth = 2,  /* Session 38d: matches LVGL double-buffer */
     };
     esp_err_t ret = esp_lcd_new_panel_io_spi(TDECK_SPI_HOST, &io_cfg, &io_handle);
     if (ret != ESP_OK) return ret;
@@ -137,11 +137,12 @@ static esp_err_t panel_init(void)
 
 static void clear_screen_black(void)
 {
-    uint16_t *black_buf = heap_caps_malloc(320 * 40 * sizeof(uint16_t), MALLOC_CAP_DMA);
+    /* Session 38d: 20-line chunks to match reduced max_transfer_sz */
+    uint16_t *black_buf = heap_caps_malloc(320 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
     if (black_buf) {
-        memset(black_buf, 0x00, 320 * 40 * sizeof(uint16_t));
-        for (int y = 0; y < 240; y += 40) {
-            esp_lcd_panel_draw_bitmap(panel_handle, 0, y, 320, y + 40, black_buf);
+        memset(black_buf, 0x00, 320 * 20 * sizeof(uint16_t));
+        for (int y = 0; y < 240; y += 20) {
+            esp_lcd_panel_draw_bitmap(panel_handle, 0, y, 320, y + 20, black_buf);
         }
         free(black_buf);
     }
@@ -216,4 +217,10 @@ void tdeck_display_test(void)
 esp_lcd_panel_handle_t tdeck_display_get_panel(void)
 {
     return panel_handle;
+}
+
+/* Session 38f: expose io_handle for DMA completion callback registration */
+esp_lcd_panel_io_handle_t tdeck_display_get_io_handle(void)
+{
+    return io_handle;
 }
