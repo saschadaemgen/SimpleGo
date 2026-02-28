@@ -93,6 +93,11 @@ uint32_t ui_chat_get_last_seq(void);
  */
 void ui_chat_clear_contact(int contact_idx);
 
+/**
+ * @brief 38j: Update settings gear icon color (kbd backlight on/off)
+ */
+void ui_chat_update_settings_icon(void);
+
 #ifdef __cplusplus
 }
 #endif

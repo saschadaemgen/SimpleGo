@@ -27,6 +27,7 @@
 #include "ui_chat.h"
 #include "ui_theme.h"
 #include "ui_manager.h"
+#include "tdeck_keyboard.h"
 #include "esp_log.h"
 #include <string.h>
 #include <time.h>
@@ -80,6 +81,7 @@ static lv_obj_t *msg_container = NULL;
 static lv_obj_t *input_area    = NULL;
 static lv_group_t *input_group = NULL;
 static lv_obj_t *s_loading_box = NULL;   // Session 37b: "Loading..." indicator
+static lv_obj_t *s_settings_icon = NULL; // Session 38j: Settings button in header
 
 static ui_chat_send_cb_t send_cb    = NULL;
 static lv_indev_t *pending_kb_indev = NULL;
@@ -305,6 +307,23 @@ static lv_obj_t *create_action_btn(lv_obj_t *parent, const char *symbol,
 
 /* ============== Chat Header ============== */
 
+/* Session 38j: Settings button handlers */
+static void on_settings_short(lv_event_t *e)
+{
+    (void)e;
+    tdeck_kbd_backlight_toggle();
+    if (s_settings_icon) {
+        lv_obj_set_style_text_color(s_settings_icon,
+            tdeck_kbd_backlight_is_on() ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
+    }
+}
+
+static void on_settings_long(lv_event_t *e)
+{
+    (void)e;
+    ui_manager_show_screen(UI_SCREEN_SETTINGS, LV_SCR_LOAD_ANIM_NONE);
+}
+
 static lv_obj_t *create_chat_header(lv_obj_t *parent)
 {
     lv_obj_t *hdr = lv_obj_create(parent);
@@ -331,14 +350,35 @@ static lv_obj_t *create_chat_header(lv_obj_t *parent)
     lv_obj_center(arrow);
     lv_obj_add_event_cb(back_btn, on_back, LV_EVENT_CLICKED, NULL);
 
-    /* Contact name — placeholder until data binding */
+    /* Contact name */
     lv_obj_t *name = lv_label_create(hdr);
     lv_label_set_text(name, "Alice");
     lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(name, 180);
+    lv_obj_set_width(name, 148);  /* Session 38j: narrower for settings button */
     lv_obj_set_style_text_color(name, UI_COLOR_TEXT_WHITE, 0);
     lv_obj_set_style_text_font(name, UI_FONT, 0);
     lv_obj_align(name, LV_ALIGN_LEFT_MID, 28, 0);
+
+    /* Session 38j: Settings gear button (short=toggle kbd, long=settings) */
+    lv_obj_t *set_btn = lv_btn_create(hdr);
+    lv_obj_set_size(set_btn, 28, HDR_H);
+    lv_obj_set_style_bg_opa(set_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(set_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(set_btn, UI_COLOR_ACCENT, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(set_btn, 0, 0);
+    lv_obj_set_style_radius(set_btn, 0, 0);
+    lv_obj_set_style_shadow_width(set_btn, 0, 0);
+    lv_obj_set_style_pad_all(set_btn, 0, 0);
+    lv_obj_align(set_btn, LV_ALIGN_RIGHT_MID, -104, 0);
+
+    s_settings_icon = lv_label_create(set_btn);
+    lv_label_set_text(s_settings_icon, LV_SYMBOL_SETTINGS);
+    lv_obj_set_style_text_color(s_settings_icon,
+        tdeck_kbd_backlight_is_on() ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(s_settings_icon, UI_FONT, 0);
+    lv_obj_center(s_settings_icon);
+    lv_obj_add_event_cb(set_btn, on_settings_short, LV_EVENT_SHORT_CLICKED, NULL);
+    lv_obj_add_event_cb(set_btn, on_settings_long, LV_EVENT_LONG_PRESSED, NULL);
 
     lv_obj_t *enc = lv_label_create(hdr);
     lv_label_set_text(enc, "Post-Quantum E2E");
@@ -919,5 +959,15 @@ void ui_chat_hide_loading(void)
     if (s_loading_box) {
         lv_obj_delete(s_loading_box);  // deletes child label too
         s_loading_box = NULL;
+    }
+}
+
+/* ============== Session 38j: Settings Icon Update ============== */
+
+void ui_chat_update_settings_icon(void)
+{
+    if (s_settings_icon) {
+        lv_obj_set_style_text_color(s_settings_icon,
+            tdeck_kbd_backlight_is_on() ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
     }
 }
