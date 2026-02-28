@@ -69,6 +69,7 @@
 
 // T-Deck Display Driver
 #include "tdeck_display.h"
+#include "tdeck_backlight.h"
 #include "tdeck_lvgl.h"
 #include "tdeck_touch.h"
 #include "tdeck_keyboard.h"  // Auftrag 50d: T-Deck keyboard
@@ -499,9 +500,6 @@ void app_main(void) {
                 ESP_LOGW(TAG, "Keyboard init failed - continuing without keyboard");
             }
 
-            // Session 38h: Keyboard backlight init
-            tdeck_kbd_backlight_init();
-
             ESP_LOGI(TAG, "Initializing UI...");
 
             // Session 37c: Init RAM font copies with umlaut fallback
@@ -522,7 +520,7 @@ void app_main(void) {
             ESP_LOGI(TAG, "Chat UI bridge active (50ms poll)");
 
             vTaskDelay(pdMS_TO_TICKS(50));
-            tdeck_display_backlight(100);
+            tdeck_backlight_set(8);            /* Session 38j: 50% = 8/16 */
         }
     }
 
