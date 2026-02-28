@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ui_manager.c
  * @brief Screen Manager - Manual Fade Control
  */

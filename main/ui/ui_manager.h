@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ui_manager.h
  * @brief UI Screen Manager - Controls screen navigation
  * 
