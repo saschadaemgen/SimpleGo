@@ -12,7 +12,7 @@
 #include "esp_heap_caps.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
-#include "driver/ledc.h"
+#include "tdeck_backlight.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
@@ -26,16 +26,11 @@ static const char *TAG = "TDECK_DISP";
 #define TDECK_SPI_SCLK      GPIO_NUM_40
 #define TDECK_TFT_CS        GPIO_NUM_12
 #define TDECK_TFT_DC        GPIO_NUM_11
-#define TDECK_TFT_BL        GPIO_NUM_42
 #define TDECK_TFT_RST       GPIO_NUM_NC
 
 #define TFT_WIDTH           320
 #define TFT_HEIGHT          240
 #define SPI_FREQ_HZ         (40 * 1000 * 1000)
-
-#define BL_LEDC_TIMER       LEDC_TIMER_0
-#define BL_LEDC_CHANNEL     LEDC_CHANNEL_0
-#define BL_LEDC_SPEED       LEDC_LOW_SPEED_MODE
 
 static esp_lcd_panel_handle_t panel_handle = NULL;
 static esp_lcd_panel_io_handle_t io_handle = NULL;
@@ -54,38 +49,6 @@ static esp_err_t power_on(void)
     gpio_set_level(TDECK_POWER_ON, 1);
     vTaskDelay(pdMS_TO_TICKS(100));
     return ESP_OK;
-}
-
-static esp_err_t backlight_init(void)
-{
-    ledc_timer_config_t timer_cfg = {
-        .speed_mode = BL_LEDC_SPEED,
-        .timer_num = BL_LEDC_TIMER,
-        .duty_resolution = LEDC_TIMER_8_BIT,
-        .freq_hz = 5000,
-        .clk_cfg = LEDC_AUTO_CLK,
-    };
-    ESP_ERROR_CHECK(ledc_timer_config(&timer_cfg));
-
-    ledc_channel_config_t ch_cfg = {
-        .speed_mode = BL_LEDC_SPEED,
-        .channel = BL_LEDC_CHANNEL,
-        .timer_sel = BL_LEDC_TIMER,
-        .intr_type = LEDC_INTR_DISABLE,
-        .gpio_num = TDECK_TFT_BL,
-        .duty = 0,  // START WITH BACKLIGHT OFF!
-        .hpoint = 0,
-    };
-    ESP_ERROR_CHECK(ledc_channel_config(&ch_cfg));
-    return ESP_OK;
-}
-
-void tdeck_display_backlight(uint8_t percent)
-{
-    if (percent > 100) percent = 100;
-    uint32_t duty = (percent * 255) / 100;
-    ledc_set_duty(BL_LEDC_SPEED, BL_LEDC_CHANNEL, duty);
-    ledc_update_duty(BL_LEDC_SPEED, BL_LEDC_CHANNEL);
 }
 
 static esp_err_t spi_bus_init(void)
@@ -162,9 +125,8 @@ esp_err_t tdeck_display_init(void)
     ret = power_on();
     if (ret != ESP_OK) return ret;
 
-    // 2. Backlight init BUT KEEP OFF
-    ret = backlight_init();
-    if (ret != ESP_OK) return ret;
+    // 2. Display backlight init (pulse-counting GPIO 42, starts OFF)
+    tdeck_backlight_init();
 
     // 3. SPI bus
     ret = spi_bus_init();
