@@ -4,11 +4,27 @@
 
 ## Constants, Wire Formats, Verified Values
 
-**Updated: 2026-02-27 - Session 37 (💾 Encrypted Chat History: SD Card, SPI Bus Wars, Progressive Rendering)**
+**Updated: 2026-03-01 - Session 38 (🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause)**
 
 ---
 
 ## Current Status
+
+```
+SESSION 38 - 🔍 THE SPI2 BUS HUNT
+====================================
+
+Display backlight (GPIO 42, 16 levels)                  ✅
+Keyboard backlight (I2C 0x55, auto-off)                 ✅
+Settings screen with brightness sliders                  ✅
+WiFi/LWIP → PSRAM (56KB freed)                          ✅
+ROOT CAUSE: SPI2 bus sharing (display + SD)             🔍
+SD removed = 100% stable for hours                       ✅
+LVGL heap = separate 64KB pool (~8 bubbles)             🔍
+MAX_VISIBLE_BUBBLES sliding window                       ✅
+
+10 commits, 2 bugs (#60-#61), 5 lessons, 209 total! 🔍
+```
 
 ```
 SESSION 37 - 💾 ENCRYPTED CHAT HISTORY
@@ -2481,3 +2497,164 @@ Commits:
 *Status: 💾 Encrypted Chat History — SD Card, SPI Bus Wars, Progressive Rendering*  
 *13 Milestones Achieved!*  
 *Next: Session 38 — German Umlauts, Unread Badges, Server DEL*
+
+---
+
+## Section 36: Session 38 — The SPI2 Bus Hunt (2026-02-28 to 2026-03-01)
+
+### 36.1 Display Backlight (GPIO 42)
+
+```
+Control: Pulse-counting mechanism (16 brightness levels)
+GPIO: 42
+Bus: NONE (pure GPIO, independent from SPI)
+Boot: Starts at 50% brightness
+Interface: Settings screen slider + preset buttons
+
+Completely independent from SPI2 — NOT related to freeze bug.
+```
+
+### 36.2 Keyboard Backlight (I2C)
+
+```
+Control: I2C write to address 0x55
+Bus: I2C (independent from SPI)
+Feature: Auto-off timer
+Interface: Settings screen slider
+
+Completely independent from SPI2 — NOT related to freeze bug.
+```
+
+### 36.3 LVGL Memory Architecture (CRITICAL DISCOVERY)
+
+```
+TWO SEPARATE HEAPS:
+
+  ESP32 System Heap:
+    heap_caps_get_free_size(MALLOC_CAP_DEFAULT)
+    Used by: FreeRTOS, mbedTLS, WiFi, application code
+    Source: Internal SRAM + PSRAM
+
+  LVGL Pool:
+    LV_MEM_SIZE = 64KB (configured in sdkconfig)
+    Used by: ALL LVGL objects (buttons, labels, containers, bubbles)
+    Source: Allocated from ESP32 heap at LVGL init, then managed internally
+
+  CRITICAL: heap_caps_get_free_size() tells you NOTHING about LVGL pool!
+
+  64KB LVGL pool supports approximately:
+    ~8 chat bubbles (with labels, containers, style objects)
+    More = pool exhaustion = freeze or crash
+
+  Solution: MAX_VISIBLE_BUBBLES sliding window
+    #define MAX_VISIBLE_BUBBLES 5  // temporary, target 8
+    Only N most recent bubbles exist as LVGL objects
+    Older messages loaded from SD on scroll-up
+```
+
+### 36.4 SPI2 Bus Contention — Root Cause Analysis
+
+```
+T-Deck Plus Hardware:
+  SPI2_HOST shared by:
+    - ST7789 display (LVGL driver) — Core 1
+    - SD card (FATFS via SPI) — App Task
+
+S37 Fix: LVGL mutex serialization
+  Prevented: crashes, tearing
+  Did NOT prevent: display freeze (blocking wait too long)
+
+S38 Discovery: SD card read blocks SPI2 for too long
+  LVGL's lv_timer_handler() waits for SPI2 → visual freeze
+  Main loop continues (heartbeat logs print), but display dead
+
+Proof: Physical elimination test
+  SD removed → device runs HOURS, 100% stable, zero issues
+  SD inserted → freeze returns on history load
+
+Fix (Session 39): Move SD to SPI3
+  T-Deck Plus has SPI3 available
+  Separate buses = zero contention = parallel operation
+```
+
+### 36.5 Eight Hypotheses Chronicle
+
+```
+1. ❌ DMA Timeout         → Freeze not in DMA wait path
+2. ❌ Memory Crash        → ESP32 heap was never the problem
+3. ❌ DMA Callback Revert → Freeze identical without callback
+4. ❌ bubble_draw_cb      → Freeze identical without custom callbacks
+5. ❌ LVGL Pool 64→192KB  → WiFi init crashes (no internal SRAM)
+6. ❌ LVGL Pool 64→96KB   → Freeze continues unchanged
+7. ❌ trans_queue_depth    → 2→1 = OOM + display stripes
+8. ✅ SD Card Removed     → STABLE → SPI2 bus sharing = root cause
+
+Key Lesson: Correlation ≠ Causation
+  Backlight commits were temporally correlated but NOT causal.
+  Bug existed since S37 (SD introduction), masked by low message count.
+```
+
+### 36.6 SPI Architecture Constraints
+
+```
+trans_queue_depth:
+  MUST stay at 2 (hard constraint)
+  Setting to 1 → OOM errors + display artifacts (stripes)
+
+DMA vs Synchronous:
+  Async DMA callback: added complexity, didn't solve contention
+  Synchronous draw_bitmap() + flush_ready(): simpler, more stable
+
+WiFi/LWIP → PSRAM:
+  Buffers moved from internal SRAM to PSRAM
+  56KB internal SRAM freed
+  No performance impact
+```
+
+### 36.7 Device State (End of Session 38)
+
+```
+STABLE (without SD):
+  ✅ Cryptography (Double Ratchet, X3DH, AES)
+  ✅ Network (TLS 1.3, SMP, PING/PONG)
+  ✅ Multi-Contact (5 contacts active)
+  ✅ Display Backlight (GPIO 42, 16 levels)
+  ✅ Keyboard Backlight (I2C 0x55, auto-off)
+  ✅ Settings Screen
+  ✅ Chat UI (without SD)
+
+BROKEN (with SD):
+  ❌ Chat History load → display freeze (SPI2 contention)
+  ❌ SD card general → SPI2 conflict with display
+
+Uncommitted:
+  - MAX_VISIBLE_BUBBLES 5 in main.c
+  - Synchronous SPI in tdeck_lvgl.c
+  (Waiting for S39 SPI3 fix to commit together)
+```
+
+### 36.8 Files Changed (Session 38)
+
+```
+Commits (10):
+  feat(core): integrate backlight initialization in boot sequence
+  feat(ui): add gear button in chat header for backlight control
+  feat(ui): add settings screen with display and keyboard brightness
+  feat(hal): add display backlight control via pulse-counting
+  feat(hal): add dedicated keyboard backlight module
+  docs(config): correct SD card pin definitions for T-Deck Plus
+  perf(config): move WiFi/LWIP buffers to PSRAM, free 56KB internal SRAM
+  feat(keyboard): add backlight control with auto-off timer
+  fix(display): sync DMA completion before mutex release, add OOM retry
+  perf(display): reduce SPI transfer size and queue depth
+
+Last commit hash: f0616e4
+```
+
+---
+
+*Quick Reference v32.0*  
+*Last updated: March 1, 2026 - Session 38*  
+*Status: 🔍 The SPI2 Bus Hunt — Eight Hypotheses, One Root Cause*  
+*14 Milestones Achieved!*  
+*Next: Session 39 — SD on SPI3, Sliding Window History, WiFi Manager*

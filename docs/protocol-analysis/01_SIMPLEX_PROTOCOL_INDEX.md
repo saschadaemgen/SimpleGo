@@ -4,11 +4,26 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation  
 **Version:** v0.1.18-alpha  
-**Last Updated:** 2026-02-27 (Session 37 — 💾 Encrypted Chat History: SD Card, SPI Bus Wars, Progressive Rendering)
+**Last Updated:** 2026-03-01 (Session 38 — 🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause)
 
 ---
 
-## 💾 LATEST: Encrypted Chat History (Session 37)
+## 🔍 LATEST: The SPI2 Bus Hunt (Session 38)
+
+On February 28 - March 1, 2026, Session 38 added backlight control and identified the display freeze root cause:
+
+- **Display Backlight:** ✅ GPIO 42 pulse-counting (16 levels)
+- **Keyboard Backlight:** ✅ I2C 0x55 with auto-off timer
+- **Settings Screen:** ✅ Brightness sliders + gear button
+- **WiFi/LWIP → PSRAM:** ✅ 56KB internal SRAM freed
+- **Root Cause Found:** SPI2 bus sharing (display + SD card)
+- **8 Hypotheses Tested:** 7 wrong, 1 correct (SD removal = stable!)
+- **LVGL Heap Discovery:** Separate 64KB pool, ~8 bubbles max
+
+**Bugs: 61 total (2 new in S38: #60-#61)**
+**Lessons Learned:** 209 total (5 new in S38)
+
+## 💾 PREVIOUS: Encrypted Chat History (Session 37)
 
 On February 25-27, 2026, Session 37 implemented encrypted chat persistence:
 
@@ -55,7 +70,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~30,000+ lines, 625+ sections) is split into 34 parts:
+The complete protocol analysis (~31,000+ lines, 640+ sections) is split into 35 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -93,7 +108,8 @@ The complete protocol analysis (~30,000+ lines, 625+ sections) is split into 34 
 | **32** | [**34_PART32_SESSION_35.md**](34_PART32_SESSION_35.md) | **~304** | **🏁 Multi-Contact Victory — All Planned Bugs Fixed** |
 | **33** | [**35_PART33_SESSION_36.md**](35_PART33_SESSION_36.md) | **~389** | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | **34** | [**36_PART34_SESSION_37.md**](36_PART34_SESSION_37.md) | **~332** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
-| **Total** | | **~30,000+** | **625+ Sections** |
+| **35** | [**37_PART35_SESSION_38.md**](37_PART35_SESSION_38.md) | **~324** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** |
+| **Total** | | **~31,000+** | **640+ Sections** |
 
 ---
 
@@ -101,9 +117,9 @@ The complete protocol analysis (~30,000+ lines, 625+ sections) is split into 34 
 
 | Document | Lines | Description |
 |----------|-------|-------------|
-| [README.md](README.md) | ~1,250 | Project overview and navigation |
-| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,200 | All 59 bugs documented, 204 lessons |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2,500 | Constants, wire formats, verified values |
+| [README.md](README.md) | ~1,300 | Project overview and navigation |
+| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,300 | All 61 bugs documented, 209 lessons |
+| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2,600 | Constants, wire formats, verified values |
 
 ---
 
@@ -145,6 +161,7 @@ The complete protocol analysis (~30,000+ lines, 625+ sections) is split into 34 
 | **35** | **Feb 24, 2026** | **VICTORY** | **🏁 All Planned Bugs Fixed — Chat Filter Working!** |
 | **36** | **Feb 25, 2026** | **LIFECYCLE** | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | **37** | **Feb 25-27, 2026** | **HISTORY** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
+| **38** | **Feb 28 - Mar 1, 2026** | **SPI HUNT** | **🔍 Eight Hypotheses, One Root Cause** |
 
 ---
 
@@ -214,6 +231,14 @@ The complete protocol analysis (~30,000+ lines, 625+ sections) is split into 34 
 - **Chunked Rendering (3 bubbles/tick)** 💾
 - **Contact List Redesign (28px, search, bottom bar)** 💾
 - **MILESTONE 13: Encrypted Chat History** 💾
+- **Display Backlight Control (GPIO 42, 16 levels)** 🔍
+- **Keyboard Backlight Control (I2C 0x55, auto-off)** 🔍
+- **Settings Screen with Brightness Sliders** 🔍
+- **WiFi/LWIP Buffers to PSRAM (56KB freed)** 🔍
+- **SPI2 Root Cause Identified (8 hypotheses, SD removal = stable)** 🔍
+- **LVGL Heap Discovery (64KB separate pool, ~8 bubbles)** 🔍
+- **MAX_VISIBLE_BUBBLES Sliding Window** 🔍
+- **MILESTONE 14: Backlight Control + SPI Root Cause** 🔍
 
 ### ✅ Session 23: The 7-Step Handshake
 ```
@@ -235,7 +260,7 @@ The complete protocol analysis (~30,000+ lines, 625+ sections) is split into 34 
 
 ## Bug Summary
 
-**Total bugs found and fixed: 59**
+**Total bugs found and fixed: 61** (59 fixed, #60 identified for S39, #61 temp fix)
 
 | Category | Count | Sessions |
 |----------|-------|----------|
@@ -478,19 +503,18 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 38)
+## Next Steps (Session 39)
 
-### Phase 1: UI Polish
+### Phase 1: SPI Root Cause Fix
 ```
-P0: German umlaut fallback fonts (LVGL, task prepared)
-P1: Contact list enhancements (unread badge, message count)
+P0: SD card on SPI3 bus (display freeze root cause fix)
+P1: Sliding window chat history (8 visible, load older on scroll)
 ```
 
-### Phase 2: Remaining Issues
+### Phase 2: User Experience
 ```
-P2: Server DEL command on contact delete
-P3: First message invisible on fresh contact
-P4: Display freeze investigation (observed twice)
+P2: WiFi Manager (user-friendly network configuration)
+P3: German umlaut fallback fonts (LVGL, task prepared)
 ```
 
 ---
@@ -513,7 +537,8 @@ P4: Display freeze investigation (observed twice)
 | **11** | **🏁 Multi-Contact Chat Filter** | **2026-02-24** | **35** |
 | **12** | **🔄 Contact Lifecycle** | **2026-02-25** | **36** |
 | **13** | **💾 Encrypted Chat History** | **2026-02-27** | **37** |
+| **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
 
 ---
 
-*Index updated: 2026-02-27 Session 37 — 💾 Encrypted Chat History: SD Card, SPI Bus Wars, Progressive Rendering*
+*Index updated: 2026-03-01 Session 38 — 🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause*

@@ -2,7 +2,7 @@
 
 # Bug Tracker
 
-## Complete Documentation of All 59 Bugs
+## Complete Documentation of All 61 Bugs
 
 This document provides detailed documentation of all bugs discovered during SimpleGo development, including the incorrect code, correct code, and root cause analysis.
 
@@ -52,7 +52,7 @@ This document provides detailed documentation of all bugs discovered during Simp
 | **38** | **Receipt rcptInfo=Word32** | **25** | **FIXED** |
 | **39** | **NULL contact Reply Queue** | **25** | **FIXED** |
 
-**Total: 59 bugs documented, 59 FIXED**
+**Total: 61 bugs documented, 59 FIXED, 1 identified (S39), 1 temp fix**
 
 ---
 
@@ -2155,3 +2155,156 @@ Storage Path: /sdcard/simplego/msgs/chat_XX.bin (one file per contact)
 *Total bugs documented: 59 (all FIXED) + Bug E*  
 *204 lessons learned!*  
 *💾 Session 37: Encrypted Chat History — SD Card, SPI Bus Wars, Progressive Rendering*
+
+---
+
+## Session 38 — The SPI2 Bus Hunt (2026-02-28 to 2026-03-01)
+
+### 🔍 Eight Hypotheses, One Root Cause
+
+**2 bugs found across 2 days of intensive debugging.** Added display and keyboard backlight, moved WiFi/LWIP to PSRAM, then spent two days hunting the display freeze. Eight hypotheses tested systematically — seven wrong, one correct. SD card physically removed proved SPI2 bus sharing is the root cause.
+
+### Bug #60: Display Freeze on SD Card Access (SPI2 Bus Contention)
+
+```
+Symptoms:
+  Display freezes completely when loading chat history from SD card
+  Image frozen, main loop continues (heartbeat logs still printing)
+  No crash, no assert, just visual freeze
+  Always in chat with the most messages
+
+Root Cause:
+  Display (ST7789) and SD card share the SAME SPI2 bus on T-Deck Plus.
+  When SD card is read, SPI2 bus blocked → display rendering stalls.
+  LVGL hangs in lv_timer_handler() waiting for SPI2.
+  S37 mutex fix prevented crashes/tearing but contention remains:
+  one bus, two masters, blocking serialization.
+
+Proof:
+  SD card physically removed → device runs HOURS, 100% stable
+  SD card reinserted → freeze returns immediately on history load
+
+Eight Hypotheses Tested:
+  1. ❌ DMA Timeout → Freeze not in DMA wait path
+  2. ❌ Memory Crash → ESP32 heap was never the problem
+  3. ❌ DMA Callback Revert → Freeze identical without callback
+  4. ❌ bubble_draw_cb → Freeze identical without custom callbacks
+  5. ❌ LVGL Pool 64→192KB → WiFi init crashes (no internal SRAM left)
+  6. ❌ LVGL Pool 64→96KB → Freeze continues unchanged
+  7. ❌ trans_queue_depth 2→1 → Display artifacts (stripes) + OOM
+  8. ✅ SD Card Removed → STABLE → SPI2 bus sharing IS the root cause
+
+Fix Plan (Session 39):
+  Move SD card to SPI3 bus. T-Deck Plus has SPI3 available.
+  Separate buses = zero contention = parallel operation.
+
+Status: ROOT CAUSE IDENTIFIED — fix scheduled for Session 39
+```
+
+### Bug #61: LVGL Heap Exhaustion with Many Chat Bubbles
+
+```
+Symptom:
+  Display freeze or crash when too many chat bubbles displayed.
+  Always in chat with the most messages (same pattern as Bug #60).
+
+Root Cause:
+  LVGL has its OWN memory pool (LV_MEM_SIZE=64KB in sdkconfig).
+  This is COMPLETELY SEPARATE from ESP32's system heap.
+  heap_caps_get_free_size() shows ESP32 heap, NOT LVGL pool!
+  64KB supports approximately 8 chat bubbles.
+  More bubbles = pool exhaustion = freeze or crash.
+
+Fix:
+  MAX_VISIBLE_BUBBLES = 5 (temporary, target 8)
+  Sliding window: only N most recent bubbles exist as LVGL objects
+  Older messages loaded from SD history on scroll-up
+
+Status: TEMPORARY FIX — final sliding window in Session 39
+```
+
+### Features Implemented (Session 38)
+
+```
+1. Keyboard Backlight
+   - I2C address 0x55
+   - Auto-off timer
+   - Independent from SPI bus (I2C)
+
+2. Display Backlight
+   - GPIO 42 with pulse-counting (16 brightness levels)
+   - Independent from SPI bus (pure GPIO)
+   - Starts at 50% on boot
+
+3. Settings Screen
+   - Brightness sliders for display and keyboard
+   - Preset buttons for quick adjustment
+   - Gear button in chat header for quick access
+
+4. WiFi/LWIP → PSRAM
+   - WiFi and LWIP buffers moved from internal SRAM to PSRAM
+   - 56KB internal SRAM freed
+   - No performance impact observed
+```
+
+### SPI Architecture Decisions
+
+```
+Synchronous SPI (stable):
+  DMA callback mechanism (S38f) identified as adding complexity
+  without solving fundamental SPI2 contention. Removed.
+  Replaced with synchronous draw_bitmap() + flush_ready().
+
+trans_queue_depth:
+  MUST remain at 2. Setting to 1 causes OOM + display stripes.
+  This is a hard constraint of the ESP-IDF SPI driver.
+
+Uncommitted changes (waiting for S39 SPI3 fix):
+  - main/main.c: MAX_VISIBLE_BUBBLES 5
+  - tdeck_lvgl.c: Synchronous SPI (DMA callback removed)
+```
+
+### Key Insight: Correlation ≠ Causation
+
+```
+The display freeze bug existed since Session 37 (SD card introduction).
+It was never triggered earlier because there weren't enough chat
+messages to cause significant SD read time.
+
+The backlight commits (Session 38) were temporally correlated but
+NOT causally related. Backlight uses I2C (keyboard) and GPIO (display),
+both completely independent from SPI2.
+
+Classic case: Correlation ≠ Causation.
+```
+
+### Commits (Session 38)
+
+```
+f0616e4 feat(core): integrate backlight initialization in boot sequence
+0cfc8ca feat(ui): add gear button in chat header for backlight control
+a5995ec feat(ui): add settings screen with display and keyboard brightness
+1179c74 feat(hal): add display backlight control via pulse-counting
+fa4d40a feat(hal): add dedicated keyboard backlight module
+91b380f docs(config): correct SD card pin definitions for T-Deck Plus
+381122c perf(config): move WiFi/LWIP buffers to PSRAM, free 56KB internal SRAM
+108b4c8 feat(keyboard): add backlight control with auto-off timer
+25ad16f fix(display): sync DMA completion before mutex release, add OOM retry
+6f1436d perf(display): reduce SPI transfer size and queue depth
+```
+
+### New Lessons Learned (Session 38)
+
+205. **SPI2 bus sharing is the root cause of display freeze** - Not DMA, not memory, not LVGL pool. SD card removed = device 100% stable for hours. Correlation (backlight commits) ≠ Causation (SPI2 bus). Physical elimination test is definitive (Session 38)
+206. **LVGL has its own heap (LV_MEM_SIZE), separate from ESP32 heap** - heap_caps_get_free_size() does NOT show LVGL pool status. LV_MEM_SIZE=64KB in sdkconfig supports ~8 chat bubbles. Monitoring ESP32 heap tells you NOTHING about LVGL memory (Session 38)
+207. **trans_queue_depth MUST stay at 2** - Setting to 1 causes OOM errors and display artifacts (stripes). Synchronous draw_bitmap() + flush_ready() is more stable than async DMA callback. Hard constraint of ESP-IDF SPI driver (Session 38)
+208. **When multiple hypotheses fail, remove the suspected hardware** - Physical elimination test beats software debugging. 8 hypotheses tested in software, none conclusive. SD card physically removed = instant answer. Always try the simplest physical test (Session 38)
+209. **WiFi/LWIP buffers can safely run from PSRAM, freeing ~56KB internal SRAM** - No performance impact observed. WiFi and LWIP are not latency-critical enough to require internal SRAM. Good optimization for memory-constrained ESP32-S3 projects (Session 38)
+
+---
+
+*Bug Tracker v33.0*  
+*Last updated: March 1, 2026 - Session 38*  
+*Total bugs documented: 61 (59 FIXED, 1 identified for S39, 1 temp fix) + Bug E*  
+*209 lessons learned!*  
+*🔍 Session 38: The SPI2 Bus Hunt — Eight Hypotheses, One Root Cause*

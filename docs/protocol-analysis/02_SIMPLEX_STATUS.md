@@ -1,14 +1,44 @@
 ![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
 
-# SimpleGo - Current Status (2026-02-27)
+# SimpleGo - Current Status (2026-03-01)
 
 **Project:** Native SimpleX SMP Client for ESP32  
 **Version:** v0.1.17-alpha  
-**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (625+ sections, 34 parts)
+**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (640+ sections, 35 parts)
 
 ---
 
-## 💾 LATEST: Encrypted Chat History (2026-02-27 Session 37)
+## 🔍 LATEST: The SPI2 Bus Hunt (2026-03-01 Session 38)
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+
+  🔍🔍🔍 THE SPI2 BUS HUNT: EIGHT HYPOTHESES, ONE ROOT CAUSE 🔍🔍🔍
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                                                                         │
+  │   Display backlight (GPIO 42, 16 levels)                    ✅        │
+  │   Keyboard backlight (I2C 0x55, auto-off)                   ✅        │
+  │   Settings screen with brightness sliders                   ✅        │
+  │   WiFi/LWIP buffers → PSRAM (56KB freed)                    ✅        │
+  │   ROOT CAUSE: SPI2 bus sharing (display + SD)               🔍        │
+  │   LVGL heap = separate 64KB pool (~8 bubbles)               🔍        │
+  │   MAX_VISIBLE_BUBBLES sliding window                        ✅        │
+  │   SD card removed → device 100% stable for hours            ✅        │
+  │                                                                         │
+  │   10 commits, 2 bugs (#60-#61), 5 lessons (#205-#209)                 │
+  │   8 hypotheses tested, 7 wrong, 1 correct                             │
+  │                                                                         │
+  │   Date: February 28 - March 1, 2026                                    │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+---
+
+## 💾 PREVIOUS: Encrypted Chat History (2026-02-27 Session 37)
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -642,9 +672,9 @@ Bytes 80-95: HEADER_IV (iv2)   ← FOR HEADER!
 | `01_SIMPLEX_PROTOCOL_INDEX.md` | Navigation index |
 | `02_SIMPLEX_STATUS.md` | This file - quick status |
 | `README.md` | Project overview |
-| `BUG_TRACKER.md` | All 59 bugs, 204 lessons |
+| `BUG_TRACKER.md` | All 61 bugs, 209 lessons |
 | `QUICK_REFERENCE.md` | Constants, wire formats |
-| `03-36_PART*.md` | Sessions 1-37 documentation |
+| `03-37_PART*.md` | Sessions 1-38 documentation |
 
 ---
 
@@ -666,20 +696,20 @@ Bytes 80-95: HEADER_IV (iv2)   ← FOR HEADER!
 | **11** | **🏁 Multi-Contact Chat Filter** | **2026-02-24** | **35** |
 | **12** | **🔄 Contact Lifecycle** | **2026-02-25** | **36** |
 | **13** | **💾 Encrypted Chat History** | **2026-02-27** | **37** |
+| **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
 
 ---
 
-## 🎯 Next Steps (Session 38)
+## 🎯 Next Steps (Session 39)
 
-1. **P0:** German umlaut fallback fonts (LVGL, task prepared)
-2. **P1:** Contact list enhancements (unread badge, message count)
-3. **P2:** Server DEL command on contact delete
-4. **P3:** First message invisible on fresh contact
-5. **P4:** Display freeze investigation (observed twice)
+1. **P0:** SD card on SPI3 bus (display freeze root cause fix)
+2. **P1:** Sliding window chat history (8 visible bubbles, load older on scroll)
+3. **P2:** WiFi Manager (user-friendly network configuration)
+4. **P3:** German umlaut fallback fonts (LVGL, task prepared)
 
-**Status:** Encrypted chat history operational. UI polish phase.
+**Status:** SPI2 root cause identified. SD removed = stable. Fix: move SD to SPI3.
 
 ---
 
-*Status updated: 2026-02-27 Session 37 — 💾 Encrypted Chat History: SD Card, SPI Bus Wars, Progressive Rendering*  
-*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY!*
+*Status updated: 2026-03-01 Session 38 — 🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause*  
+*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY -> S38 SPI HUNT!*

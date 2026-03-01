@@ -8,7 +8,28 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## 💾 LATEST: Encrypted Chat History (2026-02-27 Session 37)
+## 🔍 LATEST: The SPI2 Bus Hunt (2026-03-01 Session 38)
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+
+  🔍🔍🔍 THE SPI2 BUS HUNT: EIGHT HYPOTHESES, ONE ROOT CAUSE 🔍🔍🔍
+
+  Display + keyboard backlight                           ✅
+  Settings screen with brightness sliders                ✅
+  WiFi/LWIP → PSRAM (56KB freed)                        ✅
+  Root cause: SPI2 bus sharing (display + SD)            🔍
+  SD removed = 100% stable for hours                     ✅
+  LVGL heap = separate 64KB pool (~8 bubbles)            🔍
+
+  10 commits, 2 bugs (#60-#61), 5 lessons (#205-#209)
+  8 hypotheses, 7 wrong, 1 correct
+  Date: February 28 - March 1, 2026
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+## 💾 Session 37: Encrypted Chat History (2026-02-27)
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -371,10 +392,11 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | [34_PART32_SESSION_35.md](34_PART32_SESSION_35.md) | ~304 | **🏁 Multi-Contact Victory — All Planned Bugs Fixed** |
 | [35_PART33_SESSION_36.md](35_PART33_SESSION_36.md) | ~389 | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | [36_PART34_SESSION_37.md](36_PART34_SESSION_37.md) | ~332 | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
-| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2200 | Complete bug documentation (59 bugs, 204 lessons) |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2500 | Constants, wire formats, verified values |
+| [37_PART35_SESSION_38.md](37_PART35_SESSION_38.md) | ~324 | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** |
+| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2300 | Complete bug documentation (61 bugs, 209 lessons) |
+| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2660 | Constants, wire formats, verified values |
 
-**Total: ~30,000+ lines of detailed protocol analysis (Session docs + reference docs)**
+**Total: ~31,000+ lines of detailed protocol analysis (Session docs + reference docs)**
 
 ---
 
@@ -417,6 +439,27 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **35** | **Feb 24** | **🏁 Multi-Contact Victory — All Bugs Fixed!** | **6 lessons** |
 | **36** | **Feb 25** | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** | **7 bugs, 10 lessons** |
 | **37** | **Feb 25-27** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** | **2 bugs, 2 lessons** |
+| **38** | **Feb 28 - Mar 1** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** | **2 bugs, 5 lessons** |
+
+---
+
+## Session 38 Key Achievements — 🔍 The SPI2 Bus Hunt
+
+### Backlight Control + Root Cause Discovery
+
+```
+Features: Display backlight (GPIO 42, 16 levels), keyboard (I2C 0x55)
+          Settings screen with sliders, WiFi/LWIP → PSRAM (56KB freed)
+
+Root Cause: SPI2 bus sharing (display + SD card)
+  8 hypotheses tested: 7 wrong, 1 correct
+  SD removed = device runs hours, 100% stable
+  Fix: Move SD to SPI3 (Session 39)
+
+LVGL Discovery: Separate 64KB heap, ~8 bubbles max
+  heap_caps_get_free_size() ≠ LVGL pool
+  MAX_VISIBLE_BUBBLES sliding window introduced
+```
 
 ---
 
@@ -1221,4 +1264,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: February 27, 2026 - Session 37 (💾 Encrypted Chat History: SD Card, SPI Bus Wars, Progressive Rendering)*
+*Last updated: March 1, 2026 - Session 38 (🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause)*
