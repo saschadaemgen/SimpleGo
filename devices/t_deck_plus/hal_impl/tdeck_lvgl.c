@@ -1,6 +1,12 @@
-﻿/**
+/**
  * @file tdeck_lvgl.c
  * @brief LVGL Integration - Task starts AFTER UI init
+ *
+ * Session 39 fix: Reverted to synchronous SPI transfers.
+ * The async DMA callback mechanism (Session 38f) caused display freezes
+ * when the ISR completion signal was lost. Synchronous draw_bitmap()
+ * is reliable and fast enough (12 transfers × ~320µs = ~4ms per frame).
+ * LVGL mutex already protects SPI2 bus sharing with SD card.
  */
 
 #include "tdeck_lvgl.h"
@@ -13,7 +19,6 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_task_wdt.h"
-#include "esp_lcd_panel_io.h"   /* Session 38f: DMA callback registration */
 #include "lvgl.h"
 
 static const char *TAG = "TDECK_LVGL";
@@ -30,36 +35,15 @@ static TaskHandle_t lvgl_task_handle = NULL;
 static bool is_initialized = false;
 static bool task_running = false;
 
-/* Session 38f: DMA completion sync for SPI2 bus sharing */
-static SemaphoreHandle_t dma_done_sem = NULL;
-static volatile int dma_pending = 0;
-
-/* Forward declaration: io_handle getter from tdeck_display.c */
-extern esp_lcd_panel_io_handle_t tdeck_display_get_io_handle(void);
-
-/* Session 38f: DMA completion callback - called from ISR when SPI transfer finishes */
-static bool on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
-                                esp_lcd_panel_io_event_data_t *edata,
-                                void *user_ctx)
-{
-    lv_display_t *disp = (lv_display_t *)user_ctx;
-    lv_display_flush_ready(disp);
-
-    dma_pending--;
-    if (dma_pending <= 0) {
-        dma_pending = 0;
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xSemaphoreGiveFromISR(dma_done_sem, &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
-    return false;
-}
-
+/**
+ * Session 39: Simple synchronous flush callback.
+ * draw_bitmap() blocks until SPI transfer completes, then we call flush_ready.
+ * No ISR, no semaphore, no race condition. Rock solid.
+ */
 static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
     esp_lcd_panel_handle_t panel = tdeck_display_get_panel();
     if (panel) {
-        dma_pending++;
         esp_err_t ret = esp_lcd_panel_draw_bitmap(panel,
                             area->x1, area->y1,
                             area->x2 + 1, area->y2 + 1, px_map);
@@ -78,19 +62,9 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
             ESP_LOGE(TAG, "draw_bitmap FAILED: %s (0x%x) px_map=%p dma_capable=%d",
                      esp_err_to_name(ret), ret, px_map, esp_ptr_dma_capable(px_map));
         }
-
-        if (dma_done_sem && ret == ESP_OK) {
-            /* DMA queued, on_color_trans_done will call flush_ready */
-            return;
-        }
-
-        /* Error or no DMA sync: clean up immediately */
-        dma_pending--;
-        if (dma_pending <= 0) {
-            dma_pending = 0;
-            xSemaphoreGive(dma_done_sem);
-        }
     }
+
+    /* ALWAYS notify LVGL — no matter what happened above */
     lv_display_flush_ready(disp);
 }
 
@@ -102,6 +76,8 @@ static void lvgl_tick_cb(void *arg)
 static void lvgl_task(void *pvParameter)
 {
     ESP_LOGI(TAG, "LVGL task running");
+
+    uint32_t heartbeat_counter = 0;
 
     esp_task_wdt_config_t wdt_cfg = {
         .timeout_ms = 30000,
@@ -117,21 +93,17 @@ static void lvgl_task(void *pvParameter)
 
     while (1) {
         if (xSemaphoreTakeRecursive(lvgl_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-            /* Session 38f: Reset DMA counter before new render cycle */
-            xSemaphoreTake(dma_done_sem, 0);  /* Non-blocking: consume stale signal */
-            dma_pending = 0;
+
+            /* Session 39: Heartbeat every ~50 seconds */
+            heartbeat_counter++;
+            if (heartbeat_counter >= 5000) {
+                ESP_LOGI(TAG, "LVGL heartbeat — alive, free_internal=%u free_psram=%u",
+                         (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+                         (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+                heartbeat_counter = 0;
+            }
 
             uint32_t time_till_next = lv_timer_handler();
-
-            /* Session 38f: WAIT for all DMA transfers to complete before
-             * releasing mutex. This ensures SPI2 bus is idle when SD card
-             * operations (which also take lvgl_mutex) access the bus. */
-            if (dma_pending > 0) {
-                if (xSemaphoreTake(dma_done_sem, pdMS_TO_TICKS(100)) != pdTRUE) {
-                    ESP_LOGW(TAG, "DMA wait timeout! pending=%d", dma_pending);
-                    dma_pending = 0;
-                }
-            }
 
             xSemaphoreGiveRecursive(lvgl_mutex);
 
@@ -165,12 +137,6 @@ esp_err_t tdeck_lvgl_init(void)
     if (!lvgl_mutex) {
         ESP_LOGE(TAG, "Mutex failed!");
         return ESP_FAIL;
-    }
-
-    /* Session 38f: DMA completion semaphore for SPI2 bus sharing */
-    dma_done_sem = xSemaphoreCreateBinary();
-    if (dma_done_sem) {
-        xSemaphoreGive(dma_done_sem);  /* Initial: no transfers pending */
     }
 
     lv_init();
@@ -217,21 +183,12 @@ esp_err_t tdeck_lvgl_init(void)
         lv_display_set_buffers(lvgl_display, draw_buf1, NULL, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
     }
 
-    /* Session 38f: Register DMA completion callback on panel IO.
-     * This signals when SPI transfer is done, allowing us to hold the
-     * mutex until the bus is actually free (not just queued). */
-    esp_lcd_panel_io_handle_t io = tdeck_display_get_io_handle();
-    if (io && dma_done_sem) {
-        const esp_lcd_panel_io_callbacks_t cbs = {
-            .on_color_trans_done = on_color_trans_done,
-        };
-        esp_err_t cb_err = esp_lcd_panel_io_register_event_callbacks(io, &cbs, lvgl_display);
-        if (cb_err == ESP_OK) {
-            ESP_LOGI(TAG, "DMA completion callback registered (SPI2 bus sync)");
-        } else {
-            ESP_LOGW(TAG, "DMA callback registration failed: %s", esp_err_to_name(cb_err));
-        }
-    }
+    /*
+     * Session 39: NO DMA callback registration.
+     * draw_bitmap() runs synchronously — blocks until SPI transfer
+     * completes, then flush_cb calls flush_ready. Simple and reliable.
+     * The async DMA callback (Session 38f) caused display freezes.
+     */
 
     // Set default screen to BLACK immediately
     lv_obj_t *scr = lv_scr_act();

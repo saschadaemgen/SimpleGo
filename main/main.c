@@ -114,6 +114,7 @@ static volatile bool s_show_qr_pending = false;
 
 // Session 37b: Progressive history rendering — 3 messages per timer tick
 #define HISTORY_CHUNK_SIZE  3   // messages per 50ms tick — smooth UX
+#define MAX_VISIBLE_BUBBLES 5   // Session 39: prevent LVGL heap exhaustion
 static int  s_hist_render_idx   = 0;     // current position in batch
 static bool s_hist_rendering    = false; // true while progressively rendering
 
@@ -125,11 +126,6 @@ static void ui_poll_timer_cb(lv_timer_t *t)
     if (s_hist_rendering && smp_history_batch && smp_history_batch_count > 0) {
         int end = s_hist_render_idx + HISTORY_CHUNK_SIZE;
         if (end > smp_history_batch_count) end = smp_history_batch_count;
-
-        // First chunk: remove "Loading..." label before rendering bubbles
-        if (s_hist_render_idx == 0) {
-            ui_chat_hide_loading();
-        }
 
         for (int h = s_hist_render_idx; h < end; h++) {
             history_message_t *m = &smp_history_batch[h];
@@ -210,8 +206,20 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                     // 37d: Clear ALL bubbles (not just target contact) to prevent accumulation
                     ui_chat_clear_contact(-1);
 
+                    // Session 39: Show only the last 8 messages to prevent LVGL heap exhaustion.
+                    // Older messages are skipped. Scroll-up loading comes in a later session.
+                    int render_start = 0;
+                    if (smp_history_batch_count > MAX_VISIBLE_BUBBLES) {
+                        render_start = smp_history_batch_count - MAX_VISIBLE_BUBBLES;
+                        ESP_LOGI("UI", "History: showing last %d of %d messages",
+                                 MAX_VISIBLE_BUBBLES, smp_history_batch_count);
+                    }
+
+                    // Hide "Loading..." before first bubble renders
+                    ui_chat_hide_loading();
+
                     // Start chunked rendering — first chunk happens next timer tick
-                    s_hist_render_idx = 0;
+                    s_hist_render_idx = render_start;
                     s_hist_rendering = true;
 
                     ESP_LOGI("UI", "History: starting progressive render (%d msgs, slot %d)",
