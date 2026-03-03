@@ -73,14 +73,33 @@ static void anim_dots_cb(lv_timer_t *t);
  * Always use lv_async_call(deferred_wifi_rebuild, NULL).
  * ================================================================ */
 
+static lv_timer_t *s_rebuild_timer = NULL;
+
+static void rebuild_timer_cb(lv_timer_t *t)
+{
+    (void)t;
+    s_rebuild_timer = NULL;
+    /* Session 39k: Don't rebuild while scan is running. Rebuild calls
+     * cleanup which resets s_scan_in_progress, so scan results would
+     * never be displayed. Reschedule and try again in 300ms. */
+    if (s_scan_in_progress) {
+        s_rebuild_timer = lv_timer_create(rebuild_timer_cb, 300, NULL);
+        lv_timer_set_repeat_count(s_rebuild_timer, 1);
+        return;
+    }
+    settings_switch_tab(TAB_WIFI);
+}
+
 static void deferred_wifi_rebuild(void *data)
 {
     (void)data;
-    /* Session 39d Fix 3: Give WiFi stack 200ms to stabilize status
-     * after connect/disconnect. Without this, wifi_manager_get_status()
-     * may still return the old SSID. Single frame-skip, acceptable. */
-    vTaskDelay(pdMS_TO_TICKS(200));
-    settings_switch_tab(TAB_WIFI);
+    /* Session 39k: Give WiFi stack 200ms to stabilize status after
+     * connect/disconnect. Original used vTaskDelay which BLOCKED the
+     * LVGL task for 200ms causing UI freeze. Now uses a one-shot LVGL
+     * timer -- non-blocking, fires once then auto-deletes. */
+    if (s_rebuild_timer) return;  /* Already pending */
+    s_rebuild_timer = lv_timer_create(rebuild_timer_cb, 200, NULL);
+    lv_timer_set_repeat_count(s_rebuild_timer, 1);
 }
 
 /* ================================================================
@@ -317,11 +336,15 @@ static void wifi_scan_poll_cb(lv_timer_t *t)
     s_scan_in_progress = false;
     stop_anim();
 
-    uint16_t ap_num = 0;
-    esp_wifi_scan_get_ap_num(&ap_num);
-    s_scan_count = (ap_num < WIFI_MAX_APS) ? ap_num : WIFI_MAX_APS;
+    /* Session 39k Fix: Use cached backend results instead of direct ESP-IDF
+     * API. wifi_manager.c caches results in SCAN_DONE handler BEFORE anything
+     * can call esp_wifi_connect() and clear the buffer. Old code called
+     * esp_wifi_scan_get_ap_records() directly -- race with event handler. */
+    uint16_t backend_count = wifi_manager_get_scan_count();
+    const wifi_ap_record_t *backend_aps = wifi_manager_get_scan_results();
+    s_scan_count = (backend_count < WIFI_MAX_APS) ? backend_count : WIFI_MAX_APS;
     if (s_scan_count > 0) {
-        esp_wifi_scan_get_ap_records(&s_scan_count, s_scan_results);
+        memcpy(s_scan_results, backend_aps, s_scan_count * sizeof(wifi_ap_record_t));
     }
 
     /* Update header */
@@ -604,6 +627,21 @@ void settings_create_wifi(lv_obj_t *parent)
     lv_obj_set_style_pad_top(s_wifi_empty_hint, ws.connected ? 20 : 50, 0);
     lv_obj_set_width(s_wifi_empty_hint, LV_PCT(100));
 
+    /* Session 39k: If cached scan results exist (from a previous scan
+     * before a connection-triggered rebuild), show them immediately.
+     * Without this, a rebuild after connect wipes scan results from view. */
+    if (s_scan_count > 0) {
+        if (s_wifi_empty_hint) lv_obj_add_flag(s_wifi_empty_hint, LV_OBJ_FLAG_HIDDEN);
+        for (int i = 0; i < s_scan_count; i++) {
+            bool is_conn = ws.connected &&
+                (strcmp((char *)s_scan_results[i].ssid, ws.ssid) == 0);
+            /* Skip connected network -- already shown as dedicated row above */
+            if (is_conn) continue;
+            create_wifi_row(s_wifi_list, (char *)s_scan_results[i].ssid,
+                            s_scan_results[i].rssi, false, i);
+        }
+    }
+
     s_wifi_scan_timer = lv_timer_create(wifi_scan_poll_cb, 100, NULL);
 
     /* Poll connection status every 2s — detects reconnect and network switch */
@@ -631,6 +669,11 @@ void settings_cleanup_wifi_timers(void)
         s_wifi_conn_timer = NULL;
     }
     stop_anim();
+    /* Session 39k: Cancel pending rebuild timer */
+    if (s_rebuild_timer) {
+        lv_timer_del(s_rebuild_timer);
+        s_rebuild_timer = NULL;
+    }
     /* Close password overlay if open */
     close_password_overlay();
     s_scan_in_progress = false;
