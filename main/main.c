@@ -57,7 +57,7 @@
 #include "smp_e2e.h"
 #include "reply_queue.h"   // Session 34 Phase 6: per-contact reply queues
 #include "smp_agent.h"
-#include "smp_wifi.h"
+#include "wifi_manager.h"
 #include "smp_storage.h"
 #include "smp_tasks.h"
 #include "smp_history.h"   // Session 37: history_message_t, HISTORY_DIR_SENT
@@ -78,6 +78,7 @@
 #include "ui_manager.h"
 #include "ui/screens/ui_connect.h"
 #include "ui_chat.h"
+#include "ui_settings.h"
 #include "ui_theme.h"
 #include "simplego_fonts.h"
 
@@ -111,6 +112,9 @@ static void chat_send_cb(const char *text)
 // Session 33 Phase 4A: Pending QR code (thread-safe handoff from smp_connect)
 static char s_pending_qr_link[1500] = {0};
 static volatile bool s_show_qr_pending = false;
+
+// Session 39k: Auto-launch WiFi setup when no credentials exist
+static volatile bool s_wifi_setup_pending = false;
 
 // Session 37b: Progressive history rendering — 3 messages per timer tick
 #define HISTORY_CHUNK_SIZE  3   // messages per 50ms tick — smooth UX
@@ -160,6 +164,14 @@ static void ui_poll_timer_cb(lv_timer_t *t)
         ui_manager_show_screen(UI_SCREEN_CONNECT, LV_SCR_LOAD_ANIM_NONE);
         ui_connect_set_invite_link(s_pending_qr_link);
         ESP_LOGI("UI", "QR code displayed from pending buffer");
+    }
+
+    // Session 39k: Auto-launch WiFi Settings on first boot (no credentials)
+    if (s_wifi_setup_pending) {
+        s_wifi_setup_pending = false;
+        ui_manager_show_screen(UI_SCREEN_SETTINGS, LV_SCR_LOAD_ANIM_NONE);
+        ui_settings_show_wifi_tab();
+        ESP_LOGI("UI", "Auto-launched WiFi setup (no credentials)");
     }
 
     extern QueueHandle_t app_to_ui_queue;
@@ -535,11 +547,24 @@ void app_main(void) {
     // Storage Phase 2: SD card (after display owns SPI bus)
     smp_storage_init_sd();
 
-    smp_wifi_init();
+    wifi_manager_init();
+
+    /* Session 39k: Auto-launch WiFi setup if no credentials stored.
+     * Sets flag that ui_poll_timer_cb reads on LVGL task to navigate
+     * to Settings > WiFi tab. Main task keeps waiting below --
+     * LVGL runs on its own task so UI stays responsive. */
+    if (wifi_manager_needs_setup()) {
+        ESP_LOGI(TAG, "No WiFi credentials -- launching WiFi setup UI");
+        s_wifi_setup_pending = true;
+    }
 
     ESP_LOGI(TAG, "Waiting for WiFi...");
+    int wifi_wait_ticks = 0;
     while (!wifi_connected) {
         vTaskDelay(pdMS_TO_TICKS(100));
+        if (++wifi_wait_ticks % 100 == 0) {
+            ESP_LOGI(TAG, "WiFi: still waiting... (%ds)", wifi_wait_ticks / 10);
+        }
     }
     vTaskDelay(pdMS_TO_TICKS(1000));
 

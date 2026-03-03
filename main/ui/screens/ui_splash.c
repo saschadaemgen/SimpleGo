@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ui_splash.c
  * @brief Splash - Simple, No Animation
  */
@@ -15,6 +15,12 @@ static lv_obj_t *screen = NULL;
 static void go_to_main(lv_timer_t *t)
 {
     lv_timer_del(t);
+    /* Session 39k: If another system (e.g. SMP task first-boot WiFi setup)
+     * already navigated away from splash, don't override with Main. */
+    if (ui_manager_get_current() != UI_SCREEN_SPLASH) {
+        ESP_LOGI(TAG, "Already navigated away from splash, skipping");
+        return;
+    }
     ui_manager_show_screen(UI_SCREEN_MAIN, LV_SCR_LOAD_ANIM_NONE);
 }
 

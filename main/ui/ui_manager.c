@@ -1,6 +1,8 @@
 /**
  * @file ui_manager.c
  * @brief Screen Manager - Manual Fade Control
+ *
+ * Session 39k: First-boot WiFi detection via wifi_manager_needs_setup().
  */
 #include "ui_manager.h"
 #include "ui_theme.h"
@@ -11,6 +13,7 @@
 #include "ui_connect.h"
 #include "ui_settings.h"
 #include "ui_developer.h"
+#include "wifi_manager.h"
 #include "esp_log.h"
 
 static const char *TAG = "UI_MGR";
@@ -105,6 +108,21 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
         // Remove splash from stack too
         if (nav_stack_top >= 0 && nav_stack[nav_stack_top] == UI_SCREEN_SPLASH) {
             nav_stack_top--;
+        }
+
+        /* Session 39k: First-boot WiFi detection.
+         * Uses wifi_manager_needs_setup() which checks NVS namespace
+         * "wifi_cfg" key "ssid" AND Kconfig fallback. If neither has
+         * credentials, redirect to Settings WiFi tab. */
+        if (screen == UI_SCREEN_MAIN && wifi_manager_needs_setup()) {
+            ESP_LOGI(TAG, "No WiFi credentials -> WiFi setup");
+            if (!screens[UI_SCREEN_SETTINGS]) {
+                screens[UI_SCREEN_SETTINGS] = screen_creators[UI_SCREEN_SETTINGS]();
+            }
+            nav_stack_push(current_screen);
+            current_screen = UI_SCREEN_SETTINGS;
+            lv_scr_load(screens[UI_SCREEN_SETTINGS]);
+            ui_settings_show_wifi_tab();
         }
     }
 }
