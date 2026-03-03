@@ -77,6 +77,13 @@ lv_obj_t *ui_create_switch(lv_obj_t *parent, const char *label, lv_coord_t x, lv
  */
 lv_obj_t *ui_create_status_bar(lv_obj_t *parent);
 
+/**
+ * @brief Session 39f: Centralized style helpers
+ * Replaces identical static copies in ui_chat.c, ui_contacts.c, ui_settings.c
+ */
+void ui_style_reset(lv_obj_t *obj);
+void ui_style_black(lv_obj_t *obj);
+
 #ifdef __cplusplus
 }
 #endif

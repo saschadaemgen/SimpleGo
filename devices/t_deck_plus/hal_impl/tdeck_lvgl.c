@@ -77,8 +77,6 @@ static void lvgl_task(void *pvParameter)
 {
     ESP_LOGI(TAG, "LVGL task running");
 
-    uint32_t heartbeat_counter = 0;
-
     esp_task_wdt_config_t wdt_cfg = {
         .timeout_ms = 30000,
         .idle_core_mask = 0,
@@ -93,15 +91,6 @@ static void lvgl_task(void *pvParameter)
 
     while (1) {
         if (xSemaphoreTakeRecursive(lvgl_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-
-            /* Session 39: Heartbeat every ~50 seconds */
-            heartbeat_counter++;
-            if (heartbeat_counter >= 5000) {
-                ESP_LOGI(TAG, "LVGL heartbeat — alive, free_internal=%u free_psram=%u",
-                         (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
-                         (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
-                heartbeat_counter = 0;
-            }
 
             uint32_t time_till_next = lv_timer_handler();
 

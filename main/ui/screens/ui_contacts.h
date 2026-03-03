@@ -1,8 +1,11 @@
-﻿/**
+/**
  * @file ui_contacts.h
  * @brief Contacts Screen
+ *
+ * SimpleGo UI
+ * Copyright (c) 2025-2026 Sascha
+ * SPDX-License-Identifier: AGPL-3.0
  */
-
 #ifndef UI_CONTACTS_H
 #define UI_CONTACTS_H
 

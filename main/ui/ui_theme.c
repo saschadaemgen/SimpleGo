@@ -322,3 +322,24 @@ lv_obj_t *ui_create_status_bar(lv_obj_t *parent)
     ESP_LOGI(TAG, "Status bar created (16px, hand-drawn)");
     return go_btn;
 }
+
+/* ============== Session 39f: Centralized Style Helpers ============== */
+
+void ui_style_reset(lv_obj_t *obj)
+{
+    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(obj, 0, 0);
+    lv_obj_set_style_radius(obj, 0, 0);
+    lv_obj_set_style_pad_all(obj, 0, 0);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+}
+
+void ui_style_black(lv_obj_t *obj)
+{
+    lv_obj_set_style_bg_color(obj, UI_COLOR_BG, 0);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(obj, 0, 0);
+    lv_obj_set_style_radius(obj, 0, 0);
+    lv_obj_set_style_pad_all(obj, 0, 0);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+}
