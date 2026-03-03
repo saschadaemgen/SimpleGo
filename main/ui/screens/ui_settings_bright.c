@@ -225,12 +225,7 @@ void settings_create_bright(lv_obj_t *parent)
     create_preset_row(parent, GROUP2_Y + BTN_OFS,
         on_kbd_0, on_kbd_25, on_kbd_50, on_kbd_100);
 
-    /* Battery hint */
-    lv_obj_t *hint = lv_label_create(parent);
-    lv_label_set_text(hint, "(Brightness affects battery life)");
-    lv_obj_set_style_text_color(hint, lv_color_hex(0x304050), 0);
-    lv_obj_set_style_text_font(hint, UI_FONT_SM, 0);
-    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -4);
+    /* Battery hint removed -- Session 39k */
 }
 
 void settings_cleanup_bright_timers(void)

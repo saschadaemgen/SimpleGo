@@ -62,19 +62,24 @@ static void on_hdr_action(lv_event_t *e)
 
 static void update_tab_button_styles(void)
 {
-    const char *labels[3] = {"BRIGHT", "WIFI", "INFO"};
-    (void)labels;
+    const char *normal[3]  = {"BRIGHT", "WIFI", "INFO"};
+    const char *active[3]  = {"(BRIGHT)", "(WIFI)", "(INFO)"};
 
     for (int i = 0; i < 3; i++) {
         if (!s_tab_btns[i]) continue;
         lv_obj_t *lbl = lv_obj_get_child(s_tab_btns[i], 0);
+        /* No background highlight -- text only */
+        lv_obj_set_style_bg_opa(s_tab_btns[i], LV_OPA_TRANSP, 0);
         if (i == (int)active_tab) {
-            lv_obj_set_style_bg_color(s_tab_btns[i], UI_COLOR_PRIMARY, 0);
-            lv_obj_set_style_bg_opa(s_tab_btns[i], LV_OPA_30, 0);
-            if (lbl) lv_obj_set_style_text_color(lbl, UI_COLOR_TEXT_WHITE, 0);
+            if (lbl) {
+                lv_label_set_text(lbl, active[i]);
+                lv_obj_set_style_text_color(lbl, UI_COLOR_TEXT_WHITE, 0);
+            }
         } else {
-            lv_obj_set_style_bg_opa(s_tab_btns[i], LV_OPA_TRANSP, 0);
-            if (lbl) lv_obj_set_style_text_color(lbl, UI_COLOR_PRIMARY, 0);
+            if (lbl) {
+                lv_label_set_text(lbl, normal[i]);
+                lv_obj_set_style_text_color(lbl, UI_COLOR_PRIMARY, 0);
+            }
         }
     }
 }
