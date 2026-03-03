@@ -130,32 +130,34 @@ esp_err_t tdeck_lvgl_init(void)
 
     lv_init();
 
-    size_t buf_size = TDECK_DISPLAY_WIDTH * LVGL_BUFFER_LINES * sizeof(lv_color_t);
-    
     /*
-     * Session 37b: Draw buffer placement for smooth scrolling.
+     * Session 39k: Both draw buffers in internal DMA-capable SRAM.
      *
-     * buf1 in internal DMA-capable SRAM: fast SPI2 transfers, no tearing.
-     * buf2 in PSRAM: LVGL renders here while buf1 is being DMA'd to display.
+     * Buffer size uses 2 bytes/pixel (RGB565) -- NOT sizeof(lv_color_t)
+     * which is 3 bytes (RGB888). Wrong size caused LVGL to calculate
+     * 30 lines per flush but SPI max_transfer_sz only handles 20 lines
+     * (12800 bytes) -> garbled display.
      *
-     * Cost: ~12.8KB internal SRAM (320 × 20 lines × 2 bytes RGB565).
-     * Benefit: eliminates scroll "Schlieren" (tearing artifacts) because
-     * DMA from internal SRAM is ~4x faster than from PSRAM via cache.
-     *
-     * If internal SRAM is too tight, fall back to both in PSRAM.
+     * Double buffer restored for smooth rendering: LVGL renders into
+     * one while the other is being flushed. Both in internal DMA SRAM
+     * to avoid PSRAM bounce-buffer OOM when crypto tasks run.
+     * Cost: 2 x 12800 = 25.6KB internal SRAM.
      */
+    size_t buf_size = TDECK_DISPLAY_WIDTH * LVGL_BUFFER_LINES * 2;  /* RGB565 = 2 bytes/pixel */
+    
     draw_buf1 = heap_caps_malloc(buf_size, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
-    draw_buf2 = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+    draw_buf2 = heap_caps_malloc(buf_size, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
 
     if (!draw_buf1) {
-        // Fallback: both in PSRAM (slower but works)
-        ESP_LOGW(TAG, "Internal DMA buf failed (%u bytes), falling back to PSRAM", (unsigned)buf_size);
-        draw_buf1 = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
-    }
-    if (!draw_buf1) {
-        ESP_LOGE(TAG, "Buffer alloc failed!");
+        ESP_LOGE(TAG, "Draw buf1 alloc failed! (%u bytes internal)", (unsigned)buf_size);
         return ESP_ERR_NO_MEM;
     }
+    if (!draw_buf2) {
+        /* Single buffer fallback -- still works, just no overlap */
+        ESP_LOGW(TAG, "Draw buf2 alloc failed, using single buffer");
+    }
+    ESP_LOGI(TAG, "Draw buffer: %u bytes x %d in internal DMA SRAM",
+             (unsigned)buf_size, draw_buf2 ? 2 : 1);
 
     lvgl_display = lv_display_create(TDECK_DISPLAY_WIDTH, TDECK_DISPLAY_HEIGHT);
     if (!lvgl_display) {
@@ -166,11 +168,8 @@ esp_err_t tdeck_lvgl_init(void)
     lv_display_set_flush_cb(lvgl_display, lvgl_flush_cb);
     lv_display_set_color_format(lvgl_display, LV_COLOR_FORMAT_RGB565);
 
-    if (draw_buf2) {
-        lv_display_set_buffers(lvgl_display, draw_buf1, draw_buf2, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
-    } else {
-        lv_display_set_buffers(lvgl_display, draw_buf1, NULL, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
-    }
+    /* Session 39k: Double buffer if both allocated, single buffer fallback */
+    lv_display_set_buffers(lvgl_display, draw_buf1, draw_buf2, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     /*
      * Session 39: NO DMA callback registration.
