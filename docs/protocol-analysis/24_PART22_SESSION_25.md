@@ -97,7 +97,7 @@ After Session 24 we had:
 
 **New files:**
 - `smp_wifi.c` (52 lines)
-- `smp_wifi.h` (13 lines)
+- `wifi_manager.h` (13 lines)
 
 **Extracted:**
 - `wifi_init()`, `wifi_event_handler()`, WiFi includes
