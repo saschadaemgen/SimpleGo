@@ -12,6 +12,7 @@
  *   - "SimpleGo" title removed — only "GO" remains
  *   - Content gains ~19px (177px vs 158px)
  *   - WiFi/Battery pixel-art from ui_create_status_bar() inlined
+ * Session 41:  Icons redrawn all-cyan, bottom bar 3 zones, gear long-press WiFi
  *
  * SimpleGo UI
  * Copyright (c) 2025-2026 Sascha
@@ -25,6 +26,7 @@
 #include "smp_tasks.h"
 #include "smp_contacts.h"
 #include "smp_history.h"
+#include "wifi_manager.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -34,6 +36,8 @@ static lv_obj_t *screen         = NULL;
 static lv_obj_t *list_container = NULL;
 static lv_obj_t *empty_label    = NULL;
 static lv_obj_t *hdr_count_lbl  = NULL;
+static lv_timer_t *gear_lp_timer = NULL;
+static lv_timer_t *s_hdr_refresh_timer = NULL;
 
 /* ================================================================
  * Layout — Session 40: Combined single bar
@@ -42,7 +46,7 @@ static lv_obj_t *hdr_count_lbl  = NULL;
  *  Combined Bar  26px  [GO] 3 unread    [12:00] [WiFi] [Bat]
  *  Glow line      1px  ~~~~~~~~~~~~~~~~
  *  Content      177px  Scrollable unread list
- *  Bottom Bar    36px  CHATS | NEW | DEV | gear
+ *  Bottom Bar    36px  CHATS | gear | MEDIA
  *                ----
  *  Total        240px
  */
@@ -55,7 +59,8 @@ static lv_obj_t *hdr_count_lbl  = NULL;
 #define CONTENT_H       (BAR_Y - CONTENT_Y)             /* 177 */
 
 /* Bottom bar: 4 equal buttons */
-#define BAR_BTN_W       (UI_SCREEN_W / 4)               /* 80 */
+#define BAR_BTN_W       (UI_SCREEN_W / 3)               /* 106 */
+#define BAR_BTN_W_LAST  (UI_SCREEN_W - BAR_BTN_W * 2)  /* 108 remainder */
 
 /* Row styling — matches ui_contacts.c */
 #define ROW_H           28
@@ -66,6 +71,7 @@ static lv_obj_t *hdr_count_lbl  = NULL;
 
 /* Name truncation */
 #define NAME_MAX_DISPLAY  25
+#define GEAR_LONGPRESS_MS 5000
 
 /* ================================================================
  * Style Helpers (from ui_contacts.c)
@@ -87,8 +93,30 @@ static void style_black(lv_obj_t *obj)
 
 static void on_chats(lv_event_t *e) { (void)e; ui_manager_show_screen(UI_SCREEN_CONTACTS, LV_SCR_LOAD_ANIM_NONE); }
 static void on_new(lv_event_t *e)   { (void)e; ui_manager_show_screen(UI_SCREEN_CONNECT, LV_SCR_LOAD_ANIM_NONE); }
-static void on_dev(lv_event_t *e)   { (void)e; ui_manager_show_screen(UI_SCREEN_DEVELOPER, LV_SCR_LOAD_ANIM_NONE); }
 static void on_sys(lv_event_t *e)   { (void)e; ui_manager_show_screen(UI_SCREEN_SETTINGS, LV_SCR_LOAD_ANIM_NONE); }
+static void on_wifi_menu(lv_event_t *e) { (void)e; ui_manager_show_screen(UI_SCREEN_CONNECT, LV_SCR_LOAD_ANIM_NONE); }
+
+static void gear_longpress_timer_cb(lv_timer_t *t)
+{
+    (void)t;
+    ESP_LOGI(TAG, "Gear long-press 5s -> WiFi menu");
+    gear_lp_timer = NULL;
+    on_wifi_menu(NULL);
+}
+
+static void on_gear_pressed(lv_event_t *e)
+{
+    (void)e;
+    if (gear_lp_timer) lv_timer_delete(gear_lp_timer);
+    gear_lp_timer = lv_timer_create(gear_longpress_timer_cb, GEAR_LONGPRESS_MS, NULL);
+    lv_timer_set_repeat_count(gear_lp_timer, 1);
+}
+
+static void on_gear_released(lv_event_t *e)
+{
+    (void)e;
+    if (gear_lp_timer) { lv_timer_delete(gear_lp_timer); gear_lp_timer = NULL; }
+}
 
 /* ================================================================
  * Helpers
@@ -225,43 +253,24 @@ static void create_main_bar(lv_obj_t *parent)
     lv_obj_set_style_pad_all(bar, 0, 0);
     lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* ---- "GO" button — left side ---- */
-    lv_obj_t *go_btn = lv_btn_create(bar);
-    lv_obj_set_size(go_btn, 32, MAIN_BAR_H);
-    lv_obj_set_pos(go_btn, 2, 0);
-    lv_obj_set_style_bg_opa(go_btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_opa(go_btn, LV_OPA_20, LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(go_btn, UI_COLOR_ACCENT, LV_STATE_PRESSED);
-    lv_obj_set_style_border_width(go_btn, 0, 0);
-    lv_obj_set_style_radius(go_btn, 0, 0);
-    lv_obj_set_style_shadow_width(go_btn, 0, 0);
-    lv_obj_set_style_pad_all(go_btn, 0, 0);
-
-    lv_obj_t *go_lbl = lv_label_create(go_btn);
-    lv_label_set_text(go_lbl, "GO");
-    lv_obj_set_style_text_color(go_lbl, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_text_font(go_lbl, UI_FONT, 0);
-    lv_obj_center(go_lbl);
-    lv_obj_add_event_cb(go_btn, on_chats, LV_EVENT_CLICKED, NULL);
-
-    /* ---- Unread count (next to GO, updated by refresh) ---- */
+    /* ---- WiFi SSID / Unread count (left, updated by refresh) ---- */
     hdr_count_lbl = lv_label_create(bar);
     lv_label_set_text(hdr_count_lbl, "");
-    lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_SECONDARY, 0);
+    lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_TEXT_DIM, 0);
     lv_obj_set_style_text_font(hdr_count_lbl, UI_FONT, 0);
-    lv_obj_align(hdr_count_lbl, LV_ALIGN_LEFT_MID, 38, 0);
+    lv_obj_align(hdr_count_lbl, LV_ALIGN_LEFT_MID, 6, 0);
 
     /* ---- Battery tip (rightmost element) ---- */
     lv_obj_t *bat_tip = _pixel_rect(bar, 2, 5,
-                                     UI_COLOR_TEXT_DIM, LV_OPA_COVER);
+                                     UI_COLOR_PRIMARY, LV_OPA_COVER);
     lv_obj_align(bat_tip, LV_ALIGN_RIGHT_MID, -4, 0);
 
     /* ---- Battery body: 18×9, outlined ---- */
     lv_obj_t *bat_body = lv_obj_create(bar);
-    lv_obj_set_size(bat_body, 18, 9);
+    lv_obj_set_size(bat_body, 20, 11);
     lv_obj_set_style_bg_opa(bat_body, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bat_body, 1, 0);
-    lv_obj_set_style_border_color(bat_body, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_border_color(bat_body, UI_COLOR_PRIMARY, 0);
     lv_obj_set_style_radius(bat_body, 1, 0);
     lv_obj_set_style_pad_all(bat_body, 1, 0);
     lv_obj_clear_flag(bat_body, LV_OBJ_FLAG_SCROLLABLE);
@@ -269,29 +278,28 @@ static void create_main_bar(lv_obj_t *parent)
     lv_obj_align_to(bat_body, bat_tip, LV_ALIGN_OUT_LEFT_MID, -1, 0);
 
     /* Battery fill: ~70% green inside body */
-    lv_obj_t *bat_fill = _pixel_rect(bat_body, 10, 5,
-                                      UI_COLOR_SECONDARY, LV_OPA_COVER);
+    lv_obj_t *bat_fill = _pixel_rect(bat_body, 12, 7,
+                                      UI_COLOR_PRIMARY, LV_OPA_COVER);
     lv_obj_align(bat_fill, LV_ALIGN_LEFT_MID, 0, 0);
 
     /* ---- WiFi: 4 ascending bars ---- */
     lv_obj_t *wifi = lv_obj_create(bar);
-    lv_obj_set_size(wifi, 13, 9);
+    lv_obj_set_size(wifi, 15, 11);
     _sty_reset(wifi);
     lv_obj_align_to(wifi, bat_body, LV_ALIGN_OUT_LEFT_MID, -6, 0);
 
-    /* Bars: widths 2px, heights 2/4/6/9, spaced 3px apart, bottom-aligned */
-    static const int bar_h[] = {2, 4, 6, 9};
+    /* Bars: 3px wide, heights 3/5/8/11, all solid cyan */
+    static const int bar_h[] = {3, 5, 8, 11};
     for (int i = 0; i < 4; i++) {
-        lv_obj_t *wb = _pixel_rect(wifi, 2, bar_h[i],
-                                    UI_COLOR_PRIMARY,
-                                    (i == 3) ? LV_OPA_30 : LV_OPA_COVER);
-        lv_obj_set_pos(wb, i * 3, 9 - bar_h[i]);
+        lv_obj_t *wb = _pixel_rect(wifi, 3, bar_h[i],
+                                    UI_COLOR_PRIMARY, LV_OPA_COVER);
+        lv_obj_set_pos(wb, i * 4, 11 - bar_h[i]);
     }
 
     /* ---- Time: dim cyan ---- */
     lv_obj_t *time_lbl = lv_label_create(bar);
     lv_label_set_text(time_lbl, "12:00");
-    lv_obj_set_style_text_color(time_lbl, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_color(time_lbl, UI_COLOR_PRIMARY, 0);
     lv_obj_set_style_text_font(time_lbl, UI_FONT_MD, 0);
     lv_obj_align_to(time_lbl, wifi, LV_ALIGN_OUT_LEFT_MID, -6, 0);
 
@@ -324,10 +332,10 @@ static void create_bar_separator(lv_obj_t *parent, int x)
 }
 
 static lv_obj_t *create_bar_btn(lv_obj_t *parent, const char *text,
-                                  int x, lv_event_cb_t cb)
+                                  int x, int w, lv_event_cb_t cb)
 {
     lv_obj_t *btn = lv_btn_create(parent);
-    lv_obj_set_size(btn, BAR_BTN_W, BAR_H);
+    lv_obj_set_size(btn, w, BAR_H);
     lv_obj_set_pos(btn, x, 0);
     lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
     lv_obj_set_style_bg_opa(btn, LV_OPA_20, LV_STATE_PRESSED);
@@ -358,13 +366,60 @@ static void create_bottom_bar(lv_obj_t *parent)
     lv_obj_set_style_border_opa(bar, (lv_opa_t)38, 0);
     lv_obj_set_style_border_side(bar, LV_BORDER_SIDE_TOP, 0);
 
-    create_bar_btn(bar, "CHATS", 0,              on_chats);
+    /* Zone 1: CHATS (left) */
+    create_bar_btn(bar, "CHATS", 0, BAR_BTN_W, on_chats);
     create_bar_separator(bar, BAR_BTN_W);
-    create_bar_btn(bar, "NEW",   BAR_BTN_W,      on_new);
+
+    /* Zone 2: gear (center) - short=settings, 5s long=WiFi */
+    lv_obj_t *gear_btn = create_bar_btn(bar, LV_SYMBOL_SETTINGS,
+                                         BAR_BTN_W, BAR_BTN_W, on_sys);
+    lv_obj_add_event_cb(gear_btn, on_gear_pressed,  LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(gear_btn, on_gear_released, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(gear_btn, on_gear_released, LV_EVENT_PRESS_LOST, NULL);
     create_bar_separator(bar, BAR_BTN_W * 2);
-    create_bar_btn(bar, "DEV",   BAR_BTN_W * 2,  on_dev);
-    create_bar_separator(bar, BAR_BTN_W * 3);
-    create_bar_btn(bar, LV_SYMBOL_SETTINGS, BAR_BTN_W * 3, on_sys);
+
+    /* Zone 3: MEDIA (right, placeholder -> CONNECT) */
+    create_bar_btn(bar, "MEDIA", BAR_BTN_W * 2, BAR_BTN_W_LAST, on_new);
+}
+
+/* ================================================================
+ * Header Bar Periodic Refresh (Session 39k)
+ *
+ * Updates SSID / unread indicator every 3s so WiFi SSID appears
+ * on the main screen even if connection happens after boot.
+ * ================================================================ */
+
+static void hdr_refresh_cb(lv_timer_t *t)
+{
+    (void)t;
+    if (!hdr_count_lbl) return;
+
+    /* Count unreads (lightweight -- just count, no SD reads) */
+    int unread_count = 0;
+    for (int i = 0; i < MAX_CONTACTS; i++) {
+        if (!contacts_db.contacts[i].active) continue;
+        uint16_t total, unread;
+        smp_history_get_counts(i, &total, &unread);
+        if (unread > 0) unread_count++;
+    }
+
+    if (unread_count > 0) {
+        char buf[24];
+        snprintf(buf, sizeof(buf), LV_SYMBOL_ENVELOPE " %d", unread_count);
+        lv_label_set_text(hdr_count_lbl, buf);
+        lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
+    } else {
+        wifi_status_t ws = wifi_manager_get_status();
+        if (ws.connected) {
+            char ssid_buf[28];
+            snprintf(ssid_buf, sizeof(ssid_buf), "%.24s", ws.ssid);
+            lv_label_set_text(hdr_count_lbl, ssid_buf);
+            lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
+        } else {
+            lv_label_set_text(hdr_count_lbl, "No WiFi");
+            lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_TEXT_DIM, 0);
+        }
+    }
 }
 
 /* ================================================================
@@ -415,6 +470,9 @@ lv_obj_t *ui_main_create(void)
     /* Initial populate */
     ui_main_refresh();
 
+    /* Session 39k: Periodic header refresh for WiFi SSID after boot */
+    s_hdr_refresh_timer = lv_timer_create(hdr_refresh_cb, 3000, NULL);
+
     return screen;
 }
 
@@ -463,14 +521,26 @@ void ui_main_refresh(void)
         lv_obj_clear_flag(empty_label, LV_OBJ_FLAG_HIDDEN);
     }
 
-    /* Update count in combined bar */
+    /* Update combined bar info: unread count OR WiFi SSID */
     if (hdr_count_lbl) {
         if (unread_count > 0) {
+            /* Unread: blue mail icon + count */
             char buf[24];
-            snprintf(buf, sizeof(buf), "%d unread", unread_count);
+            snprintf(buf, sizeof(buf), LV_SYMBOL_ENVELOPE " %d", unread_count);
             lv_label_set_text(hdr_count_lbl, buf);
+            lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
         } else {
-            lv_label_set_text(hdr_count_lbl, "");
+            /* No unread: show connected WiFi SSID */
+            wifi_status_t ws = wifi_manager_get_status();
+            if (ws.connected) {
+                char ssid_buf[28];
+                snprintf(ssid_buf, sizeof(ssid_buf), "%.24s", ws.ssid);
+                lv_label_set_text(hdr_count_lbl, ssid_buf);
+                lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
+            } else {
+                lv_label_set_text(hdr_count_lbl, "No WiFi");
+                lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_TEXT_DIM, 0);
+            }
         }
     }
 }
