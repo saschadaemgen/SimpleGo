@@ -8,7 +8,26 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## 🔍 LATEST: The SPI2 Bus Hunt (2026-03-01 Session 38)
+## 📡 LATEST: On-Device WiFi Manager (2026-03-03 Session 39)
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+
+  📡📡📡 FIRST ON-DEVICE WIFI MANAGER FOR T-DECK HARDWARE 📡📡📡
+
+  Unified WiFi backend (NVS-only, single state machine)  ✅
+  First-boot auto-launch, WPA3 SAE fix                   ✅
+  SPI DMA buffer pinned, dynamic main header              ✅
+  Info tab redesign with live stats                       ✅
+  No other T-Deck project has on-device WiFi setup        ✅
+
+  9 bugs (#62-#70), 4 lessons (#210-#213), 15 files
+  Date: March 3, 2026
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+## 🔍 Session 38: The SPI2 Bus Hunt (2026-03-01)
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -393,10 +412,11 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | [35_PART33_SESSION_36.md](35_PART33_SESSION_36.md) | ~389 | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | [36_PART34_SESSION_37.md](36_PART34_SESSION_37.md) | ~332 | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
 | [37_PART35_SESSION_38.md](37_PART35_SESSION_38.md) | ~324 | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** |
-| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2300 | Complete bug documentation (61 bugs, 209 lessons) |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2660 | Constants, wire formats, verified values |
+| [38_PART36_SESSION_39.md](38_PART36_SESSION_39.md) | ~310 | **📡 WiFi Manager: First On-Device WiFi Setup for T-Deck** |
+| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2500 | Complete bug documentation (70 bugs, 213 lessons) |
+| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2850 | Constants, wire formats, verified values |
 
-**Total: ~31,000+ lines of detailed protocol analysis (Session docs + reference docs)**
+**Total: ~32,000+ lines of detailed protocol analysis (Session docs + reference docs)**
 
 ---
 
@@ -440,6 +460,24 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **36** | **Feb 25** | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** | **7 bugs, 10 lessons** |
 | **37** | **Feb 25-27** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** | **2 bugs, 2 lessons** |
 | **38** | **Feb 28 - Mar 1** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** | **2 bugs, 5 lessons** |
+| **39** | **Mar 3** | **📡 WiFi Manager: First On-Device WiFi for T-Deck** | **9 bugs, 4 lessons** |
+
+---
+
+## Session 39 Key Achievements — 📡 On-Device WiFi Manager
+
+### First On-Device WiFi for T-Deck Hardware
+
+```
+Market research: Meshtastic, Bruce, ESP32Berry, MeshCore, ESPP, all
+ESP-IDF WiFi libraries — none has on-device WiFi with LVGL + keyboard.
+
+Backend: Unified wifi_manager.c (was 2 fighting files)
+WPA3: SAE fix (WIFI_AUTH_WPA2_PSK threshold, 100+ test attempts)
+DMA: LVGL buffer pinned to internal SRAM (PSRAM = SPI DMA fail)
+Boot: First-boot auto-launch WiFi Manager, navigation guard
+UI: Dynamic header (SSID/unread/NoWiFi), info tab live stats
+```
 
 ---
 
@@ -1264,4 +1302,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 1, 2026 - Session 38 (🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause)*
+*Last updated: March 3, 2026 - Session 39 (📡 WiFi Manager: First On-Device WiFi Setup for T-Deck)*

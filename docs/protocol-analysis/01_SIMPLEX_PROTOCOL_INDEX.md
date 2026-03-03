@@ -4,11 +4,26 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation  
 **Version:** v0.1.18-alpha  
-**Last Updated:** 2026-03-01 (Session 38 — 🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause)
+**Last Updated:** 2026-03-03 (Session 39 — 📡 WiFi Manager: First On-Device WiFi Setup for T-Deck)
 
 ---
 
-## 🔍 LATEST: The SPI2 Bus Hunt (Session 38)
+## 📡 LATEST: On-Device WiFi Manager (Session 39)
+
+On March 3, 2026, Session 39 delivered the first on-device WiFi manager for T-Deck hardware:
+
+- **Unified WiFi Backend:** ✅ Single wifi_manager.c, NVS-only storage
+- **First-Boot Auto-Launch:** ✅ WiFi Manager opens automatically on fresh device
+- **WPA3 SAE Fix:** ✅ WIFI_AUTH_WPA2_PSK threshold (100+ test attempts)
+- **SPI DMA OOM Fix:** ✅ Draw buffer pinned to internal SRAM
+- **Dynamic Main Header:** ✅ SSID/unread count/NoWiFi with 3s refresh
+- **Info Tab Redesign:** ✅ Row-based with live heap/PSRAM/LVGL stats
+- **Market First:** No other T-Deck project has on-device WiFi setup
+
+**Bugs: 70 total (9 new in S39: #62-#70)**
+**Lessons Learned:** 213 total (4 new in S39)
+
+## 🔍 PREVIOUS: The SPI2 Bus Hunt (Session 38)
 
 On February 28 - March 1, 2026, Session 38 added backlight control and identified the display freeze root cause:
 
@@ -70,7 +85,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~31,000+ lines, 640+ sections) is split into 35 parts:
+The complete protocol analysis (~32,000+ lines, 660+ sections) is split into 36 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -109,7 +124,8 @@ The complete protocol analysis (~31,000+ lines, 640+ sections) is split into 35 
 | **33** | [**35_PART33_SESSION_36.md**](35_PART33_SESSION_36.md) | **~389** | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | **34** | [**36_PART34_SESSION_37.md**](36_PART34_SESSION_37.md) | **~332** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
 | **35** | [**37_PART35_SESSION_38.md**](37_PART35_SESSION_38.md) | **~324** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** |
-| **Total** | | **~31,000+** | **640+ Sections** |
+| **36** | [**38_PART36_SESSION_39.md**](38_PART36_SESSION_39.md) | **~310** | **📡 WiFi Manager: First On-Device WiFi Setup for T-Deck** |
+| **Total** | | **~32,000+** | **660+ Sections** |
 
 ---
 
@@ -117,9 +133,9 @@ The complete protocol analysis (~31,000+ lines, 640+ sections) is split into 35 
 
 | Document | Lines | Description |
 |----------|-------|-------------|
-| [README.md](README.md) | ~1,300 | Project overview and navigation |
-| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,300 | All 61 bugs documented, 209 lessons |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2,600 | Constants, wire formats, verified values |
+| [README.md](README.md) | ~1,350 | Project overview and navigation |
+| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,500 | All 70 bugs documented, 213 lessons |
+| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2,800 | Constants, wire formats, verified values |
 
 ---
 
@@ -162,6 +178,7 @@ The complete protocol analysis (~31,000+ lines, 640+ sections) is split into 35 
 | **36** | **Feb 25, 2026** | **LIFECYCLE** | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | **37** | **Feb 25-27, 2026** | **HISTORY** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
 | **38** | **Feb 28 - Mar 1, 2026** | **SPI HUNT** | **🔍 Eight Hypotheses, One Root Cause** |
+| **39** | **Mar 3, 2026** | **WIFI** | **📡 First On-Device WiFi Manager for T-Deck** |
 
 ---
 
@@ -239,6 +256,14 @@ The complete protocol analysis (~31,000+ lines, 640+ sections) is split into 35 
 - **LVGL Heap Discovery (64KB separate pool, ~8 bubbles)** 🔍
 - **MAX_VISIBLE_BUBBLES Sliding Window** 🔍
 - **MILESTONE 14: Backlight Control + SPI Root Cause** 🔍
+- **Unified WiFi Manager (Single State Machine, NVS-only)** 📡
+- **First-Boot Auto-Launch WiFi Manager** 📡
+- **WPA3 SAE Fix (WIFI_AUTH_WPA2_PSK threshold)** 📡
+- **SPI DMA Buffer pinned to Internal SRAM** 📡
+- **Dynamic Main Header (SSID/Unread/NoWiFi)** 📡
+- **Info Tab Redesign (Live Heap/PSRAM/LVGL Stats)** 📡
+- **First On-Device WiFi Manager for T-Deck Hardware** 📡
+- **MILESTONE 15: On-Device WiFi Manager** 📡
 
 ### ✅ Session 23: The 7-Step Handshake
 ```
@@ -260,7 +285,7 @@ The complete protocol analysis (~31,000+ lines, 640+ sections) is split into 35 
 
 ## Bug Summary
 
-**Total bugs found and fixed: 61** (59 fixed, #60 identified for S39, #61 temp fix)
+**Total bugs found and fixed: 70** (68 fixed, #60 identified for SPI3 fix, #61 temp fix)
 
 | Category | Count | Sessions |
 |----------|-------|----------|
@@ -503,18 +528,18 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 39)
+## Next Steps (Session 40)
 
-### Phase 1: SPI Root Cause Fix
+### Phase 1: SD Card Fix
 ```
 P0: SD card on SPI3 bus (display freeze root cause fix)
-P1: Sliding window chat history (8 visible, load older on scroll)
+P1: Sliding window chat history (8 visible bubbles, bubble recycling)
 ```
 
-### Phase 2: User Experience
+### Phase 2: Monitoring
 ```
-P2: WiFi Manager (user-friendly network configuration)
-P3: German umlaut fallback fonts (LVGL, task prepared)
+P2: WiFi scan intermittent bug (second scan sometimes empty, observe)
+P3: Multi-network support (backend extension, product tiering)
 ```
 
 ---
@@ -538,7 +563,8 @@ P3: German umlaut fallback fonts (LVGL, task prepared)
 | **12** | **🔄 Contact Lifecycle** | **2026-02-25** | **36** |
 | **13** | **💾 Encrypted Chat History** | **2026-02-27** | **37** |
 | **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
+| **15** | **📡 On-Device WiFi Manager** | **2026-03-03** | **39** |
 
 ---
 
-*Index updated: 2026-03-01 Session 38 — 🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause*
+*Index updated: 2026-03-03 Session 39 — 📡 WiFi Manager: First On-Device WiFi Setup for T-Deck*

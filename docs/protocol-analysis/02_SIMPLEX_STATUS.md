@@ -1,14 +1,43 @@
 ![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
 
-# SimpleGo - Current Status (2026-03-01)
+# SimpleGo - Current Status (2026-03-03)
 
 **Project:** Native SimpleX SMP Client for ESP32  
 **Version:** v0.1.17-alpha  
-**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (640+ sections, 35 parts)
+**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (660+ sections, 36 parts)
 
 ---
 
-## 🔍 LATEST: The SPI2 Bus Hunt (2026-03-01 Session 38)
+## 📡 LATEST: On-Device WiFi Manager (2026-03-03 Session 39)
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+
+  📡📡📡 FIRST ON-DEVICE WIFI MANAGER FOR T-DECK HARDWARE 📡📡📡
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                                                                         │
+  │   Unified WiFi backend (single state machine, NVS-only)     ✅        │
+  │   First-boot auto-launch (WiFi Manager opens on fresh start)✅        │
+  │   WPA3 SAE fix (WIFI_AUTH_WPA2_PSK threshold)               ✅        │
+  │   SPI DMA buffer pinned to internal SRAM                    ✅        │
+  │   Dynamic main header (SSID/unread/NoWiFi + 3s refresh)     ✅        │
+  │   Info tab redesign (live heap/PSRAM/LVGL stats)            ✅        │
+  │   First on-device WiFi for T-Deck (no other project has it) ✅        │
+  │                                                                         │
+  │   9 bugs fixed (#62-#70), 4 lessons (#210-#213)                        │
+  │   15 files changed, 100+ WPA3 test attempts                            │
+  │                                                                         │
+  │   Date: March 3, 2026                                                   │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+---
+
+## 🔍 PREVIOUS: The SPI2 Bus Hunt (2026-03-01 Session 38)
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -672,9 +701,9 @@ Bytes 80-95: HEADER_IV (iv2)   ← FOR HEADER!
 | `01_SIMPLEX_PROTOCOL_INDEX.md` | Navigation index |
 | `02_SIMPLEX_STATUS.md` | This file - quick status |
 | `README.md` | Project overview |
-| `BUG_TRACKER.md` | All 61 bugs, 209 lessons |
+| `BUG_TRACKER.md` | All 70 bugs, 213 lessons |
 | `QUICK_REFERENCE.md` | Constants, wire formats |
-| `03-37_PART*.md` | Sessions 1-38 documentation |
+| `03-38_PART*.md` | Sessions 1-39 documentation |
 
 ---
 
@@ -697,19 +726,20 @@ Bytes 80-95: HEADER_IV (iv2)   ← FOR HEADER!
 | **12** | **🔄 Contact Lifecycle** | **2026-02-25** | **36** |
 | **13** | **💾 Encrypted Chat History** | **2026-02-27** | **37** |
 | **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
+| **15** | **📡 On-Device WiFi Manager** | **2026-03-03** | **39** |
 
 ---
 
-## 🎯 Next Steps (Session 39)
+## 🎯 Next Steps (Session 40)
 
 1. **P0:** SD card on SPI3 bus (display freeze root cause fix)
-2. **P1:** Sliding window chat history (8 visible bubbles, load older on scroll)
-3. **P2:** WiFi Manager (user-friendly network configuration)
-4. **P3:** German umlaut fallback fonts (LVGL, task prepared)
+2. **P1:** Sliding window chat history (8 visible bubbles, bubble recycling)
+3. **P2:** WiFi scan intermittent bug (second scan sometimes empty, observe)
+4. **P3:** Multi-network support (backend extension, product tiering)
 
-**Status:** SPI2 root cause identified. SD removed = stable. Fix: move SD to SPI3.
+**Status:** WiFi Manager complete. SD card SPI contention is the last hardware blocker.
 
 ---
 
-*Status updated: 2026-03-01 Session 38 — 🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause*  
-*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY -> S38 SPI HUNT!*
+*Status updated: 2026-03-03 Session 39 — 📡 WiFi Manager: First On-Device WiFi Setup for T-Deck*  
+*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY -> S38 SPI HUNT -> S39 WIFI!*

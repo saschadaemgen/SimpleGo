@@ -2,7 +2,7 @@
 
 # Bug Tracker
 
-## Complete Documentation of All 61 Bugs
+## Complete Documentation of All 70 Bugs
 
 This document provides detailed documentation of all bugs discovered during SimpleGo development, including the incorrect code, correct code, and root cause analysis.
 
@@ -52,7 +52,7 @@ This document provides detailed documentation of all bugs discovered during Simp
 | **38** | **Receipt rcptInfo=Word32** | **25** | **FIXED** |
 | **39** | **NULL contact Reply Queue** | **25** | **FIXED** |
 
-**Total: 61 bugs documented, 59 FIXED, 1 identified (S39), 1 temp fix**
+**Total: 70 bugs documented, 68 FIXED, 1 identified (SPI3), 1 temp fix**
 
 ---
 
@@ -2308,3 +2308,176 @@ fa4d40a feat(hal): add dedicated keyboard backlight module
 *Total bugs documented: 61 (59 FIXED, 1 identified for S39, 1 temp fix) + Bug E*  
 *209 lessons learned!*  
 *🔍 Session 38: The SPI2 Bus Hunt — Eight Hypotheses, One Root Cause*
+
+---
+
+## Session 39 — On-Device WiFi Manager (2026-03-03)
+
+### 📡 First On-Device WiFi Manager for T-Deck Hardware
+
+**9 bugs found and fixed in a single day.** After exhaustive market research (Meshtastic, MeshCore, Bruce, ESP32Berry, Armachat, ESPP, all ESP-IDF WiFi libraries), confirmed no T-Deck project has on-device WiFi setup. SimpleGo is the first. Complete WiFi backend rewrite, first-boot flow, WPA3 fix, SPI DMA fix, dynamic UI.
+
+### Bug #62: Dual-File WiFi Race Condition
+
+```
+Problem:
+  smp_wifi.c and wifi_manager.c fought each other.
+  smp_wifi.c had unconditional auto-reconnect on DISCONNECT event.
+  wifi_manager.c disconnects to switch network → smp_wifi.c reconnects to old.
+
+  wifi_manager: esp_wifi_disconnect()  → DISCONNECT event fires
+  smp_wifi:    event_handler()         → esp_wifi_connect(old_network!)
+  wifi_manager: esp_wifi_connect(new)  → ALREADY CONNECTED to old!
+
+Fix:
+  Both files merged into single wifi_manager.c.
+  One state machine, one event handler chain, no conflicts.
+  Kconfig credentials eliminated as priority source, NVS-only storage.
+```
+
+### Bug #63: UI Freeze from vTaskDelay in LVGL Context
+
+```
+Problem:
+  deferred_wifi_rebuild() called vTaskDelay(pdMS_TO_TICKS(200))
+  Blocked LVGL render task for 200ms — no screen updates, no input.
+
+Fix:
+  Replaced with lv_timer_create() one-shot timer.
+  Fires after 200ms without blocking LVGL task.
+```
+
+### Bug #64: WiFi Scan Race Condition
+
+```
+Problem:
+  wifi_scan_poll_cb() called ESP-IDF APIs directly:
+    esp_wifi_scan_get_ap_num() + esp_wifi_scan_get_ap_records()
+  Instead of using cached results from backend.
+  Inconsistent results when scan and UI polling out of sync.
+
+Fix:
+  Switched to wifi_manager_get_scan_count() / get_scan_results().
+  Backend caches results after scan completion, UI reads cache only.
+```
+
+### Bug #65: First Scan Shows No Results
+
+```
+Problem:
+  500ms "stale flag guard" ignored wifi_manager_is_scan_done() for first 500ms.
+  ESP32 completes scan in <500ms with few APs → poll misses done signal.
+
+Fix:
+  Stale flag guard completely removed.
+  Backend sets s_scan_done = false before each new scan. Sufficient.
+```
+
+### Bug #66: WPA3 SAE Authentication Failure (0x600)
+
+```
+Symptom:
+  auth -> init (0x600) on every connection attempt
+  10 retries, then state machine dead
+  Router: WPA2/WPA3 Transition Mode
+
+Root Cause:
+  WIFI_AUTH_WPA_WPA2_PSK threshold made ESP32 attempt WPA3-SAE.
+  SAE negotiation on ESP32-S3 (ESP-IDF 5.5.2) fails consistently
+  with Transition Mode routers.
+
+Fix:
+  Threshold: WIFI_AUTH_WPA2_PSK
+  sae_pwe_h2e = WPA3_SAE_PWE_BOTH
+  pmf_cfg.capable = true, required = false
+  Accepts WPA2 and WPA3, but doesn't aggressively attempt SAE.
+
+  1 line of code, 100+ test attempts to isolate.
+```
+
+### Bug #67: Dead State Machine After Exhausted Retries
+
+```
+Problem:
+  After 10 failed boot retries, WiFi state machine stayed dead.
+  Manual connect via WiFi Manager ignored (retry counter exhausted).
+
+Fix:
+  Retry counter reset on every new wifi_manager_connect() call.
+  esp_wifi_disconnect() before esp_wifi_connect() to clean driver state.
+```
+
+### Bug #68: SPI DMA OOM on Screen Switch
+
+```
+Symptom:
+  lcd_panel.io.spi: spi transmit (queue) color failed
+  TDECK_LVGL: draw_bitmap FAILED: ESP_ERR_NO_MEM (0x101)
+  LVGL buffer at 0x3c1d79a8 (PSRAM range)
+
+Root Cause:
+  Previously invisible because WiFi Manager never worked.
+  Working WiFi Manager = first "screen switch during active network session".
+  TLS/SMP/crypto consumed internal SRAM → malloc fell back to PSRAM.
+  ESP32-S3 SPI DMA cannot read from PSRAM.
+
+Fix:
+  LVGL draw buffer: MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL
+  Guarantees internal SRAM placement regardless of heap pressure.
+```
+
+### Bug #69: Splash Timer Overwrites WiFi Manager
+
+```
+Problem:
+  First boot: SMP task detects "no WiFi" at ~2040ms → opens Settings/WiFi
+  Splash timer fires at ~3770ms → overwrites with Main Screen
+
+Fix:
+  Navigation guard in ui_splash.c:
+  If current screen != Splash (task already navigated), timer does nothing.
+```
+
+### Bug #70: SSID Not Visible on Main Screen
+
+```
+Problem:
+  WiFi SSID only appeared after visiting Settings/WiFi.
+
+Root Cause:
+  ui_main_refresh() called only once at screen create.
+  WiFi not yet connected at that point.
+
+Fix:
+  3-second timer hdr_refresh_cb checks WiFi status + unread count.
+  Dynamic header: unread (blue mail icon) / SSID (cyan) / "No WiFi" (grey)
+```
+
+### Market Research Results
+
+```
+No T-Deck project has an on-device WiFi manager:
+
+  Meshtastic (9,000 commits): CLI, phone app, web UI only
+  LilyGo Factory Firmware:    Hardware examples, no WiFi
+  ESP32Berry:                  Had LVGL WiFi, archived May 2024
+  Bruce Firmware:              Best WiFi, but TFT_eSPI not LVGL
+  All ESP-IDF libraries:      Web portals or BLE, no on-device LVGL
+
+  SimpleGo: FIRST on-device WiFi manager for T-Deck with LVGL + keyboard
+```
+
+### New Lessons Learned (Session 39)
+
+210. **WPA3 SAE negotiation on ESP32-S3 is fragile with WPA2/WPA3 Transition Mode routers** - WIFI_AUTH_WPA2_PSK as threshold is the safe default. Allows WPA3 when forced, but doesn't aggressively attempt SAE. Poorly documented in ESP-IDF. 100+ test attempts to isolate (Session 39)
+211. **ESP32-S3 SPI DMA cannot read from PSRAM** - When internal SRAM is consumed by TLS/SMP/crypto, malloc falls back to PSRAM silently. LVGL draw buffers must use MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL to prevent runtime OOM. The failure only manifests under memory pressure (Session 39)
+212. **FreeRTOS tasks and LVGL timers run asynchronously** - Timer-based navigation must always check "am I still the active screen?" before acting. Without guards, a late-firing timer overwrites earlier task navigation. Essential for every timer callback that changes screens (Session 39)
+213. **No T-Deck project has an on-device WiFi manager** - After analyzing Meshtastic, MeshCore, Bruce, ESP32Berry, Armachat, ESPP, and all ESP-IDF WiFi libraries: SimpleGo is the first. Market gap confirmed across 6+ projects and 10+ libraries (Session 39)
+
+---
+
+*Bug Tracker v34.0*  
+*Last updated: March 3, 2026 - Session 39*  
+*Total bugs documented: 70 (68 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
+*213 lessons learned!*  
+*📡 Session 39: WiFi Manager — First On-Device WiFi Setup for T-Deck*

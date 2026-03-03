@@ -4,11 +4,26 @@
 
 ## Constants, Wire Formats, Verified Values
 
-**Updated: 2026-03-01 - Session 38 (🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause)**
+**Updated: 2026-03-03 - Session 39 (📡 WiFi Manager: First On-Device WiFi Setup for T-Deck)**
 
 ---
 
 ## Current Status
+
+```
+SESSION 39 - 📡 ON-DEVICE WIFI MANAGER
+========================================
+
+Unified WiFi backend (single state machine, NVS-only)   ✅
+First-boot auto-launch WiFi Manager                      ✅
+WPA3 SAE fix (WIFI_AUTH_WPA2_PSK threshold)             ✅
+SPI DMA buffer pinned to internal SRAM                   ✅
+Dynamic main header (SSID/unread/NoWiFi + 3s refresh)   ✅
+Info tab redesign (live heap/PSRAM/LVGL stats)          ✅
+First on-device WiFi for T-Deck (market first!)          ✅
+
+9 bugs fixed (#62-#70), 4 lessons, 213 total! 📡
+```
 
 ```
 SESSION 38 - 🔍 THE SPI2 BUS HUNT
@@ -2658,3 +2673,156 @@ Last commit hash: f0616e4
 *Status: 🔍 The SPI2 Bus Hunt — Eight Hypotheses, One Root Cause*  
 *14 Milestones Achieved!*  
 *Next: Session 39 — SD on SPI3, Sliding Window History, WiFi Manager*
+
+---
+
+## Section 37: Session 39 — On-Device WiFi Manager (2026-03-03)
+
+### 37.1 WiFi Manager Architecture
+
+```
+BEFORE (broken):
+  smp_wifi.c     = auto-reconnect handler (unconditional)
+  wifi_manager.c = scan + connect logic
+  → Race condition: disconnect to switch → smp_wifi reconnects to old
+
+AFTER (unified):
+  wifi_manager.c = SINGLE file, SINGLE state machine
+    States: IDLE → SCANNING → CONNECTING → CONNECTED → DISCONNECTED
+    Storage: NVS-only (no Kconfig credentials)
+    Events: Single esp_event_handler_t, no conflicts
+
+  smp_wifi.c     = gutted, minimal interface for SMP task
+
+API:
+  wifi_manager_init()              Start WiFi subsystem
+  wifi_manager_connect(ssid, pw)   Connect to network
+  wifi_manager_scan_start()        Start async AP scan
+  wifi_manager_is_scan_done()      Poll scan status
+  wifi_manager_get_scan_results()  Get cached scan results
+  wifi_manager_get_ssid()          Get current SSID
+  wifi_manager_needs_setup()       Check if first-boot (no NVS creds)
+```
+
+### 37.2 WPA3 SAE Fix (CRITICAL for ESP32-S3)
+
+```
+Problem:
+  WPA2/WPA3 Transition Mode routers cause auth -> init (0x600)
+  on ESP32-S3 with ESP-IDF 5.5.2 when SAE is attempted.
+
+Root Cause:
+  WIFI_AUTH_WPA_WPA2_PSK threshold triggers aggressive SAE.
+  SAE negotiation on ESP32-S3 is fragile with transition mode.
+
+Fix:
+  wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+  wifi_config.sta.sae_pwe_h2e       = WPA3_SAE_PWE_BOTH;
+  wifi_config.sta.pmf_cfg.capable   = true;
+  wifi_config.sta.pmf_cfg.required  = false;
+
+  Result: Accepts WPA2, allows WPA3 when forced, no aggressive SAE.
+  Poorly documented in ESP-IDF. 100+ test attempts to find.
+```
+
+### 37.3 SPI DMA PSRAM Trap
+
+```
+Problem:
+  Under memory pressure (TLS + SMP + crypto active),
+  malloc() falls back from internal SRAM to PSRAM silently.
+  LVGL draw buffer lands in PSRAM → SPI DMA fails.
+
+  Symptom: ESP_ERR_NO_MEM (0x101) on spi transmit
+  Buffer address in PSRAM range: 0x3c000000-0x3dffffff
+
+Fix:
+  At init time (before memory pressure):
+  buf = heap_caps_malloc(size, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+
+  Guarantees internal SRAM placement regardless of runtime heap state.
+
+ESP32-S3 Memory Ranges:
+  Internal SRAM: 0x3fc00000 - 0x3fcfffff (DMA capable)
+  PSRAM:         0x3c000000 - 0x3dffffff (NOT DMA capable for SPI)
+```
+
+### 37.4 First-Boot Auto-Launch Flow
+
+```
+Boot Sequence:
+
+  Power On
+    ↓
+  Splash Screen (3770ms timer)
+    ↓
+  SMP Task checks WiFi (~2040ms):
+    ├── Has NVS credentials? → Connect → Main Screen
+    └── No credentials?     → Open WiFi Manager
+                               ↓
+                             (Splash timer fires at 3770ms)
+                               ↓
+                             Navigation Guard: "Am I still Splash?"
+                               ├── Yes → Navigate to Main
+                               └── No  → Do nothing (WiFi Manager stays)
+
+Dual-Path:
+  Developer: Kconfig SSID → auto-transferred to NVS at boot
+  End user:  No Kconfig → WiFi Manager auto-launches
+```
+
+### 37.5 Dynamic Main Screen Header
+
+```
+3-second auto-refresh timer (hdr_refresh_cb):
+
+  Priority 1: Unread messages > 0
+    → Blue mail icon + count (e.g. "📧 3")
+
+  Priority 2: WiFi connected, no unreads
+    → SSID in cyan (e.g. "MyNetwork")
+
+  Priority 3: No WiFi
+    → "No WiFi" in grey
+```
+
+### 37.6 Info Tab Live Stats
+
+```
+167-line complete rewrite. Row-based design with accent bars.
+2-second auto-refresh timer:
+
+  Free Heap:     xxx,xxx bytes
+  PSRAM Free:    xxx KB
+  LVGL Pool:     xx% used
+  Server Status: Connected (SSID)
+```
+
+### 37.7 Files Changed (Session 39)
+
+```
+CHANGED (15 files):
+  main/net/wifi_manager.c              Complete rewrite, unified state machine
+  main/include/wifi_manager.h          New API
+  main/net/smp_wifi.c                  Gutted, logic migrated
+  main/include/smp_wifi.h              Reduced interface
+  devices/.../tdeck_lvgl.c             SPI DMA buffer fix
+  main/main.c                          Blocking WiFi loop removed
+  main/ui/ui_manager.c                 First-boot WiFi redirect
+  main/ui/screens/ui_splash.c          Navigation guard
+  main/ui/screens/ui_main.c            Dynamic header + 3s refresh
+  main/ui/screens/ui_settings.c        Tab text-only styling
+  main/ui/screens/ui_settings_wifi.c   Scan race, vTaskDelay, stale guard
+  main/ui/screens/ui_settings_bright.c Battery hint removed
+  main/ui/screens/ui_settings_info.c   Complete rewrite, live stats
+  sdkconfig                            WiFi Manager config
+  main/ui/screens/ui_main.c.old        Backup (to be removed)
+```
+
+---
+
+*Quick Reference v33.0*  
+*Last updated: March 3, 2026 - Session 39*  
+*Status: 📡 On-Device WiFi Manager — First for T-Deck Hardware*  
+*15 Milestones Achieved!*  
+*Next: Session 40 — SD on SPI3, Sliding Window History*
