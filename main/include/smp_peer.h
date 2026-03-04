@@ -24,6 +24,9 @@ void peer_disconnect(void);
 // Send AgentConfirmation to peer
 bool send_agent_confirmation(contact_t *contact, int contact_idx);
 
+// Send HELLO to peer contact
+bool peer_send_hello(contact_t *contact);
+
 // Auftrag 44a: Send chat message to peer
 bool peer_send_chat_message(contact_t *contact, const char *message);
 

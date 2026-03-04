@@ -32,8 +32,6 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
-// TODO: move to smp_peer.h
-extern bool peer_send_hello(contact_t *contact);
 
 static const char *TAG = "SMP_TASKS";
 static const char *TAG_APP = "SMP_APP";  // App Task logging
