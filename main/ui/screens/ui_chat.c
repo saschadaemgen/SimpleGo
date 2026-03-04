@@ -483,6 +483,11 @@ uint32_t ui_chat_get_last_seq(void)
 
 void ui_chat_switch_contact(int contact_idx, const char *name)
 {
+    /* 42e: Set guard IMMEDIATELY to block stale scroll events.
+     * Without this, on_scroll_cb fires between screen creation and
+     * cache_history, adding bubbles that fragment the pool. */
+    s_window_setup = true;
+
     s_chat_active_contact = contact_idx;
 
     /* Update header */
@@ -492,26 +497,18 @@ void ui_chat_switch_contact(int contact_idx, const char *name)
         lv_label_set_text(header_label, trunc);
     }
 
-    /* Filter bubbles: show matching, hide others */
+    /* 42e: Delete ALL existing bubbles (not just hide/show).
+     * Old code only toggled visibility, leaving stale bubbles consuming
+     * LVGL pool memory. Since cache_history will render fresh bubbles
+     * anyway, full cleanup is safe and prevents pool fragmentation. */
     if (msg_container) {
-        uint32_t child_count = lv_obj_get_child_count(msg_container);
-        for (uint32_t i = 0; i < child_count; i++) {
-            lv_obj_t *child = lv_obj_get_child(msg_container, i);
-            int tag = (int)(intptr_t)lv_obj_get_user_data(child);
-            if (tag == 0) continue;  /* Untagged, skip */
-            int child_contact = tag - 1;
-            if (child_contact == contact_idx) {
-                lv_obj_clear_flag(child, LV_OBJ_FLAG_HIDDEN);
-            } else {
-                lv_obj_add_flag(child, LV_OBJ_FLAG_HIDDEN);
-            }
-        }
-        /* Scroll to bottom of visible messages */
-        lv_obj_update_layout(msg_container);
-        lv_obj_scroll_to_y(msg_container, LV_COORD_MAX, LV_ANIM_OFF);
+        lv_obj_clean(msg_container);
+        s_loading_box = NULL;
+        chat_bubble_reset_count();
     }
 
-    ESP_LOGI(TAG, "Switched to contact [%d] '%s'", contact_idx, name ? name : "?");
+    ESP_LOGI(TAG, "42e: Switched to contact [%d] '%s' (pool cleared, scroll guard ON)",
+             contact_idx, name ? name : "?");
 }
 
 void ui_chat_clear_contact(int contact_idx)
@@ -592,12 +589,20 @@ void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
     s_window_setup = true;
 
     /* Clear ALL existing bubbles BEFORE setting window state.
-     * This prevents scroll events from seeing stale content. */
+     * This prevents scroll events from seeing stale content.
+     * 42e: Force layout update after cleanup to help LVGL reclaim
+     * freed pool memory before new bubbles are created. */
     if (msg_container) {
         lv_obj_clean(msg_container);
         s_loading_box = NULL;
         chat_bubble_reset_count();
-        ESP_LOGI(TAG, "40c: Cleared bubbles before cache setup");
+        lv_obj_update_layout(msg_container);
+
+        lv_mem_monitor_t mon;
+        lv_mem_monitor(&mon);
+        ESP_LOGI(TAG, "42e: Pool after cleanup: free=%u/%u (%u%% used), frags=%u%%",
+                 (unsigned)mon.free_size, (unsigned)mon.total_size,
+                 (unsigned)mon.used_pct, (unsigned)mon.frag_pct);
     }
 
     /* Allocate PSRAM cache on first use */
