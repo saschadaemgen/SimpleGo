@@ -65,11 +65,21 @@ static uint32_t msg_seq_counter = 0;
 
 static int s_bubble_count = 0;   /* Active bubbles in LVGL 64KB pool */
 
+/* 42f: Reset all state when chat screen is destroyed */
+void chat_bubble_cleanup(void)
+{
+    memset(tracked_msgs, 0, sizeof(tracked_msgs));
+    msg_seq_counter = 0;
+    s_bubble_count = 0;
+}
+
 /* LVGL pool safety: refuse new bubbles when free memory drops below this.
- * 4KB reserve for UI updates, animations, temporary LVGL allocations.
- * Session 42d: Lowered from 8KB to 4KB because eviction now runs BEFORE
- * creation, guaranteeing ~1000-1300 bytes freed before each new bubble. */
-#define LVGL_POOL_SAFETY_MARGIN  4096
+ * Must account for: (a) the bubble about to be created (~1400 bytes worst case)
+ * plus (b) minimum LVGL working memory for layout/render (~3000 bytes).
+ * Session 42e: Raised from 4096 to 4500 to prevent freeze when pool is
+ * tight after contact switch (bubble passes old check at 4116 free, costs
+ * 1348, leaving only 2768 which freezes LVGL). */
+#define LVGL_POOL_SAFETY_MARGIN  4500
 
 /* ============== Timestamp Helpers ============== */
 

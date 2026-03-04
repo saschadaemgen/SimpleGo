@@ -16,6 +16,9 @@
 #include "wifi_manager.h"
 #include "esp_log.h"
 
+/* 42f: Cleanup functions called before screen deletion */
+extern void ui_chat_cleanup(void);
+
 static const char *TAG = "UI_MGR";
 
 static lv_obj_t *screens[UI_SCREEN_COUNT] = {NULL};
@@ -94,6 +97,8 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
     /* 42f: Delete previous screen to free LVGL pool (MAIN stays permanent) */
     if (prev != UI_SCREEN_SPLASH && prev != UI_SCREEN_MAIN) {
         if (screens[prev] != NULL) {
+            /* Null dangling pointers BEFORE destroying LVGL objects */
+            if (prev == UI_SCREEN_CHAT) ui_chat_cleanup();
             lv_obj_del(screens[prev]);
             screens[prev] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", prev);
@@ -159,6 +164,8 @@ void ui_manager_go_back(void)
     /* 42f: Delete old screen to free LVGL pool (MAIN stays permanent) */
     if (old != UI_SCREEN_SPLASH && old != UI_SCREEN_MAIN) {
         if (screens[old] != NULL) {
+            /* Null dangling pointers BEFORE destroying LVGL objects */
+            if (old == UI_SCREEN_CHAT) ui_chat_cleanup();
             lv_obj_del(screens[old]);
             screens[old] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", old);

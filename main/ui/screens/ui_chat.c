@@ -23,6 +23,10 @@
 
 #include "ui_chat.h"
 #include "ui_chat_bubble.h"
+
+/* 42f: Cleanup tracked message state when screen is destroyed.
+ * TODO: Move this declaration to ui_chat_bubble.h */
+extern void chat_bubble_cleanup(void);
 #include "ui_theme.h"
 #include "ui_manager.h"
 #include "tdeck_keyboard.h"
@@ -91,6 +95,45 @@ static bool s_scroll_cb_registered = false;
 
 /* Forward declaration for scroll handler */
 static void on_scroll_cb(lv_event_t *e);
+
+/* ============== 42f: Screen Cleanup ============== */
+
+void ui_chat_cleanup(void)
+{
+    /* Null all LVGL object pointers BEFORE lv_obj_del(screen).
+     * lv_obj_del destroys the objects, but these static pointers
+     * would still reference freed memory (dangling pointers).
+     * Background tasks (switch_contact, add_message) check these
+     * and would crash without this cleanup. */
+    screen          = NULL;
+    header_label    = NULL;
+    msg_container   = NULL;
+    input_area      = NULL;
+    s_loading_box   = NULL;
+    s_settings_icon = NULL;
+
+    /* input_group is NOT a child of the screen, must be freed separately */
+    if (input_group) {
+        lv_group_del(input_group);
+        input_group = NULL;
+    }
+
+    /* Reset window state */
+    s_window_start  = 0;
+    s_window_end    = 0;
+    s_cache_count   = 0;
+    s_cache_slot    = -1;
+    s_loading_older = false;
+    s_loading_newer = false;
+    s_window_busy   = false;
+    s_window_setup  = false;
+    s_scroll_cb_registered = false;
+
+    /* Reset bubble tracking (status_label pointers are dangling too) */
+    chat_bubble_cleanup();
+
+    ESP_LOGI(TAG, "42f: Chat screen cleanup (all pointers nulled)");
+}
 
 /* ============== Forward Declarations ============== */
 
@@ -394,6 +437,10 @@ void ui_chat_set_contact(const char *name)
 
 void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx)
 {
+    /* 42f: If chat screen was destroyed, skip bubble creation.
+     * Message is already saved to SD history by the caller. */
+    if (!screen) return;
+
     /* 42d: Evict BEFORE creating new bubble to guarantee pool space.
      * Previously eviction ran AFTER creation, causing the pool check
      * inside create_bubble_internal() to reject the new bubble when
@@ -466,6 +513,7 @@ lv_indev_t *ui_chat_get_keyboard_indev(void)
 
 void ui_chat_update_status(uint32_t msg_seq, int status)
 {
+    if (!screen) return;  /* 42f: no screen, no labels to update */
     chat_bubble_update_status(msg_seq, status);
 }
 
@@ -483,12 +531,13 @@ uint32_t ui_chat_get_last_seq(void)
 
 void ui_chat_switch_contact(int contact_idx, const char *name)
 {
-    /* 42e: Set guard IMMEDIATELY to block stale scroll events.
-     * Without this, on_scroll_cb fires between screen creation and
-     * cache_history, adding bubbles that fragment the pool. */
-    s_window_setup = true;
-
+    /* 42f: If chat screen was destroyed, only update contact index.
+     * Background tasks may call this after navigation away from chat. */
     s_chat_active_contact = contact_idx;
+    if (!screen) return;
+
+    /* 42e: Set guard IMMEDIATELY to block stale scroll events. */
+    s_window_setup = true;
 
     /* Update header */
     if (header_label && name) {
@@ -583,6 +632,10 @@ void ui_chat_scroll_to_bottom(void)
 
 void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
 {
+    /* 42f: If chat screen was destroyed, skip entirely.
+     * Data will be loaded fresh when screen is recreated. */
+    if (!screen) return;
+
     /* GUARD ON: Block scroll-cb from firing on stale content during setup.
      * Without this, setting window vars while old bubbles exist causes the
      * scroll event to trigger load_older_messages() and corrupt the window. */
@@ -632,10 +685,26 @@ void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
     s_cache_count = to_copy;
     s_cache_slot = slot;
 
-    /* Calculate initial window: show last BUBBLE_WINDOW_SIZE messages */
+    /* Calculate initial window: show last N messages where N depends
+     * on available LVGL pool.  42e: Pool may be fragmented/tight after
+     * contact switches. Check actual free memory and reduce window if
+     * the pool can't hold BUBBLE_WINDOW_SIZE bubbles safely.
+     * Each bubble costs ~1200-1400 bytes. Reserve 4500 for LVGL. */
+    lv_mem_monitor_t win_mon;
+    lv_mem_monitor(&win_mon);
+    int pool_budget = (int)win_mon.free_size - 4500;
+    int max_safe = pool_budget / 1200;  /* avg bubble cost from measurements */
+    if (max_safe < 1) max_safe = 1;
+    if (max_safe > BUBBLE_WINDOW_SIZE) max_safe = BUBBLE_WINDOW_SIZE;
+
     s_window_end = s_cache_count;
-    s_window_start = s_cache_count - BUBBLE_WINDOW_SIZE;
+    s_window_start = s_cache_count - max_safe;
     if (s_window_start < 0) s_window_start = 0;
+
+    if (max_safe < BUBBLE_WINDOW_SIZE) {
+        ESP_LOGW(TAG, "42e: Pool tight (%d free), window reduced to %d bubbles",
+                 (int)win_mon.free_size, max_safe);
+    }
 
     s_loading_older = false;
     s_loading_newer = false;
@@ -670,10 +739,14 @@ int ui_chat_get_active_contact(void)
 /**
  * Render one history message from cache as an LVGL bubble.
  * Used by both initial render (from main.c timer) and scroll-up loading.
+ * 42e: Detects if create_bubble_internal skipped due to pool safety,
+ * and adjusts window state to prevent inconsistency.
  */
 static void render_cache_bubble(int cache_idx, bool at_top)
 {
     if (cache_idx < 0 || cache_idx >= s_cache_count || !msg_container) return;
+
+    int count_before = chat_bubble_get_count();
 
     history_message_t *m = &s_msg_cache[cache_idx];
 
@@ -696,6 +769,18 @@ static void render_cache_bubble(int cache_idx, bool at_top)
                                 m->direction == HISTORY_DIR_SENT,
                                 s_cache_slot, s_chat_active_contact,
                                 m->timestamp, m->delivery_status);
+    }
+
+    /* 42e: If bubble count didn't increase, creation was skipped (pool safety).
+     * Adjust window to match actual rendered state. */
+    if (chat_bubble_get_count() == count_before) {
+        if (at_top) {
+            s_window_start = cache_idx + 1;
+        } else {
+            s_window_end = cache_idx;
+        }
+        ESP_LOGW(TAG, "42e: Bubble skipped at cache[%d], window adjusted to [%d..%d)",
+                 cache_idx, s_window_start, s_window_end);
     }
 }
 
