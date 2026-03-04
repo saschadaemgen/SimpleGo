@@ -67,14 +67,4 @@ int simplex_secretbox(uint8_t *cipher,
                       const uint8_t *nonce24,
                       const uint8_t *dh_secret);
 
-/**
- * Debug version with verbose logging (printf)
- */
-int simplex_secretbox_open_debug(uint8_t *plain, 
-                                  const uint8_t *cipher, 
-                                  size_t cipherlen,
-                                  const uint8_t *nonce24, 
-                                  const uint8_t *dh_secret,
-                                  const char *tag);
-
 #endif /* SIMPLEX_CRYPTO_H */
