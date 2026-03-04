@@ -59,7 +59,7 @@ static esp_err_t spi_bus_init(void)
         .miso_io_num = TDECK_SPI_MISO,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 320 * 20 * sizeof(uint16_t),  /* Session 38d: match LVGL 20-line buffer, not full screen */
+        .max_transfer_sz = 320 * 20 * sizeof(uint16_t),  /* match LVGL 20-line buffer */
     };
     return spi_bus_initialize(TDECK_SPI_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
 }
@@ -73,7 +73,7 @@ static esp_err_t panel_init(void)
         .lcd_cmd_bits = 8,
         .lcd_param_bits = 8,
         .spi_mode = 0,
-        .trans_queue_depth = 2,  /* Session 38d: matches LVGL double-buffer */
+        .trans_queue_depth = 2,  /* matches LVGL double-buffer */
     };
     esp_err_t ret = esp_lcd_new_panel_io_spi(TDECK_SPI_HOST, &io_cfg, &io_handle);
     if (ret != ESP_OK) return ret;
@@ -100,7 +100,7 @@ static esp_err_t panel_init(void)
 
 static void clear_screen_black(void)
 {
-    /* Session 38d: 20-line chunks to match reduced max_transfer_sz */
+    /* 20-line chunks to match reduced max_transfer_sz */
     uint16_t *black_buf = heap_caps_malloc(320 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
     if (black_buf) {
         memset(black_buf, 0x00, 320 * 20 * sizeof(uint16_t));
@@ -140,7 +140,7 @@ esp_err_t tdeck_display_init(void)
     clear_screen_black();
 
     // 6. NOW turn backlight on - screen is already black!
-    // Backlight wird spaeter von main.c eingeschaltet
+    // Backlight turned on later by main.c at 25% (not by display or keyboard)
 
     is_initialized = true;
     ESP_LOGI(TAG, "Display ready!");
@@ -181,7 +181,7 @@ esp_lcd_panel_handle_t tdeck_display_get_panel(void)
     return panel_handle;
 }
 
-/* Session 38f: expose io_handle for DMA completion callback registration */
+/* Expose io_handle for DMA completion callback registration */
 esp_lcd_panel_io_handle_t tdeck_display_get_io_handle(void)
 {
     return io_handle;
