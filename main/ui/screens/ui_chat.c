@@ -26,8 +26,11 @@
 #include "ui_theme.h"
 #include "ui_manager.h"
 #include "tdeck_keyboard.h"
+#include "smp_history.h"       /* Session 40c: history_message_t for PSRAM cache */
+#include "esp_heap_caps.h"     /* Session 40c: PSRAM allocation */
 #include "esp_log.h"
 #include <string.h>
+#include <time.h>             /* Session 40c: time() for live message timestamp */
 
 static const char *TAG = "UI_CHAT";
 
@@ -61,6 +64,33 @@ static lv_indev_t *pending_kb_indev = NULL;
 
 /* 35e: Active contact for message filtering */
 static int s_chat_active_contact = 0;
+
+/* ============== Session 40c: Sliding Window Chat History ============== */
+
+#define MSG_CACHE_SIZE      30   /* Max messages in PSRAM ring cache */
+#define BUBBLE_WINDOW_SIZE   5   /* Max simultaneous bubbles in LVGL pool */
+#define SCROLL_LOAD_COUNT    2   /* Bubbles to add/remove per scroll trigger */
+#define SCROLL_TOP_THRESHOLD 10  /* Pixels from top to trigger older load */
+#define SCROLL_BTM_THRESHOLD 10  /* Pixels from bottom to trigger newer load */
+
+static history_message_t *s_msg_cache = NULL;  /* PSRAM, allocated on first use */
+static int  s_cache_count    = 0;    /* Messages currently in cache */
+static int  s_cache_slot     = -1;   /* Contact slot for current cache */
+
+/* Window tracks which cache indices are currently rendered as LVGL bubbles.
+ * s_window_start = cache index of the OLDEST visible bubble (top of screen)
+ * s_window_end   = cache index AFTER the NEWEST visible bubble (bottom)
+ * Invariant: s_window_end - s_window_start <= BUBBLE_WINDOW_SIZE */
+static int  s_window_start   = 0;
+static int  s_window_end     = 0;
+static bool s_loading_older  = false; /* Debounce guard for scroll-up loading */
+static bool s_loading_newer  = false; /* Debounce guard for scroll-down loading */
+static bool s_window_busy    = false; /* Re-entrancy guard: blocks ALL scroll triggers while loading */
+static bool s_window_setup   = false; /* Guard: block scroll-cb during cache+render setup */
+static bool s_scroll_cb_registered = false;
+
+/* Forward declaration for scroll handler */
+static void on_scroll_cb(lv_event_t *e);
 
 /* ============== Forward Declarations ============== */
 
@@ -219,6 +249,10 @@ lv_obj_t *ui_chat_create(void)
     lv_obj_add_flag(msg_container, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scrollbar_mode(msg_container, LV_SCROLLBAR_MODE_OFF);
 
+    /* Session 40c: Scroll handler for sliding window (load older on scroll-up) */
+    lv_obj_add_event_cb(msg_container, on_scroll_cb, LV_EVENT_SCROLL, NULL);
+    s_scroll_cb_registered = true;
+
     /* Input Bar (36px) */
     lv_obj_t *input_bar = lv_obj_create(screen);
     lv_obj_set_width(input_bar, LV_PCT(100));
@@ -362,6 +396,42 @@ void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx)
 {
     chat_bubble_add_live(msg_container, text, is_outgoing,
                          contact_idx, s_chat_active_contact);
+
+    /* 40c: Add live message to PSRAM cache so scroll-up has no gaps.
+     * Only if cache exists and matches current contact. */
+    if (s_msg_cache && contact_idx == s_cache_slot
+        && s_cache_count < MSG_CACHE_SIZE) {
+        history_message_t *m = &s_msg_cache[s_cache_count];
+        memset(m, 0, sizeof(history_message_t));
+        m->direction = is_outgoing ? HISTORY_DIR_SENT : HISTORY_DIR_RECEIVED;
+        m->delivery_status = 0xFF;  /* live: no SD status yet */
+        m->timestamp = (int64_t)time(NULL);
+        size_t len = strlen(text);
+        if (len > HISTORY_MAX_TEXT - 1) len = HISTORY_MAX_TEXT - 1;
+        memcpy(m->text, text, len);
+        m->text[len] = '\0';
+        m->text_len = (uint16_t)len;
+        s_cache_count++;
+        s_window_end = s_cache_count;
+    }
+
+    /* 40c: Enforce BUBBLE_WINDOW_SIZE for live messages.
+     * Remove oldest bubble(s) from top when count exceeds limit. */
+    if (contact_idx == s_chat_active_contact) {
+        int count = chat_bubble_get_count();
+        if (count > BUBBLE_WINDOW_SIZE) {
+            int excess = count - BUBBLE_WINDOW_SIZE;
+            chat_bubble_remove_oldest(msg_container, excess, s_chat_active_contact);
+            s_window_start += excess;
+            ESP_LOGI(TAG, "40c: Live evict %d oldest, window [%d..%d)",
+                     excess, s_window_start, s_window_end);
+        }
+    }
+
+    ESP_LOGI(TAG, "40c: Live %s, bubbles=%d, cache=%d, window [%d..%d)",
+             is_outgoing ? "OUT" : "IN",
+             chat_bubble_get_count(), s_cache_count,
+             s_window_start, s_window_end);
 }
 
 void ui_chat_add_history_message(const char *text, bool is_outgoing, int contact_idx,
@@ -450,21 +520,27 @@ void ui_chat_clear_contact(int contact_idx)
     if (contact_idx < 0) {
         lv_obj_clean(msg_container);
         s_loading_box = NULL;  /* was a child of msg_container, now deleted */
+        chat_bubble_reset_count();  /* Session 40b: reset bubble tracking */
         ESP_LOGI(TAG, "36d: Cleared ALL bubbles");
         return;
     }
 
+    int removed = 0;
     uint32_t i = 0;
     while (i < lv_obj_get_child_count(msg_container)) {
         lv_obj_t *child = lv_obj_get_child(msg_container, i);
         int tag = (int)(intptr_t)lv_obj_get_user_data(child);
         if (tag != 0 && (tag - 1) == contact_idx) {
             lv_obj_delete(child);
+            removed++;
         } else {
             i++;
         }
     }
-    ESP_LOGI(TAG, "36d: Cleared bubbles for contact [%d]", contact_idx);
+    if (removed > 0) {
+        chat_bubble_decrement_count(removed);  /* Session 40b */
+    }
+    ESP_LOGI(TAG, "36d: Cleared %d bubbles for contact [%d]", removed, contact_idx);
 }
 
 /* ============== Loading Indicator ============== */
@@ -502,6 +578,282 @@ void ui_chat_scroll_to_bottom(void)
         lv_obj_update_layout(msg_container);
         lv_obj_scroll_to_y(msg_container, LV_COORD_MAX, LV_ANIM_OFF);
     }
+}
+
+/* ============== Session 40c: Sliding Window Implementation ============== */
+
+void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
+{
+    /* GUARD ON: Block scroll-cb from firing on stale content during setup.
+     * Without this, setting window vars while old bubbles exist causes the
+     * scroll event to trigger load_older_messages() and corrupt the window. */
+    s_window_setup = true;
+
+    /* Clear ALL existing bubbles BEFORE setting window state.
+     * This prevents scroll events from seeing stale content. */
+    if (msg_container) {
+        lv_obj_clean(msg_container);
+        s_loading_box = NULL;
+        chat_bubble_reset_count();
+        ESP_LOGI(TAG, "40c: Cleared bubbles before cache setup");
+    }
+
+    /* Allocate PSRAM cache on first use */
+    if (!s_msg_cache) {
+        s_msg_cache = heap_caps_malloc(
+            sizeof(history_message_t) * MSG_CACHE_SIZE, MALLOC_CAP_SPIRAM);
+        if (!s_msg_cache) {
+            ESP_LOGE(TAG, "40c: PSRAM cache alloc failed (%u bytes)",
+                     (unsigned)(sizeof(history_message_t) * MSG_CACHE_SIZE));
+            s_window_setup = false;
+            return;
+        }
+        ESP_LOGI(TAG, "40c: PSRAM cache allocated (%u bytes)",
+                 (unsigned)(sizeof(history_message_t) * MSG_CACHE_SIZE));
+    }
+
+    /* Copy last MSG_CACHE_SIZE messages into cache */
+    int to_copy = count;
+    int src_start = 0;
+    if (to_copy > MSG_CACHE_SIZE) {
+        src_start = count - MSG_CACHE_SIZE;
+        to_copy = MSG_CACHE_SIZE;
+    }
+    memcpy(s_msg_cache, &batch[src_start],
+           (size_t)to_copy * sizeof(history_message_t));
+
+    s_cache_count = to_copy;
+    s_cache_slot = slot;
+
+    /* Calculate initial window: show last BUBBLE_WINDOW_SIZE messages */
+    s_window_end = s_cache_count;
+    s_window_start = s_cache_count - BUBBLE_WINDOW_SIZE;
+    if (s_window_start < 0) s_window_start = 0;
+
+    s_loading_older = false;
+    s_loading_newer = false;
+    s_window_busy = false;
+
+    /* Guard stays ON until ui_chat_window_render_done() is called by main.c
+     * after progressive render completes. */
+    ESP_LOGI(TAG, "40c: Cached %d msgs (slot %d), window [%d..%d), guard ON",
+             s_cache_count, slot, s_window_start, s_window_end);
+}
+
+int ui_chat_get_window_start(void)
+{
+    return s_window_start;
+}
+
+int ui_chat_get_window_end(void)
+{
+    return s_window_end;
+}
+
+lv_obj_t *ui_chat_get_msg_container(void)
+{
+    return msg_container;
+}
+
+int ui_chat_get_active_contact(void)
+{
+    return s_chat_active_contact;
+}
+
+/**
+ * Render one history message from cache as an LVGL bubble.
+ * Used by both initial render (from main.c timer) and scroll-up loading.
+ */
+static void render_cache_bubble(int cache_idx, bool at_top)
+{
+    if (cache_idx < 0 || cache_idx >= s_cache_count || !msg_container) return;
+
+    history_message_t *m = &s_msg_cache[cache_idx];
+
+    if (at_top) {
+        /* Create bubble normally, then move to top of container */
+        chat_bubble_add_history(msg_container, m->text,
+                                m->direction == HISTORY_DIR_SENT,
+                                s_cache_slot, s_chat_active_contact,
+                                m->timestamp, m->delivery_status);
+
+        /* Move the just-created bubble (last child) to position 0 */
+        uint32_t last = lv_obj_get_child_count(msg_container) - 1;
+        lv_obj_t *bubble = lv_obj_get_child(msg_container, last);
+        if (bubble) {
+            lv_obj_move_to_index(bubble, 0);
+        }
+    } else {
+        /* Append at bottom (normal order) */
+        chat_bubble_add_history(msg_container, m->text,
+                                m->direction == HISTORY_DIR_SENT,
+                                s_cache_slot, s_chat_active_contact,
+                                m->timestamp, m->delivery_status);
+    }
+}
+
+static void load_older_messages(void)
+{
+    if (s_window_start <= 0) {
+        ESP_LOGD(TAG, "40c: No older messages in cache");
+        s_loading_older = false;
+        s_window_busy = false;
+        return;
+    }
+
+    /* Calculate how many to add (don't exceed cache bounds) */
+    int to_add = SCROLL_LOAD_COUNT;
+    if (to_add > s_window_start) to_add = s_window_start;
+
+    /* Remove newest bubbles from bottom to stay within BUBBLE_WINDOW_SIZE */
+    int current_bubbles = s_window_end - s_window_start;
+    int need_remove = (current_bubbles + to_add) - BUBBLE_WINDOW_SIZE;
+    if (need_remove > 0) {
+        int removed = chat_bubble_remove_newest(
+            msg_container, need_remove, s_cache_slot);
+        s_window_end -= removed;
+    }
+
+    /* Measure content height BEFORE inserting */
+    lv_obj_update_layout(msg_container);
+    lv_coord_t old_scroll_y = lv_obj_get_scroll_y(msg_container);
+    lv_coord_t old_content_h = lv_obj_get_scroll_top(msg_container)
+                             + lv_obj_get_height(msg_container)
+                             + lv_obj_get_scroll_bottom(msg_container);
+
+    /* Insert older messages at TOP of container.
+     * Insert from newest-of-batch to oldest-of-batch, each at index 0.
+     * This produces correct chronological order:
+     *   insert cache[start-1] at 0 -> [start-1]
+     *   insert cache[start-2] at 0 -> [start-2, start-1]
+     *   insert cache[start-3] at 0 -> [start-3, start-2, start-1]  */
+    int new_start = s_window_start - to_add;
+    for (int i = s_window_start - 1; i >= new_start; i--) {
+        render_cache_bubble(i, true);
+    }
+    s_window_start = new_start;
+
+    /* Measure content height AFTER inserting and correct scroll position.
+     * New bubbles at top pushed content down. We scroll down by the added
+     * height so the user stays looking at the same messages. LV_ANIM_OFF
+     * prevents visible jump. */
+    lv_obj_update_layout(msg_container);
+    lv_coord_t new_content_h = lv_obj_get_scroll_top(msg_container)
+                             + lv_obj_get_height(msg_container)
+                             + lv_obj_get_scroll_bottom(msg_container);
+    lv_coord_t height_diff = new_content_h - old_content_h;
+    if (height_diff > 0) {
+        lv_obj_scroll_to_y(msg_container, old_scroll_y + height_diff, LV_ANIM_OFF);
+    }
+
+    s_loading_older = false;
+    s_window_busy = false;
+    ESP_LOGI(TAG, "40c: Scroll-load %d older, window [%d..%d), bubbles=%d",
+             to_add, s_window_start, s_window_end, chat_bubble_get_count());
+}
+
+static void load_newer_messages(void)
+{
+    if (s_window_end >= s_cache_count) {
+        ESP_LOGD(TAG, "40c: No newer messages in cache");
+        s_loading_newer = false;
+        s_window_busy = false;
+        return;
+    }
+
+    /* Calculate how many to add (don't exceed cache bounds) */
+    int to_add = SCROLL_LOAD_COUNT;
+    if (s_window_end + to_add > s_cache_count)
+        to_add = s_cache_count - s_window_end;
+
+    /* Remove oldest bubbles from top to stay within BUBBLE_WINDOW_SIZE.
+     * Measure scroll BEFORE removing so we can compensate for the lost height. */
+    lv_obj_update_layout(msg_container);
+    lv_coord_t old_scroll_y = lv_obj_get_scroll_y(msg_container);
+    lv_coord_t old_content_h = lv_obj_get_scroll_top(msg_container)
+                             + lv_obj_get_height(msg_container)
+                             + lv_obj_get_scroll_bottom(msg_container);
+
+    int current_bubbles = s_window_end - s_window_start;
+    int need_remove = (current_bubbles + to_add) - BUBBLE_WINDOW_SIZE;
+    if (need_remove > 0) {
+        int removed = chat_bubble_remove_oldest(
+            msg_container, need_remove, s_cache_slot);
+        s_window_start += removed;
+    }
+
+    /* Append newer messages at BOTTOM (normal order, no reorder needed) */
+    for (int i = s_window_end; i < s_window_end + to_add; i++) {
+        render_cache_bubble(i, false);
+    }
+    s_window_end += to_add;
+
+    /* Correct scroll position: removing bubbles at top shifted content up.
+     * Adjust scroll_y downward by the height that was removed so the user
+     * keeps looking at the same messages. */
+    lv_obj_update_layout(msg_container);
+    lv_coord_t new_content_h = lv_obj_get_scroll_top(msg_container)
+                             + lv_obj_get_height(msg_container)
+                             + lv_obj_get_scroll_bottom(msg_container);
+    lv_coord_t height_diff = old_content_h - new_content_h;
+    if (height_diff > 0) {
+        lv_coord_t corrected = old_scroll_y - height_diff;
+        if (corrected < 0) corrected = 0;
+        lv_obj_scroll_to_y(msg_container, corrected, LV_ANIM_OFF);
+    }
+
+    s_loading_newer = false;
+    s_window_busy = false;
+    ESP_LOGI(TAG, "40c: Scroll-load %d newer, window [%d..%d), bubbles=%d",
+             to_add, s_window_start, s_window_end, chat_bubble_get_count());
+}
+
+static void on_scroll_cb(lv_event_t *e)
+{
+    lv_obj_t *container = lv_event_get_target(e);
+    if (!container || !s_msg_cache || s_cache_count == 0) return;
+
+    /* Block during cache+render setup to prevent race condition */
+    if (s_window_setup) return;
+
+    /* Block re-entrant calls: lv_obj_scroll_to_y() inside load_older/newer
+     * fires another LV_EVENT_SCROLL before the load function returns.
+     * Without this, scroll-up triggers scroll-down in the same frame. */
+    if (s_window_busy) return;
+
+    lv_coord_t scroll_y = lv_obj_get_scroll_y(container);
+
+    /* Near top of scroll area AND there are older messages? */
+    if (scroll_y <= SCROLL_TOP_THRESHOLD
+        && s_window_start > 0
+        && !s_loading_older) {
+        s_loading_older = true;
+        s_window_busy = true;
+        ESP_LOGI(TAG, "40c: Scroll-up trigger (scroll_y=%d, window [%d..%d))",
+                 (int)scroll_y, s_window_start, s_window_end);
+        load_older_messages();
+        return;  /* Don't check bottom in same event */
+    }
+
+    /* Near bottom of scroll area AND there are newer messages?
+     * lv_obj_get_scroll_bottom() returns pixels remaining below viewport. */
+    lv_coord_t scroll_bottom = lv_obj_get_scroll_bottom(container);
+    if (scroll_bottom <= SCROLL_BTM_THRESHOLD
+        && s_window_end < s_cache_count
+        && !s_loading_newer) {
+        s_loading_newer = true;
+        s_window_busy = true;
+        ESP_LOGI(TAG, "40c: Scroll-down trigger (scroll_btm=%d, window [%d..%d))",
+                 (int)scroll_bottom, s_window_start, s_window_end);
+        load_newer_messages();
+    }
+}
+
+void ui_chat_window_render_done(void)
+{
+    s_window_setup = false;
+    ESP_LOGI(TAG, "40c: Render done, guard OFF, window [%d..%d), bubbles=%d",
+             s_window_start, s_window_end, chat_bubble_get_count());
 }
 
 /* ============== Session 38j: Settings Icon Update ============== */

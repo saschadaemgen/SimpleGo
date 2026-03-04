@@ -11,6 +11,7 @@
 #define UI_CHAT_H
 
 #include "lvgl.h"
+#include "smp_history.h"  /* Session 40c: history_message_t for cache API */
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,6 +98,45 @@ void ui_chat_clear_contact(int contact_idx);
  * @brief 38j: Update settings gear icon color (kbd backlight on/off)
  */
 void ui_chat_update_settings_icon(void);
+
+/* ============== Session 40c: Sliding Window API ============== */
+
+/**
+ * @brief Copy history batch to PSRAM cache and calculate initial window.
+ * Called from main.c when UI_EVT_HISTORY_BATCH arrives, BEFORE progressive render starts.
+ * @param batch   Array of history_message_t from smp_history_load_recent()
+ * @param count   Number of messages in batch
+ * @param slot    Contact slot index
+ */
+void ui_chat_cache_history(const history_message_t *batch, int count, int slot);
+
+/**
+ * @brief Get window start index (first visible bubble in cache)
+ * Used by main.c progressive render to know where to start rendering.
+ */
+int ui_chat_get_window_start(void);
+
+/**
+ * @brief Get window end index (one past last visible bubble in cache)
+ */
+int ui_chat_get_window_end(void);
+
+/**
+ * @brief Get msg_container for bubble remove operations
+ */
+lv_obj_t *ui_chat_get_msg_container(void);
+
+/**
+ * @brief Get active contact index for bubble filtering
+ */
+int ui_chat_get_active_contact(void);
+
+/**
+ * @brief Signal that progressive render is complete.
+ * Clears the setup guard so scroll-cb can fire again.
+ * Called from main.c when all window bubbles are rendered.
+ */
+void ui_chat_window_render_done(void);
 
 #ifdef __cplusplus
 }

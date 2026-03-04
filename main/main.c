@@ -118,8 +118,9 @@ static volatile bool s_wifi_setup_pending = false;
 
 // Session 37b: Progressive history rendering — 3 messages per timer tick
 #define HISTORY_CHUNK_SIZE  3   // messages per 50ms tick — smooth UX
-#define MAX_VISIBLE_BUBBLES 5   // Session 39: prevent LVGL heap exhaustion
+// Session 40c: MAX_VISIBLE_BUBBLES removed — replaced by BUBBLE_WINDOW_SIZE in ui_chat.c
 static int  s_hist_render_idx   = 0;     // current position in batch
+static int  s_hist_render_end   = 0;     // Session 40c: stop index (window end)
 static bool s_hist_rendering    = false; // true while progressively rendering
 
 static void ui_poll_timer_cb(lv_timer_t *t)
@@ -127,9 +128,10 @@ static void ui_poll_timer_cb(lv_timer_t *t)
     (void)t;
 
     // Session 37b: Progressive history rendering — 3 messages per tick
+    // Session 40c: Renders only the window portion [window_start..window_end)
     if (s_hist_rendering && smp_history_batch && smp_history_batch_count > 0) {
         int end = s_hist_render_idx + HISTORY_CHUNK_SIZE;
-        if (end > smp_history_batch_count) end = smp_history_batch_count;
+        if (end > s_hist_render_end) end = s_hist_render_end;
 
         for (int h = s_hist_render_idx; h < end; h++) {
             history_message_t *m = &smp_history_batch[h];
@@ -144,14 +146,20 @@ static void ui_poll_timer_cb(lv_timer_t *t)
         s_hist_render_idx = end;
 
         // All done?
-        if (s_hist_render_idx >= smp_history_batch_count) {
+        if (s_hist_render_idx >= s_hist_render_end) {
             // Scroll to bottom after final chunk
             ui_chat_scroll_to_bottom();
 
-            ESP_LOGI("UI", "History: render complete (%d bubbles)",
-                     smp_history_batch_count);
+            // Session 40c: Clear setup guard so scroll-cb can fire
+            ui_chat_window_render_done();
+
+            // Session 40c: Log actual rendered count, not total batch size
+            int rendered = s_hist_render_end - ui_chat_get_window_start();
+            ESP_LOGI("UI", "History: render complete (%d bubbles, window [%d..%d))",
+                     rendered, ui_chat_get_window_start(), s_hist_render_end);
 
             // Clear batch state (buffer stays allocated for reuse)
+            // Cache in ui_chat.c retains data for scroll-up access
             smp_history_batch_count = 0;
             smp_history_batch_slot = -1;
             s_hist_rendering = false;
@@ -211,31 +219,28 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                 break;
 
             case UI_EVT_HISTORY_BATCH:
-                // Session 37b: Start progressive rendering (don't render all at once!)
+                // Session 40c: Cache batch in PSRAM and render sliding window.
+                // cache_history() clears all bubbles internally before setting
+                // window state, and sets a guard to block scroll-cb during setup.
                 if (smp_history_batch && smp_history_batch_count > 0
                     && smp_history_batch_slot == evt.contact_idx) {
 
-                    // 37d: Clear ALL bubbles (not just target contact) to prevent accumulation
-                    ui_chat_clear_contact(-1);
+                    // 40c: Cache + clear + set window (atomic, guard ON)
+                    ui_chat_cache_history(smp_history_batch,
+                                          smp_history_batch_count,
+                                          evt.contact_idx);
 
-                    // Session 39: Show only the last 8 messages to prevent LVGL heap exhaustion.
-                    // Older messages are skipped. Scroll-up loading comes in a later session.
-                    int render_start = 0;
-                    if (smp_history_batch_count > MAX_VISIBLE_BUBBLES) {
-                        render_start = smp_history_batch_count - MAX_VISIBLE_BUBBLES;
-                        ESP_LOGI("UI", "History: showing last %d of %d messages",
-                                 MAX_VISIBLE_BUBBLES, smp_history_batch_count);
-                    }
-
-                    // Hide "Loading..." before first bubble renders
-                    ui_chat_hide_loading();
-
-                    // Start chunked rendering — first chunk happens next timer tick
-                    s_hist_render_idx = render_start;
+                    // 40c: Progressive render starts at window_start, ends at window_end.
+                    // IMPORTANT: Window indices are cache indices. Since HISTORY_MAX_LOAD (20)
+                    // <= MSG_CACHE_SIZE (30), batch and cache indices are always identical.
+                    // If HISTORY_MAX_LOAD ever exceeds MSG_CACHE_SIZE, add batch_offset here.
+                    s_hist_render_idx = ui_chat_get_window_start();
+                    s_hist_render_end = ui_chat_get_window_end();
                     s_hist_rendering = true;
 
-                    ESP_LOGI("UI", "History: starting progressive render (%d msgs, slot %d)",
-                             smp_history_batch_count, evt.contact_idx);
+                    ESP_LOGI("UI", "History: starting render, %d msgs cached, window [%d..%d)",
+                             smp_history_batch_count,
+                             s_hist_render_idx, s_hist_render_end);
                 } else {
                     // Empty history (new contact) — just hide loading
                     ui_chat_hide_loading();
