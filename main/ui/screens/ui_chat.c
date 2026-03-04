@@ -394,6 +394,21 @@ void ui_chat_set_contact(const char *name)
 
 void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx)
 {
+    /* 42d: Evict BEFORE creating new bubble to guarantee pool space.
+     * Previously eviction ran AFTER creation, causing the pool check
+     * inside create_bubble_internal() to reject the new bubble when
+     * the pool was near capacity (7808 < 8192 threshold). */
+    if (contact_idx == s_chat_active_contact) {
+        int count = chat_bubble_get_count();
+        if (count >= BUBBLE_WINDOW_SIZE) {
+            int removed = chat_bubble_remove_oldest(
+                msg_container, 1, s_chat_active_contact);
+            s_window_start += removed;
+            ESP_LOGI(TAG, "42d: Pre-evict %d oldest, window [%d..%d)",
+                     removed, s_window_start, s_window_end);
+        }
+    }
+
     chat_bubble_add_live(msg_container, text, is_outgoing,
                          contact_idx, s_chat_active_contact);
 
@@ -415,20 +430,7 @@ void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx)
         s_window_end = s_cache_count;
     }
 
-    /* 40c: Enforce BUBBLE_WINDOW_SIZE for live messages.
-     * Remove oldest bubble(s) from top when count exceeds limit. */
-    if (contact_idx == s_chat_active_contact) {
-        int count = chat_bubble_get_count();
-        if (count > BUBBLE_WINDOW_SIZE) {
-            int excess = count - BUBBLE_WINDOW_SIZE;
-            chat_bubble_remove_oldest(msg_container, excess, s_chat_active_contact);
-            s_window_start += excess;
-            ESP_LOGI(TAG, "40c: Live evict %d oldest, window [%d..%d)",
-                     excess, s_window_start, s_window_end);
-        }
-    }
-
-    ESP_LOGI(TAG, "40c: Live %s, bubbles=%d, cache=%d, window [%d..%d)",
+    ESP_LOGI(TAG, "42d: Live %s, bubbles=%d, cache=%d, window [%d..%d)",
              is_outgoing ? "OUT" : "IN",
              chat_bubble_get_count(), s_cache_count,
              s_window_start, s_window_end);

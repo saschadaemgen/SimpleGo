@@ -66,8 +66,10 @@ static uint32_t msg_seq_counter = 0;
 static int s_bubble_count = 0;   /* Active bubbles in LVGL 64KB pool */
 
 /* LVGL pool safety: refuse new bubbles when free memory drops below this.
- * 8KB reserve for UI updates, animations, temporary LVGL allocations. */
-#define LVGL_POOL_SAFETY_MARGIN  8192
+ * 4KB reserve for UI updates, animations, temporary LVGL allocations.
+ * Session 42d: Lowered from 8KB to 4KB because eviction now runs BEFORE
+ * creation, guaranteeing ~1000-1300 bytes freed before each new bubble. */
+#define LVGL_POOL_SAFETY_MARGIN  4096
 
 /* ============== Timestamp Helpers ============== */
 
