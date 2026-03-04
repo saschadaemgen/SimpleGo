@@ -16,7 +16,7 @@
 #include "sodium.h"
 #include "smp_queue.h"        // our_queue, queue_save_credentials
 #include "smp_types.h"        // reply_queue_e2e_peer_public/valid
-#include "simplex_crypto.h"   // simplex_secretbox_open_debug
+#include "simplex_crypto.h"   // simplex_secretbox_open
 
 // TODO: move to simplex_crypto.h
 extern int decrypt_client_msg(const uint8_t *data, int data_len,
@@ -198,9 +198,9 @@ static int try_e2e_decrypt_ex(const uint8_t *envelope, size_t envelope_len,
 
     // Method 3: Custom simplex_secretbox
     if (ret != 0) {
-        ESP_LOGD(TAG, "Trying simplex_secretbox_open_debug...");
-        ret = simplex_secretbox_open_debug(e2e_plain, ciphertext, cipher_len,
-                                            cm_nonce, dh_secret, "REPLY_E2E");
+        ESP_LOGD(TAG, "Trying simplex_secretbox_open...");
+        ret = simplex_secretbox_open(e2e_plain, ciphertext, cipher_len,
+                                      cm_nonce, dh_secret);
     }
 
     sodium_memzero(dh_secret, 32);

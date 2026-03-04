@@ -352,46 +352,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         memcpy(&agent_conn_info[aci_len], conn_info_json, (size_t)json_len);
         aci_len += json_len;
 
-        // 🔥 DEBUG: Bestätige dass erstes Byte 'D' ist!
-        ESP_LOGI(TAG, "🔍 DEBUG: agent_conn_info[0] = 0x%02X ('%c') - expected 0x44 ('D')!", 
-                agent_conn_info[0], agent_conn_info[0]);
-
         ESP_LOGI(TAG, "   📦 AgentConnInfoReply: %d bytes (tag='D' + queue + JSON)", aci_len);
-        ESP_LOGI(TAG, "      Queue: %s, sndId: %02x%02x%02x%02x...",
-                our_queue.server_host,
-                our_queue.snd_id[0], our_queue.snd_id[1],
-                our_queue.snd_id[2], our_queue.snd_id[3]);
-
-        printf("      Raw AgentConnInfoReply (%d bytes):\n", aci_len);
-        for (int i = 0; i < aci_len; i += 16) {
-            printf("      ");
-            for (int j = 0; j < 16 && (i+j) < aci_len; j++) {
-                printf("%02x ", agent_conn_info[i+j]);
-            }
-            printf("\n");
-        }
-
-    // ========== CONF_CMP Diagnostic ==========
-    {
-        ESP_LOGI("CONF_CMP", "");
-        ESP_LOGI("CONF_CMP", "======= CONFIRMATION DIAGNOSTIC Contact [%d] =======", peer_contact_idx);
-        ESP_LOGI("CONF_CMP", "AgentConnInfoReply (%d bytes):", aci_len);
-        ESP_LOG_BUFFER_HEX("CONF_CMP", agent_conn_info, aci_len > 200 ? 200 : aci_len);
-        if (peer_contact_idx >= 0) {
-            reply_queue_t *diag_rq = reply_queue_get(peer_contact_idx);
-            if (diag_rq && diag_rq->valid) {
-                ESP_LOGI("CONF_CMP", "RQ[%d] snd_id (%d bytes):", peer_contact_idx, diag_rq->snd_id_len);
-                ESP_LOG_BUFFER_HEX("CONF_CMP", diag_rq->snd_id, diag_rq->snd_id_len);
-                ESP_LOGI("CONF_CMP", "RQ[%d] rcv_dh_public:", peer_contact_idx);
-                ESP_LOG_BUFFER_HEX("CONF_CMP", diag_rq->rcv_dh_public, 32);
-            } else {
-                ESP_LOGE("CONF_CMP", "RQ[%d] NOT VALID! Using legacy our_queue", peer_contact_idx);
-            }
-        }
-        ESP_LOGI("CONF_CMP", "Global our_queue snd_id (%d bytes):", our_queue.snd_id_len);
-        ESP_LOG_BUFFER_HEX("CONF_CMP", our_queue.snd_id, our_queue.snd_id_len);
-        ESP_LOGI("CONF_CMP", "=================================================");
-    }
 
     // ========== Generate E2E Ratchet Parameters ==========
     e2e_params_t *e2e_params = (e2e_params_t *)heap_caps_malloc(sizeof(e2e_params_t), MALLOC_CAP_8BIT);
@@ -471,22 +432,6 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     // dh_peer, triggering a spurious ratchet step that overwrote the keys
     // needed to decrypt incoming messages from the peer.
 
-    // DEBUG: Show encConnInfo wire format (first 160 bytes)
-    ESP_LOGI(TAG, "📋 encConnInfo COMPLETE Wire-Format:");
-    ESP_LOGI(TAG, "   Bytes 0-31:");
-    printf("   "); for (int i = 0; i < 32 && i < (int)enc_conn_info_len; i++) printf("%02x ", enc_conn_info[i]); printf("\n");
-    ESP_LOGI(TAG, "   Bytes 32-63:");
-    printf("   "); for (int i = 32; i < 64 && i < (int)enc_conn_info_len; i++) printf("%02x ", enc_conn_info[i]); printf("\n");
-    ESP_LOGI(TAG, "   Bytes 64-95:");
-    printf("   "); for (int i = 64; i < 96 && i < (int)enc_conn_info_len; i++) printf("%02x ", enc_conn_info[i]); printf("\n");
-    ESP_LOGI(TAG, "   Bytes 96-127:");
-    printf("   "); for (int i = 96; i < 128 && i < (int)enc_conn_info_len; i++) printf("%02x ", enc_conn_info[i]); printf("\n");
-    ESP_LOGI(TAG, "   Bytes 128-159:");
-    printf("   "); for (int i = 128; i < 160 && i < (int)enc_conn_info_len; i++) printf("%02x ", enc_conn_info[i]); printf("\n");
-    
-    ESP_LOGI(TAG, "   Expected layout:");
-    ESP_LOGI(TAG, "   [0]=0x7B (123), [1-123]=emHeader, [124-139]=PayloadTag, [140+]=Body");
-    
     ESP_LOGI(TAG, "   🔒 encConnInfo encrypted: %d bytes", (int)enc_conn_info_len);
 
     // ========== Build AgentConfirmation ==========
@@ -519,14 +464,6 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     amp += (int)enc_conn_info_len;
 
     ESP_LOGI(TAG, "    📨 AgentConfirmation: %d bytes", amp);
-    ESP_LOGI(TAG, "      Header: %02x %02x %c (v7, 'C')",
-             agent_msg[0], agent_msg[1], agent_msg[2]);
-
-    printf("      Raw: ");
-    for (int i = 0; i < amp && i < 32; i++) {
-        printf("%02x ", agent_msg[i]);
-    }
-    printf("...\n");
 
     // ========== Build ClientMessage Plaintext ==========
     // PrivHeader for Confirmation = 'K' + Length + Ed25519 SPKI
@@ -556,7 +493,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     // 'K' = PHConfirmation tag
     plaintext[pp++] = 'K';
 
-    // Ed25519 SPKI MIT LENGTH PREFIX (44 bytes)
+    // Ed25519 SPKI with length prefix (44 bytes)
     plaintext[pp++] = 44;
 
     // Ed25519 SPKI (12 header + 32 key = 44 bytes)
@@ -571,38 +508,9 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 
     ESP_LOGI(TAG, "   📝 ClientMessage plaintext: %d bytes (PrivHeader + AgentMsg)", pp);
 
-    // ========== CONF_CMP PrivHeader Diagnostic ==========
-    {
-        ESP_LOGI("CONF_CMP", "======= PRIVHEADER Contact [%d] =======", peer_contact_idx);
-        ESP_LOGI("CONF_CMP", "PrivHeader Ed25519 key USED (sender_auth_public):");
-        ESP_LOG_BUFFER_HEX("CONF_CMP", sender_auth_public, 32);
-        ESP_LOGI("CONF_CMP", "Global our_queue.rcv_auth_public:");
-        ESP_LOG_BUFFER_HEX("CONF_CMP", our_queue.rcv_auth_public, 32);
-        if (peer_contact_idx >= 0) {
-            reply_queue_t *diag_rq = reply_queue_get(peer_contact_idx);
-            if (diag_rq && diag_rq->valid) {
-                bool correct = memcmp(sender_auth_public, diag_rq->rcv_auth_public, 32) == 0;
-                ESP_LOGW("CONF_CMP", "Uses correct RQ[%d] key: %s",
-                         peer_contact_idx, correct ? "YES" : "NO - BUG!");
-            }
-        }
-        ESP_LOGI("CONF_CMP", "Plaintext first 80 bytes:");
-        ESP_LOG_BUFFER_HEX("CONF_CMP", plaintext, pp > 80 ? 80 : pp);
-        ESP_LOGI("CONF_CMP", "==========================================");
-    }
-
     // ========== Encrypt with Peer's DH Key (crypto_box) ==========
     uint8_t nonce[24];
     esp_fill_random(nonce, 24);
-
-    // DEBUG: Show plaintext BEFORE encryption
-    ESP_LOGI(TAG, "📋 Plaintext BEFORE crypto_box (%d bytes):", pp);
-    printf("      ");
-    for (int i = 0; i < 64 && i < pp; i++) {
-        printf("%02x ", plaintext[i]);
-        if ((i + 1) % 32 == 0) printf("\n      ");
-    }
-    printf("\n");
 
     // Build PADDED plaintext with SimpleX padding scheme
     // e2eEncConfirmationLength = 15904 bytes
@@ -630,33 +538,6 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     
     int padded_len = E2E_ENC_CONFIRMATION_LENGTH;
 
-    // DEBUG: Show padded plaintext
-    ESP_LOGI(TAG, "📋 PADDED Plaintext (%d bytes = 2 + %d + %d padding):", 
-             padded_len, pp, E2E_ENC_CONFIRMATION_LENGTH - 2 - pp);
-    printf("      ");
-    for (int i = 0; i < 64 && i < padded_len; i++) {
-        printf("%02x ", padded[i]);
-        if ((i + 1) % 32 == 0) printf("\n      ");
-    }
-    printf("\n");
-
-    // ===== AUFTRAG 15a DIAGNOSE: CONFIRMATION =====
-    ESP_LOGI(TAG, "🔬 [CONFIRM] cbEncrypt Diagnose:");
-    ESP_LOGI(TAG, "   padded_len: %d", padded_len);
-    printf("   padded[0..31]: ");
-    for (int i = 0; i < 32; i++) printf("%02x ", padded[i]);
-    printf("\n");
-    printf("   padded[last 4]: ");
-    for (int i = padded_len - 4; i < padded_len; i++) printf("%02x ", padded[i]);
-    printf("\n");
-    printf("   DH peer_pub[0..7]:  ");
-    for (int i = 0; i < 8; i++) printf("%02x", pending_peer.dh_public[i]);
-    printf("\n");
-    printf("   DH our_priv[0..7]:  ");
-    for (int i = 0; i < 8; i++) printf("%02x", contact->rcv_dh_secret[i]);
-    printf("\n");
-    // ===== END DIAGNOSE =====
-
 // crypto_box with PADDED plaintext
     uint8_t *encrypted = malloc(24 + E2E_ENC_CONFIRMATION_LENGTH + crypto_box_MACBYTES);
     if (!encrypted) {
@@ -670,7 +551,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     if (crypto_box_easy(&encrypted[24], padded, (unsigned long long)padded_len, nonce,
                         pending_peer.dh_public, contact->rcv_dh_secret) != 0) {
         ESP_LOGE(TAG, "   ❌ Encryption failed!");
-        free(padded);     // ← HIER AUCH FREIGEBEN!
+        free(padded);
         free(encrypted);
         free(e2e_params);
         free(block);
@@ -713,25 +594,16 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     cmp += 32;
 
     // Encrypted body
-    // Nonce SEPARAT (24 bytes) - nicht Teil des encrypted body!
+    // Nonce (24 bytes) sent separately, not part of encrypted body
     memcpy(&client_msg[cmp], nonce, 24);
     cmp += 24;
 
-    // Ciphertext + MAC (OHNE die ersten 24 Nonce-Bytes!)
+    // Ciphertext + MAC (without the first 24 nonce bytes)
     memcpy(&client_msg[cmp], &encrypted[24], (size_t)(encrypted_len - 24));
     cmp += (encrypted_len - 24);
 
     ESP_LOGI(TAG, "   📦 Client message: %d bytes (PubHeader + encrypted)", cmp);
 
-    // ===== AUFTRAG 17: CONFIRM msgBody hex dump =====
-    ESP_LOGI(TAG, "🔬 [CONFIRM] msgBody (%d bytes):", cmp);
-    printf("   ");
-    for (int i = 0; i < 80 && i < cmp; i++) {
-        printf("%02x ", client_msg[i]);
-        if ((i+1) % 32 == 0) printf("\n   ");
-    }
-    printf("...\n");
-    // ===== END =====
     #define SEND_BUFFER_SIZE (E2E_ENC_CONFIRMATION_LENGTH + 200)
     uint8_t *send_body = malloc(SEND_BUFFER_SIZE);
     if (!send_body) {
@@ -817,12 +689,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     if (content_len >= 0) {
         uint8_t *resp = block + 2;
 
-        ESP_LOGI(TAG, "   📥 Response (%d bytes):", content_len);
-        printf("      ");
-        for (int i = 0; i < content_len && i < 40; i++) {
-            printf("%02x ", resp[i]);
-        }
-        printf("\n");
+        ESP_LOGI(TAG, "   📥 Response (%d bytes)", content_len);
 
         // Parse response (lightweight, best-effort)
         int p = 0;
