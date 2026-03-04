@@ -2,7 +2,7 @@
  * @file ui_manager.c
  * @brief Screen Manager - Manual Fade Control
  *
- * Session 39k: First-boot WiFi detection via wifi_manager_needs_setup().
+ * First-boot WiFi detection via wifi_manager_needs_setup().
  */
 #include "ui_manager.h"
 #include "ui_theme.h"
@@ -16,7 +16,8 @@
 #include "wifi_manager.h"
 #include "esp_log.h"
 
-/* 42f: Cleanup functions called before screen deletion */
+/* Cleanup functions called before screen deletion.
+ * TODO: move to ui_chat.h */
 extern void ui_chat_cleanup(void);
 
 static const char *TAG = "UI_MGR";
@@ -24,7 +25,7 @@ static const char *TAG = "UI_MGR";
 static lv_obj_t *screens[UI_SCREEN_COUNT] = {NULL};
 static ui_screen_t current_screen = UI_SCREEN_SPLASH;
 
-// Session 33: Navigation stack (replaces single prev_screen)
+// Navigation stack (replaces single prev_screen)
 #define NAV_STACK_DEPTH 8
 static ui_screen_t nav_stack[NAV_STACK_DEPTH];
 static int nav_stack_top = -1;  // -1 = empty
@@ -86,15 +87,15 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
         screens[screen] = screen_creators[screen]();
     }
     
-    // Session 33: Push current to stack before navigating
+    // Push current to stack before navigating
     nav_stack_push(current_screen);
     ui_screen_t prev = current_screen;
     current_screen = screen;
     
-    // Immer direkt laden - Animationen machen die Screens selbst
+    // Always load directly — screens handle their own animations
     lv_scr_load(screens[screen]);
 
-    /* 42f: Delete previous screen to free LVGL pool (MAIN stays permanent) */
+    /* Delete previous screen to free LVGL pool (MAIN stays permanent) */
     if (prev != UI_SCREEN_SPLASH && prev != UI_SCREEN_MAIN) {
         if (screens[prev] != NULL) {
             /* Null dangling pointers BEFORE destroying LVGL objects */
@@ -115,7 +116,7 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
         ui_main_refresh();
     }
     
-    // Alten Splash loeschen
+    // Delete splash screen after first navigation
     if (prev == UI_SCREEN_SPLASH && screens[UI_SCREEN_SPLASH]) {
         lv_obj_del(screens[UI_SCREEN_SPLASH]);
         screens[UI_SCREEN_SPLASH] = NULL;
@@ -124,9 +125,8 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
             nav_stack_top--;
         }
 
-        /* Session 39k: First-boot WiFi detection.
-         * Uses wifi_manager_needs_setup() which checks NVS namespace
-         * "wifi_cfg" key "ssid" AND Kconfig fallback. If neither has
+        /* First-boot WiFi detection.
+         * Checks NVS "wifi_cfg"/"ssid" AND Kconfig fallback. If neither has
          * credentials, redirect to Settings WiFi tab. */
         if (screen == UI_SCREEN_MAIN && wifi_manager_needs_setup()) {
             ESP_LOGI(TAG, "No WiFi credentials -> WiFi setup");
@@ -143,7 +143,7 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
 
 void ui_manager_go_back(void)
 {
-    // Session 33: Pop from navigation stack
+    // Pop from navigation stack
     ui_screen_t target = nav_stack_pop();
     
     ESP_LOGI(TAG, "<- back to screen %d (stack depth: %d)", target, nav_stack_top + 1);
@@ -156,12 +156,12 @@ void ui_manager_go_back(void)
         screens[target] = screen_creators[target]();
     }
     
-    ui_screen_t old = current_screen;  /* 42f: save before overwrite */
+    ui_screen_t old = current_screen;  /* save before overwrite */
     current_screen = target;
 
     lv_scr_load(screens[target]);
 
-    /* 42f: Delete old screen to free LVGL pool (MAIN stays permanent) */
+    /* Delete old screen to free LVGL pool (MAIN stays permanent) */
     if (old != UI_SCREEN_SPLASH && old != UI_SCREEN_MAIN) {
         if (screens[old] != NULL) {
             /* Null dangling pointers BEFORE destroying LVGL objects */

@@ -13,7 +13,7 @@
  *   └──────────────────────────────────┘
  *   Total: 16+1+26+1+160+36 = 240 ✓
  *
- * Session 39f: Bubble rendering extracted to ui_chat_bubble.c
+ * Bubble rendering extracted to ui_chat_bubble.c
  *              Style helpers centralized in ui_theme.c
  *
  * SimpleGo UI - v2 Redesign
@@ -24,17 +24,17 @@
 #include "ui_chat.h"
 #include "ui_chat_bubble.h"
 
-/* 42f: Cleanup tracked message state when screen is destroyed.
+/* Cleanup tracked message state when screen is destroyed.
  * TODO: Move this declaration to ui_chat_bubble.h */
 extern void chat_bubble_cleanup(void);
 #include "ui_theme.h"
 #include "ui_manager.h"
 #include "tdeck_keyboard.h"
-#include "smp_history.h"       /* Session 40c: history_message_t for PSRAM cache */
-#include "esp_heap_caps.h"     /* Session 40c: PSRAM allocation */
+#include "smp_history.h"       /* history_message_t for PSRAM cache */
+#include "esp_heap_caps.h"     /* PSRAM allocation */
 #include "esp_log.h"
 #include <string.h>
-#include <time.h>             /* Session 40c: time() for live message timestamp */
+#include <time.h>             /* time() for live message timestamp */
 
 static const char *TAG = "UI_CHAT";
 
@@ -60,16 +60,16 @@ static lv_obj_t *header_label  = NULL;
 static lv_obj_t *msg_container = NULL;
 static lv_obj_t *input_area    = NULL;
 static lv_group_t *input_group = NULL;
-static lv_obj_t *s_loading_box = NULL;   /* Session 37b: "Loading..." indicator */
-static lv_obj_t *s_settings_icon = NULL; /* Session 38j: Settings button in header */
+static lv_obj_t *s_loading_box = NULL;   /* "Loading..." indicator */
+static lv_obj_t *s_settings_icon = NULL; /* Settings button in header */
 
 static ui_chat_send_cb_t send_cb    = NULL;
 static lv_indev_t *pending_kb_indev = NULL;
 
-/* 35e: Active contact for message filtering */
+/* Active contact for message filtering */
 static int s_chat_active_contact = 0;
 
-/* ============== Session 40c: Sliding Window Chat History ============== */
+/* ============== Sliding Window Chat History ============== */
 
 #define MSG_CACHE_SIZE      30   /* Max messages in PSRAM ring cache */
 #define BUBBLE_WINDOW_SIZE   5   /* Max simultaneous bubbles in LVGL pool */
@@ -96,7 +96,7 @@ static bool s_scroll_cb_registered = false;
 /* Forward declaration for scroll handler */
 static void on_scroll_cb(lv_event_t *e);
 
-/* ============== 42f: Screen Cleanup ============== */
+/* ============== Screen Cleanup ============== */
 
 void ui_chat_cleanup(void)
 {
@@ -171,7 +171,7 @@ static lv_obj_t *create_action_btn(lv_obj_t *parent, const char *symbol,
 
 /* ============== Chat Header ============== */
 
-/* Session 38j: Settings button handlers */
+/* Settings button handlers */
 static void on_settings_short(lv_event_t *e)
 {
     (void)e;
@@ -218,12 +218,12 @@ static lv_obj_t *create_chat_header(lv_obj_t *parent)
     lv_obj_t *name = lv_label_create(hdr);
     lv_label_set_text(name, "Alice");
     lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(name, 148);  /* Session 38j: narrower for settings button */
+    lv_obj_set_width(name, 148);  /* narrower for settings button */
     lv_obj_set_style_text_color(name, UI_COLOR_TEXT_WHITE, 0);
     lv_obj_set_style_text_font(name, UI_FONT, 0);
     lv_obj_align(name, LV_ALIGN_LEFT_MID, 28, 0);
 
-    /* Session 38j: Settings gear button (short=toggle kbd, long=settings) */
+    /* Settings gear button (short=toggle kbd, long=settings) */
     lv_obj_t *set_btn = lv_btn_create(hdr);
     lv_obj_set_size(set_btn, 28, HDR_H);
     lv_obj_set_style_bg_opa(set_btn, LV_OPA_TRANSP, 0);
@@ -292,7 +292,7 @@ lv_obj_t *ui_chat_create(void)
     lv_obj_add_flag(msg_container, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scrollbar_mode(msg_container, LV_SCROLLBAR_MODE_OFF);
 
-    /* Session 40c: Scroll handler for sliding window (load older on scroll-up) */
+    /* Scroll handler for sliding window (load older on scroll-up) */
     lv_obj_add_event_cb(msg_container, on_scroll_cb, LV_EVENT_SCROLL, NULL);
     s_scroll_cb_registered = true;
 
@@ -437,11 +437,11 @@ void ui_chat_set_contact(const char *name)
 
 void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx)
 {
-    /* 42f: If chat screen was destroyed, skip bubble creation.
+    /* If chat screen was destroyed, skip bubble creation.
      * Message is already saved to SD history by the caller. */
     if (!screen) return;
 
-    /* 42d: Evict BEFORE creating new bubble to guarantee pool space.
+    /* Evict BEFORE creating new bubble to guarantee pool space.
      * Previously eviction ran AFTER creation, causing the pool check
      * inside create_bubble_internal() to reject the new bubble when
      * the pool was near capacity (7808 < 8192 threshold). */
@@ -459,7 +459,7 @@ void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx)
     chat_bubble_add_live(msg_container, text, is_outgoing,
                          contact_idx, s_chat_active_contact);
 
-    /* 40c: Add live message to PSRAM cache so scroll-up has no gaps.
+    /* Add live message to PSRAM cache so scroll-up has no gaps.
      * Only if cache exists and matches current contact. */
     if (s_msg_cache && contact_idx == s_cache_slot
         && s_cache_count < MSG_CACHE_SIZE) {
@@ -513,7 +513,7 @@ lv_indev_t *ui_chat_get_keyboard_indev(void)
 
 void ui_chat_update_status(uint32_t msg_seq, int status)
 {
-    if (!screen) return;  /* 42f: no screen, no labels to update */
+    if (!screen) return;  /* no screen, no labels to update */
     chat_bubble_update_status(msg_seq, status);
 }
 
@@ -531,12 +531,12 @@ uint32_t ui_chat_get_last_seq(void)
 
 void ui_chat_switch_contact(int contact_idx, const char *name)
 {
-    /* 42f: If chat screen was destroyed, only update contact index.
+    /* If chat screen was destroyed, only update contact index.
      * Background tasks may call this after navigation away from chat. */
     s_chat_active_contact = contact_idx;
     if (!screen) return;
 
-    /* 42e: Set guard IMMEDIATELY to block stale scroll events. */
+    /* Set guard IMMEDIATELY to block stale scroll events. */
     s_window_setup = true;
 
     /* Update header */
@@ -546,7 +546,7 @@ void ui_chat_switch_contact(int contact_idx, const char *name)
         lv_label_set_text(header_label, trunc);
     }
 
-    /* 42e: Delete ALL existing bubbles (not just hide/show).
+    /* Delete ALL existing bubbles (not just hide/show).
      * Old code only toggled visibility, leaving stale bubbles consuming
      * LVGL pool memory. Since cache_history will render fresh bubbles
      * anyway, full cleanup is safe and prevents pool fragmentation. */
@@ -568,7 +568,7 @@ void ui_chat_clear_contact(int contact_idx)
     if (contact_idx < 0) {
         lv_obj_clean(msg_container);
         s_loading_box = NULL;  /* was a child of msg_container, now deleted */
-        chat_bubble_reset_count();  /* Session 40b: reset bubble tracking */
+        chat_bubble_reset_count();  /* reset bubble tracking */
         ESP_LOGI(TAG, "36d: Cleared ALL bubbles");
         return;
     }
@@ -586,7 +586,7 @@ void ui_chat_clear_contact(int contact_idx)
         }
     }
     if (removed > 0) {
-        chat_bubble_decrement_count(removed);  /* Session 40b */
+        chat_bubble_decrement_count(removed);
     }
     ESP_LOGI(TAG, "36d: Cleared %d bubbles for contact [%d]", removed, contact_idx);
 }
@@ -628,11 +628,11 @@ void ui_chat_scroll_to_bottom(void)
     }
 }
 
-/* ============== Session 40c: Sliding Window Implementation ============== */
+/* ============== Sliding Window Implementation ============== */
 
 void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
 {
-    /* 42f: If chat screen was destroyed, skip entirely.
+    /* If chat screen was destroyed, skip entirely.
      * Data will be loaded fresh when screen is recreated. */
     if (!screen) return;
 
@@ -643,7 +643,7 @@ void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
 
     /* Clear ALL existing bubbles BEFORE setting window state.
      * This prevents scroll events from seeing stale content.
-     * 42e: Force layout update after cleanup to help LVGL reclaim
+     * Force layout update after cleanup to help LVGL reclaim
      * freed pool memory before new bubbles are created. */
     if (msg_container) {
         lv_obj_clean(msg_container);
@@ -686,7 +686,7 @@ void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
     s_cache_slot = slot;
 
     /* Calculate initial window: show last N messages where N depends
-     * on available LVGL pool.  42e: Pool may be fragmented/tight after
+     * on available LVGL pool. Pool may be fragmented/tight after
      * contact switches. Check actual free memory and reduce window if
      * the pool can't hold BUBBLE_WINDOW_SIZE bubbles safely.
      * Each bubble costs ~1200-1400 bytes. Reserve 4500 for LVGL. */
@@ -739,7 +739,7 @@ int ui_chat_get_active_contact(void)
 /**
  * Render one history message from cache as an LVGL bubble.
  * Used by both initial render (from main.c timer) and scroll-up loading.
- * 42e: Detects if create_bubble_internal skipped due to pool safety,
+ * Detects if create_bubble_internal skipped due to pool safety,
  * and adjusts window state to prevent inconsistency.
  */
 static void render_cache_bubble(int cache_idx, bool at_top)
@@ -771,7 +771,7 @@ static void render_cache_bubble(int cache_idx, bool at_top)
                                 m->timestamp, m->delivery_status);
     }
 
-    /* 42e: If bubble count didn't increase, creation was skipped (pool safety).
+    /* If bubble count didn't increase, creation was skipped (pool safety).
      * Adjust window to match actual rendered state. */
     if (chat_bubble_get_count() == count_before) {
         if (at_top) {
@@ -948,7 +948,7 @@ void ui_chat_window_render_done(void)
              s_window_start, s_window_end, chat_bubble_get_count());
 }
 
-/* ============== Session 38j: Settings Icon Update ============== */
+/* ============== Settings Icon Update ============== */
 
 void ui_chat_update_settings_icon(void)
 {

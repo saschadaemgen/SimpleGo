@@ -5,7 +5,7 @@
  * Bubble creation with asymmetric corners (custom draw callback),
  * delivery status tracking, timestamps, and sequence numbering.
  *
- * Session 39f: Extracted from monolithic ui_chat.c.
+ * Extracted from monolithic ui_chat.c.
  * Merges duplicate code from ui_chat_add_message() and
  * ui_chat_add_history_message() into single create_bubble_internal().
  *
@@ -16,7 +16,7 @@
 
 #include "ui_chat_bubble.h"
 #include "ui_theme.h"
-#include "smp_history.h"       /* Session 40b: HISTORY_DISPLAY_TEXT for bubble truncation */
+#include "smp_history.h"       /* HISTORY_DISPLAY_TEXT for bubble truncation */
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -61,11 +61,11 @@ typedef struct {
 static tracked_msg_t tracked_msgs[MAX_TRACKED_MSGS] = {0};
 static uint32_t msg_seq_counter = 0;
 
-/* ============== Session 40b: Bubble Count Tracking ============== */
+/* ============== Bubble Count Tracking ============== */
 
 static int s_bubble_count = 0;   /* Active bubbles in LVGL 64KB pool */
 
-/* 42f: Reset all state when chat screen is destroyed */
+/* Reset all state when chat screen is destroyed */
 void chat_bubble_cleanup(void)
 {
     memset(tracked_msgs, 0, sizeof(tracked_msgs));
@@ -76,7 +76,7 @@ void chat_bubble_cleanup(void)
 /* LVGL pool safety: refuse new bubbles when free memory drops below this.
  * Must account for: (a) the bubble about to be created (~1400 bytes worst case)
  * plus (b) minimum LVGL working memory for layout/render (~3000 bytes).
- * Session 42e: Raised from 4096 to 4500 to prevent freeze when pool is
+ * Raised from 4096 to 4500 to prevent freeze when pool is
  * tight after contact switch (bubble passes old check at 4116 free, costs
  * 1348, leaving only 2768 which freezes LVGL). */
 #define LVGL_POOL_SAFETY_MARGIN  4500
@@ -269,7 +269,7 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
 {
     if (!container || !text) return;
 
-    /* Session 40b: LVGL pool safety check.
+    /* LVGL pool safety check.
      * Refuse new bubbles when the 64KB built-in pool is critically low.
      * Prevents display freeze from pool exhaustion. */
     lv_mem_monitor_t mon_pre;
@@ -280,7 +280,7 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
         return;
     }
 
-    /* Session 40b: Truncate long messages to protect LVGL 64KB pool.
+    /* Truncate long messages to protect LVGL 64KB pool.
      * A single 4KB message label would consume significant pool space.
      * Full text remains in PSRAM cache, only display portion in LVGL. */
     char display_text[HISTORY_DISPLAY_TEXT + 4];  /* +4 for "..." + null */
@@ -304,7 +304,7 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
 
     /* ===== Bubble ===== */
     lv_obj_t *bubble = lv_obj_create(container);
-    /* 35e: Tag bubble with contact index for filtering (+1 so 0 means "untagged") */
+    /* Tag bubble with contact index for filtering (+1 so 0 means "untagged") */
     lv_obj_set_user_data(bubble, (void *)(intptr_t)(contact_idx + 1));
     /* Hide if not active contact */
     if (contact_idx != active_contact) {
@@ -342,7 +342,7 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
 
     /* ---- Message text (Font 12 — between SM and LG) ---- */
     lv_obj_t *label = lv_label_create(bubble);
-    lv_label_set_text(label, label_text);  /* Session 40b: uses truncated text */
+    lv_label_set_text(label, label_text);  /* uses truncated text */
     lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(label, LV_PCT(100));
     lv_obj_set_style_text_color(label, lv_color_hex(0xe0e0e0), 0);
@@ -403,7 +403,7 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
         lv_obj_align(time_lbl, LV_ALIGN_RIGHT_MID, 0, 0);
     }
 
-    /* Session 40b: LVGL pool monitoring -- measure actual cost per bubble */
+    /* LVGL pool monitoring -- measure actual cost per bubble */
     s_bubble_count++;
     lv_mem_monitor_t mon_post;
     lv_mem_monitor(&mon_post);
@@ -499,7 +499,7 @@ uint32_t chat_bubble_get_last_seq(void)
     return msg_seq_counter;
 }
 
-/* ============== Session 40b: Bubble Count API ============== */
+/* ============== Bubble Count API ============== */
 
 int chat_bubble_get_count(void)
 {
@@ -519,7 +519,7 @@ void chat_bubble_decrement_count(int n)
     ESP_LOGD(TAG, "Bubble count decremented by %d, now %d", n, s_bubble_count);
 }
 
-/* ============== Session 40c: Bubble Remove Helpers ============== */
+/* ============== Bubble Remove Helpers ============== */
 
 int chat_bubble_remove_oldest(lv_obj_t *container, int count, int contact_idx)
 {
