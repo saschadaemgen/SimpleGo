@@ -30,6 +30,7 @@
 #include "driver/sdspi_host.h"
 #include "driver/spi_common.h"
 #include "sdmmc_cmd.h"
+#include "mbedtls/platform_util.h"
 
 static const char *TAG = "SMP_STOR";
 
