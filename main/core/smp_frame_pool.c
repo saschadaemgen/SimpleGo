@@ -1,7 +1,9 @@
 /**
  * SimpleGo - smp_frame_pool.c
  * Static frame pool for zero-copy inter-task communication
- * Pool is allocated in PSRAM to preserve internal SRAM for TLS/WiFi.
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_frame_pool.h"

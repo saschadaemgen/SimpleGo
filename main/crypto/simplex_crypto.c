@@ -1,20 +1,9 @@
 /**
- * SimpleX Custom XSalsa20 Implementation for ESP32
- * ================================================
- * 
- * SimpleX's cbEncrypt/cbDecrypt uses a NON-STANDARD XSalsa20 variant!
- * 
- * Standard XSalsa20 (libsodium):
- *   1. subkey = HSalsa20(key, nonce[0:16])
- *   2. stream = Salsa20(subkey, zeros[8] || nonce[16:24])
- * 
- * SimpleX XSalsa20 (cryptonite):
- *   1. subkey1 = HSalsa20(key, zeros[16])
- *   2. subkey2 = HSalsa20(subkey1, nonce[8:24])
- *   3. stream  = Salsa20(subkey2, zeros[8] || nonce[0:8])
- * 
- * This file provides simplex_secretbox_open() which correctly decrypts
- * SimpleX E2E encrypted messages.
+ * SimpleGo - simplex_crypto.c
+ * SimpleX non-standard XSalsa20 encrypt/decrypt implementation
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include <string.h>

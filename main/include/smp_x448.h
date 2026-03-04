@@ -1,8 +1,9 @@
 /**
  * SimpleGo - smp_x448.h
- * X448 Elliptic Curve Diffie-Hellman for E2E Ratchet
- * Requires wolfSSL with HAVE_CURVE448 enabled
- * v0.1.15-alpha
+ * X448 Elliptic Curve Diffie-Hellman for E2E ratchet interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SMP_X448_H

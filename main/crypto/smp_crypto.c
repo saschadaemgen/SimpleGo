@@ -1,6 +1,9 @@
 /**
  * SimpleGo - smp_crypto.c
  * Cryptographic functions for SMP protocol
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_crypto.h"
