@@ -9,34 +9,34 @@
 #include "smp_tasks.h"
 #include "smp_frame_pool.h"
 #include "smp_events.h"
-#include "smp_network.h"   // Phase 3: smp_read_block()
-#include "smp_types.h"     // Phase 3: SMP_BLOCK_SIZE
-#include "smp_contacts.h"  // Phase 3 T2: find_contact_by_recipient_id, contacts_db
-#include "smp_queue.h"     // Phase 3 T2: our_queue; T4e: queue_reconnect/subscribe/send_key/read_raw/send_ack
-#include "reply_queue.h"   // Session 34 Phase 6: per-contact reply queues
-#include "smp_e2e.h"       // Phase 3 T3: smp_e2e_decrypt_reply_message()
-#include "smp_agent.h"     // Phase 3 T3: smp_agent_process_message()
-#include "smp_crypto.h"    // Phase 3 T3: decrypt_smp_message()
-#include "smp_parser.h"    // Phase 3 T3: parse_agent_message()
-#include "sodium.h"        // Phase 3 T3: crypto_box_MACBYTES
-#include "smp_ack.h"       // Phase 3 T4c: smp_send_ack()
-#include "smp_peer.h"      // Phase 3 T4e: peer_send_chat_message()
-#include "ui_chat.h"       // Session 32: ui_chat_get_last_seq()
-#include "ui_manager.h"    // Session 32: UI_SCREEN_CHAT
-#include "smp_handshake.h" // Session 32: handshake_get_last_msg_id()
-#include "smp_ratchet.h"  // Session 34: ratchet_set_active()
-#include "smp_history.h"  // Session 37: encrypted chat history on SD
+#include "smp_network.h"   // smp_read_block()
+#include "smp_types.h"     // SMP_BLOCK_SIZE
+#include "smp_contacts.h"  // find_contact_by_recipient_id, contacts_db
+#include "smp_queue.h"     // our_queue; T4e: queue_reconnect/subscribe/send_key/read_raw/send_ack
+#include "reply_queue.h"   // per-contact reply queues
+#include "smp_e2e.h"       // smp_e2e_decrypt_reply_message()
+#include "smp_agent.h"     // smp_agent_process_message()
+#include "smp_crypto.h"    // decrypt_smp_message()
+#include "smp_parser.h"    // parse_agent_message()
+#include "sodium.h"        // crypto_box_MACBYTES
+#include "smp_ack.h"       // smp_send_ack()
+#include "smp_peer.h"      // peer_send_chat_message()
+#include "ui_chat.h"       // ui_chat_get_last_seq()
+#include "ui_manager.h"    // UI_SCREEN_CHAT
+#include "smp_handshake.h" // handshake_get_last_msg_id()
+#include "smp_ratchet.h"  // ratchet_set_active()
+#include "smp_history.h"  // encrypted chat history on SD
 #include <string.h>
-#include <time.h>          // Session 37: time(NULL) for history timestamps
+#include <time.h>          // time(NULL) for history timestamps
 #include <sys/socket.h>
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
-// peer_send_hello not in any header (declared extern in main.c too)
+// TODO: move to smp_peer.h
 extern bool peer_send_hello(contact_t *contact);
 
 static const char *TAG = "SMP_TASKS";
-static const char *TAG_APP = "SMP_APP";  // Phase 3 T2: App Task logging
+static const char *TAG_APP = "SMP_APP";  // App Task logging
 
 // Task handles
 TaskHandle_t network_task_handle = NULL;
@@ -48,10 +48,10 @@ RingbufHandle_t app_to_net_buf = NULL;
 
 // Stored SSL context (set by smp_tasks_start, used by network task later)
 static mbedtls_ssl_context *s_ssl = NULL;
-static int s_sock_fd = -1;  // T6-Fix: Socket FD for timeout control
-static uint8_t s_session_id[32];  // Phase 3 T4b: session ID for ACK signing
+static int s_sock_fd = -1;  // Socket FD for timeout control
+static uint8_t s_session_id[32];  // session ID for ACK signing
 
-// Phase 3 T3: Post-confirmation state (set by Reply Queue decrypt, read by 42d handler later)
+// Post-confirmation state (set by Reply Queue decrypt, read by 42d handler later)
 static uint8_t s_peer_sender_auth_key[44];
 static bool s_has_peer_sender_auth = false;
 // Per-contact 42d completion: bit N = contact[N] completed handshake
@@ -66,7 +66,7 @@ static inline void mark_42d_done(int idx) {
         s_42d_bitmap[idx / 8] |= (1 << (idx % 8));
     }
 }
-// 36b: Public API to reset 42d bit on contact delete
+// Public API to reset 42d bit on contact delete
 void smp_clear_42d(int idx) {
     if (idx >= 0 && idx < 128) {
         s_42d_bitmap[idx / 8] &= ~(1 << (idx % 8));
@@ -74,10 +74,10 @@ void smp_clear_42d(int idx) {
     }
 }
 
-// Session 32: UI Event Queue (protocol -> LVGL thread)
+// UI Event Queue (protocol -> LVGL thread)
 QueueHandle_t app_to_ui_queue = NULL;
 
-// Session 32: seq <-> msg_id mapping for delivery receipt matching
+// seq <-> msg_id mapping for delivery receipt matching
 #define MAX_MSG_MAPPINGS 16
 
 typedef struct {
@@ -88,17 +88,17 @@ typedef struct {
 
 static msg_mapping_t msg_mappings[MAX_MSG_MAPPINGS] = {0};
 
-// Session 33: Active contact for sending (replaces hardcoded contacts[0])
+// Active contact for sending (replaces hardcoded contacts[0])
 static int s_active_contact_idx = 0;
 
 // Deferred NVS save: network task sets this, app task (Internal SRAM) writes
 static volatile bool s_contacts_dirty = false;
-static volatile int  s_rq_save_pending = -1;   // 35f: slot to save, -1 = none
+static volatile int  s_rq_save_pending = -1;   // slot to save, -1 = none
 
-// Session 37: History load request flag (UI -> App Task)
+// History load request flag (UI -> App Task)
 static volatile int s_history_load_pending = -1;  // slot to load, -1 = none
 
-// Session 37: Shared buffer for history batch (App Task writes, UI timer reads)
+// Shared buffer for history batch (App Task writes, UI timer reads)
 history_message_t *smp_history_batch      = NULL;
 int                smp_history_batch_count = 0;
 int                smp_history_batch_slot  = -1;
@@ -106,7 +106,7 @@ int                smp_history_batch_slot  = -1;
 // Track which contact slot is currently in handshake (set by add-contact flow)
 static volatile int s_handshake_contact_idx = 0;
 
-// 36c: Net Task signals KEY completion to App Task
+// Net Task signals KEY completion to App Task
 static TaskHandle_t s_app_task_handle = NULL;
 #define NOTIFY_KEY_DONE  (1 << 0)
 
@@ -120,8 +120,8 @@ static void log_heap(const char *label)
 }
 
 // --- Task functions ---
-// Network task: Phase 3 SSL read loop
-// App/UI tasks: empty loops (Phase 2, will be filled in later phases)
+// Network task: SSL read loop
+// App/UI tasks: command loops
 
 /**
  * Drain all pending frames from SSL socket before sending commands.
@@ -198,7 +198,7 @@ static void network_task(void *arg)
     ESP_LOGI(TAG, "Network task running on core %d", xPortGetCoreID());
     log_heap("net_task");
 
-    // Phase 3 T1: Allocate block buffer in PSRAM (preserve internal SRAM for TLS/WiFi)
+    // Allocate block buffer in PSRAM (preserve internal SRAM for TLS/WiFi)
     uint8_t *block = (uint8_t *)heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
     if (!block) {
         ESP_LOGE(TAG, "Network task: Failed to allocate read buffer in PSRAM!");
@@ -208,7 +208,7 @@ static void network_task(void *arg)
 
     ESP_LOGI(TAG, "Network task: SSL read loop starting...");
 
-    // T6-Fix: Reduce socket timeout for responsive read loop
+    // Reduce socket timeout for responsive read loop
     {
         struct timeval tv;
         tv.tv_sec = 1;
@@ -343,11 +343,11 @@ static void network_task(void *arg)
                                      cmd->contact_name, slot);
                             subscribe_all_contacts(s_ssl, block, s_session_id);
 
-                            // Session 34 Phase 6: Create per-contact reply queue
+                            // Create per-contact reply queue
                             int rq_ret = reply_queue_create(s_ssl, block, s_session_id, slot);
                             if (rq_ret == 0) {
                                 ESP_LOGI(TAG, "NET: Reply queue created for slot [%d]", slot);
-                                s_rq_save_pending = slot;  // 35f: deferred NVS save from app task
+                                s_rq_save_pending = slot;  // deferred NVS save from app task
                                 // Re-subscribe to include new reply queue
                                 subscribe_all_contacts(s_ssl, block, s_session_id);
                             } else {
@@ -390,7 +390,7 @@ static void network_task(void *arg)
                             key_rcv_id_len = our_queue.rcv_id_len;
                             key_auth_private = our_queue.rcv_auth_private;
                         } else {
-                            // 35c: Use REPLY QUEUE credentials for this contact
+                            // Use REPLY QUEUE credentials for this contact
                             reply_queue_t *key_rq = reply_queue_get(cmd->rq_slot);
                             if (!key_rq || !key_rq->valid) {
                                 ESP_LOGE(TAG, "NET: RQ[%d] not valid for KEY!", cmd->rq_slot);
@@ -457,6 +457,13 @@ static void network_task(void *arg)
                         memcpy(&key_trans[kt], key_body, key_body_len);
                         kt += key_body_len;
 
+                        // Sanity-Check: Hex dump of KEY transmission (compare with SUB!)
+                        ESP_LOGW("KEY_DEBUG", "KEY transmission (%d bytes):", kt);
+                        ESP_LOGW("KEY_DEBUG", "  sigLen=%d, corrIdLen=%d, entIdLen=%d, peerKeyLen=%d",
+                                 key_trans[0], key_body[0], key_body[25], cmd->peer_auth_key_len);
+                        int dump_len = kt < 96 ? kt : 96;
+                        ESP_LOG_BUFFER_HEX_LEVEL("KEY_DEBUG", key_trans, dump_len, ESP_LOG_WARN);
+
                         int ret = smp_write_command_block(s_ssl, block, key_trans, kt);
                         if (ret != 0) {
                             ESP_LOGE(TAG, "NET: KEY send failed for contact [%d]!", cmd->rq_slot);
@@ -477,20 +484,22 @@ static void network_task(void *arg)
                                     ESP_LOGI(TAG, "      +----------------------------------------------+");
                                     ESP_LOGI(TAG, "      |  KEY ACCEPTED for contact [%d]!              |", cmd->rq_slot);
                                     ESP_LOGI(TAG, "      +----------------------------------------------+");
-                                    // 36c: Signal App Task that KEY was accepted
+                                    // Signal App Task that KEY was accepted
                                     if (s_app_task_handle) {
                                         xTaskNotify(s_app_task_handle, NOTIFY_KEY_DONE, eSetBits);
                                     }
                                 } else {
                                     ESP_LOGW(TAG, "NET: KEY response not OK for contact [%d]", cmd->rq_slot);
-                                    // 36c: Signal even on failure (App Task must not hang)
+                                    ESP_LOG_BUFFER_HEX_LEVEL("KEY_DEBUG", kr,
+                                        resp_len < 48 ? resp_len : 48, ESP_LOG_WARN);
+                                    // Signal even on failure (App Task must not hang)
                                     if (s_app_task_handle) {
                                         xTaskNotify(s_app_task_handle, NOTIFY_KEY_DONE, eSetBits);
                                     }
                                 }
                             } else {
                                 ESP_LOGW(TAG, "NET: No KEY response for contact [%d] (timeout)", cmd->rq_slot);
-                                // 36c: Signal even on failure (App Task must not hang)
+                                // Signal even on failure (App Task must not hang)
                                 if (s_app_task_handle) {
                                     xTaskNotify(s_app_task_handle, NOTIFY_KEY_DONE, eSetBits);
                                 }
@@ -557,7 +566,7 @@ static void network_task(void *arg)
     vTaskDelete(NULL);
 }
 
-// === Phase 3 T4d: App Task command helpers ===
+// === App Task command helpers ===
 
 // Helper: Send ACK via Ring Buffer to Network Task
 static void app_send_ack(const uint8_t *recipient_id, int recipient_id_len,
@@ -592,7 +601,7 @@ static void app_request_subscribe_all(void)
     }
 }
 
-// Session 34: Request new contact creation via Network Task
+// Request new contact creation via Network Task
 int smp_request_add_contact(const char *name)
 {
     if (!name || !name[0]) {
@@ -622,7 +631,7 @@ int smp_request_add_contact(const char *name)
     return 0;
 }
 
-// ============== Session 32: UI Notification Helpers ==============
+// ============== UI Notification Helpers ==============
 
 void smp_notify_ui_message(const char *text, bool is_outgoing, uint32_t msg_seq, int contact_idx)
 {
@@ -665,7 +674,7 @@ void smp_notify_ui_delivery_status(uint32_t msg_seq, msg_delivery_status_t statu
     xQueueSend(app_to_ui_queue, &evt, 0);
 }
 
-// Session 33 Phase 4A: Show QR code on connect screen
+// Show QR code on connect screen
 void smp_notify_ui_show_qr(const char *invite_link)
 {
     if (!app_to_ui_queue || !invite_link) return;
@@ -690,7 +699,7 @@ void smp_notify_ui_status(const char *status_text)
     xQueueSend(app_to_ui_queue, &evt, 0);
 }
 
-// 35e: Switch chat view to a different contact (thread-safe)
+// Switch chat view to a different contact (thread-safe)
 void smp_notify_ui_switch_contact(int contact_idx, const char *name)
 {
     if (!app_to_ui_queue) return;
@@ -701,7 +710,7 @@ void smp_notify_ui_switch_contact(int contact_idx, const char *name)
     xQueueSend(app_to_ui_queue, &evt, 0);
 }
 
-// ============== Session 32: Message ID Mapping for Receipts ==============
+// ============== Message ID Mapping for Receipts ==============
 
 void smp_register_msg_mapping(uint32_t ui_seq, uint64_t protocol_msg_id)
 {
@@ -752,18 +761,18 @@ void smp_notify_receipt_received(uint64_t protocol_msg_id)
     }
 }
 
-// ============== Session 33: Active Contact Management ==============
+// ============== Active Contact Management ==============
 
 void smp_set_active_contact(int idx)
 {
     if (idx >= 0 && idx < MAX_CONTACTS && contacts_db.contacts[idx].active) {
         s_active_contact_idx = idx;
-        // 35g: Switch ratchet+handshake so send uses correct keys
+        // Switch ratchet+handshake so send uses correct keys
         ratchet_set_active(idx);
         handshake_set_active(idx);
         ESP_LOGI(TAG, "Active contact set to [%d] %s (ratchet+handshake switched)",
                  idx, contacts_db.contacts[idx].name);
-        // 35e: Notify UI to switch chat filter
+        // Notify UI to switch chat filter
         smp_notify_ui_switch_contact(idx, contacts_db.contacts[idx].name);
     } else {
         ESP_LOGW(TAG, "Invalid contact index %d (max=%d), keeping [%d]",
@@ -776,7 +785,7 @@ int smp_get_active_contact(void)
     return s_active_contact_idx;
 }
 
-// Session 37: Request history load from App Task (called from UI context)
+// Request history load from App Task (called from UI context)
 void smp_request_load_history(int slot)
 {
     if (slot >= 0 && slot < 128) {
@@ -785,15 +794,15 @@ void smp_request_load_history(int slot)
     }
 }
 
-// Phase 3 T4: App logic runs on Main Task (64KB Internal SRAM stack)
+// App logic runs on Main Task (64KB Internal SRAM stack)
 // Required because NVS writes crash with PSRAM stack (SPI Flash disables cache)
 void smp_app_run(QueueHandle_t kbd_queue)
 {
-    s_app_task_handle = xTaskGetCurrentTaskHandle();  // 36c: for KEY notification
+    s_app_task_handle = xTaskGetCurrentTaskHandle();  // for KEY notification
     ESP_LOGI(TAG_APP, "App logic running on main task, core %d", xPortGetCoreID());
     log_heap("app_run");
 
-    // Session 37: Initialize encrypted chat history (SD card)
+    // Initialize encrypted chat history (SD card)
     {
         esp_err_t hist_ret = smp_history_init();
         if (hist_ret != ESP_OK) {
@@ -802,7 +811,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
         }
     }
 
-    // Phase 3 T2: Allocate local parse buffer in PSRAM (once, not per iteration)
+    // Allocate local parse buffer in PSRAM (once, not per iteration)
     uint8_t *local_block = (uint8_t *)heap_caps_malloc(SMP_BLOCK_SIZE + 2, MALLOC_CAP_SPIRAM);
     if (!local_block) {
         ESP_LOGE(TAG_APP, "Failed to allocate parse buffer in PSRAM!");
@@ -811,12 +820,12 @@ void smp_app_run(QueueHandle_t kbd_queue)
 
     ESP_LOGI(TAG_APP, "App logic: parse loop starting...");
 
-    // T6-Fix2: Re-subscribe after task handover to ensure server delivers on this connection
+    // Re-subscribe after task handover to ensure server delivers on this connection
     ESP_LOGI(TAG_APP, "APP: Sending initial re-subscribe...");
     app_request_subscribe_all();
-    // T6-Fix5: Send wildcard ACK to clear any stuck delivery state
+    // Send wildcard ACK to clear any stuck delivery state
     // Per SMP spec: empty msgId resets delivered = Nothing on server
-    // Session 33: Wildcard ACK for active contact
+    // Wildcard ACK for active contact
     if (contacts_db.num_contacts > 0) {
         contact_t *c = &contacts_db.contacts[s_active_contact_idx];
         ESP_LOGI(TAG_APP, "APP: Sending wildcard ACK for [%s] to clear delivery state", c->name);
@@ -835,7 +844,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
             save_contacts_to_nvs();
         }
 
-        // 35f: Deferred RQ NVS save (reply_queue_create defers because PSRAM stack)
+        // Deferred RQ NVS save (reply_queue_create defers because PSRAM stack)
         if (s_rq_save_pending >= 0) {
             int rq_slot = s_rq_save_pending;
             s_rq_save_pending = -1;
@@ -846,7 +855,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
             }
         }
 
-        // Session 37: Deferred history load (UI requested via smp_request_load_history)
+        // Deferred history load (UI requested via smp_request_load_history)
         if (s_history_load_pending >= 0) {
             int slot = s_history_load_pending;
             s_history_load_pending = -1;
@@ -881,7 +890,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
                     smp_history_batch_count = 0;
                     smp_history_batch_slot = -1;
 
-                    // Session 37b: Signal UI even for empty history (hides "Loading...")
+                    // Signal UI even for empty history (hides "Loading...")
                     ui_event_t evt = {0};
                     evt.type = UI_EVT_HISTORY_BATCH;
                     evt.contact_idx = slot;
@@ -894,8 +903,8 @@ void smp_app_run(QueueHandle_t kbd_queue)
             }
         }
 
-        // T5: Keyboard send (non-blocking poll)
-        // Session 32: Keyboard send with delivery status
+        // Keyboard send (non-blocking poll)
+        // Keyboard send with delivery status
         {
             char kbd_msg[256];
             while (kbd_queue && xQueueReceive(kbd_queue, kbd_msg, 0) == pdTRUE) {
@@ -904,7 +913,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
                 // Seq was incremented by ui_chat_next_seq() in on_input_ready
                 uint32_t seq = ui_chat_get_last_seq();
 
-                // Session 33: Send to active contact
+                // Send to active contact
                 contact_t *msg_contact = &contacts_db.contacts[s_active_contact_idx];
                 if (!msg_contact->active) {
                     ESP_LOGE(TAG_APP, "   ❌ Active contact [%d] is not active!", s_active_contact_idx);
@@ -915,11 +924,11 @@ void smp_app_run(QueueHandle_t kbd_queue)
                     ESP_LOGI(TAG_APP, "   ✅ Message sent! seq=%lu", (unsigned long)seq);
                     smp_notify_ui_delivery_status(seq, MSG_STATUS_SENT);
 
-                    // Session 32: Register seq->msg_id for receipt matching
+                    // Register seq->msg_id for receipt matching
                     uint64_t sent_msg_id = handshake_get_last_msg_id();
                     smp_register_msg_mapping(seq, sent_msg_id);
 
-                    // Session 37: Save sent message to encrypted SD history
+                    // Save sent message to encrypted SD history
                     {
                         history_message_t hist_msg = {
                             .direction = HISTORY_DIR_SENT,
@@ -994,7 +1003,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
         int contact_idx = find_contact_by_recipient_id(entity_id, entLen);
         contact_t *contact = (contact_idx >= 0) ? &contacts_db.contacts[contact_idx] : NULL;
 
-        // Reply Queue Check: per-contact lookup (Session 34 Phase 6)
+        // Reply Queue Check: per-contact lookup
         int rq_contact = find_reply_queue_by_rcv_id(entity_id, entLen);
         bool is_reply_queue = (rq_contact >= 0);
         bool is_legacy_rq = false;
@@ -1084,7 +1093,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
                     int hs_contact = rq_contact;  // Use routed contact, not global!
                     ESP_LOGI(TAG_APP, "   Reply Queue: handshake for contact [%d]", hs_contact);
 
-                    // Session 35 Fix: Set active ratchet+handshake BEFORE decrypt!
+                    // Set active ratchet+handshake BEFORE decrypt!
                     // Without this, Contact 1's Confirmation is decrypted with Slot 0's keys.
                     ratchet_set_active(hs_contact);
                     handshake_set_active(hs_contact);
@@ -1098,12 +1107,12 @@ void smp_app_run(QueueHandle_t kbd_queue)
                     ESP_LOGE(TAG_APP, "   Reply Queue decrypt failed! ret=%d", e2e_ret);
                 }
 
-                // === T4e: 42d Post-Confirmation Block (Session 34: per-contact) ===
+                // === Post-Confirmation Block (per-contact) ===
                 int hs_contact = rq_contact;  // From reply queue routing!
                 if (s_has_peer_sender_auth && !is_42d_done(hs_contact)) {
                     mark_42d_done(hs_contact);
                     ratchet_set_active(hs_contact);
-                    handshake_set_active(hs_contact);  // 35a: was missing!
+                    handshake_set_active(hs_contact);  // was missing!
                     ESP_LOGI(TAG_APP, "APP: 42d — Starting for contact [%d] (ratchet+handshake set)", hs_contact);
 
                     // 1. Send KEY via Network Task (async, on main SSL)
@@ -1121,7 +1130,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
                         }
                         ESP_LOGI(TAG_APP, "APP: 42d -- SEND_KEY queued (slot=%d)", key_cmd.rq_slot);
                         smp_notify_ui_status("Securing channel...");
-                        // 36c: Wait for Net Task to confirm KEY was accepted
+                        // Wait for Net Task to confirm KEY was accepted
                         {
                             uint32_t notify_val = 0;
                             BaseType_t got = xTaskNotifyWait(0, NOTIFY_KEY_DONE, &notify_val,
@@ -1159,7 +1168,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
                     skip_42d_app: ;
                 }
 
-                // T4d: ACK Reply Queue with per-contact auth keys
+                // ACK Reply Queue with per-contact auth keys
                 {
                     reply_queue_t *ack_rq = reply_queue_get(rq_contact);
                     if (!is_legacy_rq && ack_rq && ack_rq->valid) {
@@ -1172,7 +1181,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
                     }
                 }
 
-                // T4d: Re-subscribe after handshake
+                // Re-subscribe after handshake
                 app_request_subscribe_all();
 
                 ESP_LOGI(TAG_APP, "APP: Reply Queue processing complete.");
@@ -1182,7 +1191,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
             // CONTACT QUEUE: SMP Decrypt + Agent Parse + ACK
             // ==============================================================
             if (contact && contact->have_srv_dh && enc_len > crypto_box_MACBYTES) {
-                // 35g: Compute contact index and switch ratchet BEFORE decrypt
+                // Compute contact index and switch ratchet BEFORE decrypt
                 int cq_contact_idx = (int)(contact - contacts_db.contacts);
                 if (cq_contact_idx >= 0 && cq_contact_idx < MAX_CONTACTS) {
                     ratchet_set_active(cq_contact_idx);
@@ -1207,7 +1216,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
                     ESP_LOGE(TAG_APP, "   Failed to allocate decrypt buffer!");
                 }
 
-                // T4d: ACK Contact Queue
+                // ACK Contact Queue
                 app_send_ack(contact->recipient_id, contact->recipient_id_len,
                              msg_id, msgIdLen, contact->rcv_auth_secret);
             } else if (!is_reply_queue) {
@@ -1231,6 +1240,16 @@ void smp_app_run(QueueHandle_t kbd_queue)
 
     ESP_LOGW(TAG_APP, "App logic: parse loop ended, cleaning up");
     heap_caps_free(local_block);
+}
+
+static void ui_task(void *arg)
+{
+    ESP_LOGI(TAG, "UI task running on core %d", xPortGetCoreID());
+    log_heap("ui_task");
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 }
 
 // --- Public API ---
@@ -1268,7 +1287,7 @@ int smp_tasks_init(void)
     ESP_LOGI(TAG, "  Ring buffers (PSRAM): net->app %dB, app->net %dB",
              NET_TO_APP_BUF_SIZE, APP_TO_NET_BUF_SIZE);
 
-    // Session 32: UI event queue (8 events, non-blocking push)
+    // UI event queue (8 events, non-blocking push)
     app_to_ui_queue = xQueueCreate(8, sizeof(ui_event_t));
     if (!app_to_ui_queue) {
         ESP_LOGW(TAG, "Failed to create UI event queue (non-fatal)");
@@ -1288,7 +1307,7 @@ int smp_tasks_start(mbedtls_ssl_context *ssl_context, const uint8_t *session_id,
 
     s_ssl = ssl_context;
     memcpy(s_session_id, session_id, 32);
-    s_sock_fd = sock_fd;  // T6-Fix: Store for network task timeout
+    s_sock_fd = sock_fd;  // Store for network task timeout
 
     ESP_LOGI(TAG, "Starting tasks (all in PSRAM)...");
     log_heap("before_tasks");
@@ -1309,7 +1328,19 @@ int smp_tasks_start(mbedtls_ssl_context *ssl_context, const uint8_t *session_id,
     // crash with PSRAM stack (SPI Flash disables cache = PSRAM inaccessible)
     // Call smp_app_run() from main.c after smp_tasks_start()
 
-    ESP_LOGI(TAG, "Tasks started (net PSRAM, app on main task)");
+    // UI task on Core 1 (stack in PSRAM)
+    ret = xTaskCreatePinnedToCoreWithCaps(
+        ui_task, "ui_task",
+        UI_TASK_STACK, NULL,
+        UI_TASK_PRIO, &ui_task_handle, 1,
+        MALLOC_CAP_SPIRAM);
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create UI task");
+        smp_tasks_stop();
+        return -1;
+    }
+
+    ESP_LOGI(TAG, "Tasks started (net+ui PSRAM, app on main task)");
     log_heap("after_tasks");
 
     return 0;

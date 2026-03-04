@@ -23,21 +23,21 @@
 #include "smp_x448.h"      // NEU: X448 E2E Ratchet
 #include "smp_ratchet.h"   // NEU
 #include "smp_queue.h"     // NEU: Für unsere Queue
-#include "reply_queue.h"   // Session 34 Phase 6: per-contact reply queues
+#include "reply_queue.h"   // per-contact reply queues
 #include "smp_handshake.h"
-#include "smp_storage.h"   // Auftrag 50c: NVS persistence
-#include "smp_contacts.h"  // Session 34: contact index resolution
+#include "smp_storage.h"   // NVS persistence
+#include "smp_contacts.h"  // contact index resolution
 
 static const char *TAG = "SMP_PEER";
 
-// Externs (defined elsewhere in project)
+// TODO: move to smp_network.h
 extern const int ciphersuites[];
 extern int my_send_cb(void *ctx, const unsigned char *buf, size_t len);
 extern int my_recv_cb(void *ctx, unsigned char *buf, size_t len);
 extern int smp_tcp_connect(const char *host, int port);
 extern int smp_read_block(mbedtls_ssl_context *ssl, uint8_t *block, int timeout_ms);
 
-// SPKI headers from crypto module
+// TODO: move to simplex_crypto.h
 extern const uint8_t X25519_SPKI_HEADER[12];
 extern const uint8_t ED25519_SPKI_HEADER[12];
 
@@ -53,8 +53,8 @@ static struct {
     uint8_t server_key_hash[32];
     bool connected;
     bool initialized;
-    char last_host[64];   // Auftrag 24: saved for reconnect
-    int last_port;        // Auftrag 24: saved for reconnect
+    char last_host[64];   // saved for reconnect
+    int last_port;        // saved for reconnect
 } peer_state = {0};
 
 // ============== Peer Connection ==============
@@ -66,7 +66,7 @@ bool peer_connect(const char *host, int port) {
     ESP_LOGI(TAG, "🔗 CONNECTING TO PEER SERVER...");
     ESP_LOGI(TAG, "   Host: %s:%d", host, port);
 
-    // Auftrag 24: Save for reconnect
+    // Save for reconnect
     strncpy(peer_state.last_host, host, sizeof(peer_state.last_host) - 1);
     peer_state.last_port = port;
 
@@ -208,7 +208,7 @@ void peer_disconnect(void) {
     }
 }
 
-// ============== Session 34: Per-Contact Peer State ==============
+// ============== Per-Contact Peer State ==============
 
 /**
  * Prepare peer_state and pending_peer for a specific contact.
@@ -311,7 +311,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 
     int queue_info_len = -1;
 
-    // Session 34 FIX: Use explicit contact_idx from caller - NO pointer arithmetic!
+    // Use explicit contact_idx from caller, NOT pointer arithmetic!
     int peer_contact_idx = contact_idx;
     if (peer_contact_idx < 0 || peer_contact_idx >= MAX_CONTACTS ||
         !contacts_db.contacts[peer_contact_idx].active) {
@@ -327,7 +327,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
                 &agent_conn_info[aci_len], sizeof(agent_conn_info) - (size_t)aci_len);
             ESP_LOGI(TAG, "Using per-contact reply queue RQ[%d]", peer_contact_idx);
         } else if (peer_contact_idx > 0) {
-            // 35f: NEVER use our_queue for non-zero contacts - it sends WRONG queue info!
+            // NEVER use our_queue for non-zero contacts - it sends WRONG queue info!
             ESP_LOGE(TAG, "RQ[%d] NOT VALID and slot > 0 - cannot send confirmation!", peer_contact_idx);
             ESP_LOGE(TAG, "   This means reply_queue_create() data was lost.");
             ESP_LOGE(TAG, "   Check if subscribe_all_contacts() overwrites PSRAM via reply_queue_load()");
@@ -353,7 +353,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         aci_len += json_len;
 
         // 🔥 DEBUG: Bestätige dass erstes Byte 'D' ist!
-        ESP_LOGI(TAG, "🔍 DEBUG: agent_conn_info[0] = 0x%02X ('%c') - sollte 0x44 ('D') sein!", 
+        ESP_LOGI(TAG, "🔍 DEBUG: agent_conn_info[0] = 0x%02X ('%c') - expected 0x44 ('D')!", 
                 agent_conn_info[0], agent_conn_info[0]);
 
         ESP_LOGI(TAG, "   📦 AgentConnInfoReply: %d bytes (tag='D' + queue + JSON)", aci_len);
@@ -371,7 +371,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
             printf("\n");
         }
 
-    // ========== Session 34: CONF_CMP Diagnostic ==========
+    // ========== CONF_CMP Diagnostic ==========
     {
         ESP_LOGI("CONF_CMP", "");
         ESP_LOGI("CONF_CMP", "======= CONFIRMATION DIAGNOSTIC Contact [%d] =======", peer_contact_idx);
@@ -414,7 +414,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     ESP_LOGI(TAG, "   🔐 E2E params: %d bytes", e2e_len);
 
     // ========== X3DH + Ratchet Encryption ==========
-    // Session 34: Set active ratchet/handshake slot BEFORE X3DH
+    // Set active ratchet/handshake slot BEFORE X3DH
     // Without this, Contact 2's ratchet overwrites Contact 1's rat_00!
     if (peer_contact_idx >= 0) {
         ratchet_set_active((uint8_t)peer_contact_idx);
@@ -541,7 +541,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     }
     int pp = 0;
 
-    // Session 34: Resolve per-contact auth key for PrivHeader + SEND signing
+    // Resolve per-contact auth key for PrivHeader + SEND signing
     uint8_t *sender_auth_public = our_queue.rcv_auth_public;
     uint8_t *sender_auth_private = our_queue.rcv_auth_private;
     if (peer_contact_idx >= 0) {
@@ -562,7 +562,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     // Ed25519 SPKI (12 header + 32 key = 44 bytes)
     memcpy(&plaintext[pp], ED25519_SPKI_HEADER, 12);
     pp += 12;
-    memcpy(&plaintext[pp], sender_auth_public, 32);  // Session 34: per-contact key
+    memcpy(&plaintext[pp], sender_auth_public, 32);  // per-contact key
     pp += 32;
 
     // AgentMsgEnvelope (AgentConfirmation)
@@ -571,7 +571,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 
     ESP_LOGI(TAG, "   📝 ClientMessage plaintext: %d bytes (PrivHeader + AgentMsg)", pp);
 
-    // ========== Session 34: CONF_CMP PrivHeader Diagnostic ==========
+    // ========== CONF_CMP PrivHeader Diagnostic ==========
     {
         ESP_LOGI("CONF_CMP", "======= PRIVHEADER Contact [%d] =======", peer_contact_idx);
         ESP_LOGI("CONF_CMP", "PrivHeader Ed25519 key USED (sender_auth_public):");
@@ -616,7 +616,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         return false;
     }
     
-    // 2-Byte Length Prefix (Big Endian) - Nachrichtenlänge
+    // 2-Byte Length Prefix (Big Endian) - message length
     uint16_t msg_len = pp;  // pp = plaintext length
     padded[0] = (msg_len >> 8) & 0xFF;  // High byte
     padded[1] = msg_len & 0xFF;         // Low byte
@@ -657,7 +657,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     printf("\n");
     // ===== END DIAGNOSE =====
 
-// Jetzt crypto_box mit PADDED!
+// crypto_box with PADDED plaintext
     uint8_t *encrypted = malloc(24 + E2E_ENC_CONFIRMATION_LENGTH + crypto_box_MACBYTES);
     if (!encrypted) {
         ESP_LOGE(TAG, "   ❌ Failed to allocate encrypted buffer!");
@@ -677,9 +677,9 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         return false;
     }
     
-    free(padded);  // ← Nach erfolgreicher Verschlüsselung freigeben
+    free(padded);  // free after successful encryption
 
-    // WICHTIG: encrypted_len muss jetzt padded_len nutzen!
+    // IMPORTANT: encrypted_len must use padded_len!
     int encrypted_len = 24 + padded_len + crypto_box_MACBYTES;
     ESP_LOGI(TAG, "   🔐 Encrypted: %d bytes (nonce + ciphertext + MAC)", encrypted_len);
 
@@ -866,7 +866,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
                         our_dh_private,
                         our_dh_public,
                         ratchet_get_state(),
-                        sender_auth_private  // Session 34: per-contact key
+                        sender_auth_private  // per-contact key
                     );
 
                     if (hello_ok) {
@@ -878,7 +878,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
                     ESP_LOGW(TAG, "   ⚠️  No peer DH key available, skipping HELLO");
                 }
 
-                // Auftrag 50c: Persist peer state after successful handshake
+                // Persist peer state after successful handshake
                 peer_save_state(peer_contact_idx >= 0 ? (uint8_t)peer_contact_idx : 0);
 
                 free(transmission);
@@ -906,16 +906,16 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     return false;
 }
 
-// ============== Auftrag 24: Send HELLO from main.c ==============
+// ============== Send HELLO ==============
 
 bool peer_send_hello(contact_t *contact) {
-    // Session 34: Load correct peer state for THIS contact
+    // Load correct peer state for THIS contact
     if (!peer_prepare_for_contact(contact)) {
         ESP_LOGE(TAG, "❌ peer_send_hello: peer_prepare failed!");
         return false;
     }
 
-    // Auftrag 24: Reconnect to peer if connection was closed
+    // Reconnect to peer if connection was closed
     if (!peer_state.connected) {
         if (peer_state.last_host[0] == '\0' || peer_state.last_port == 0) {
             ESP_LOGE(TAG, "❌ peer_send_hello: no saved peer host/port!");
@@ -946,7 +946,7 @@ bool peer_send_hello(contact_t *contact) {
     memcpy(our_dh_private, contact->rcv_dh_secret, 32);
     memcpy(our_dh_public,  contact->rcv_dh_public,  32);
 
-    // Session 34: Resolve per-contact auth key
+    // Resolve per-contact auth key
     int hello_cidx = (contact >= &contacts_db.contacts[0] &&
                       contact < &contacts_db.contacts[MAX_CONTACTS])
                      ? (int)(contact - &contacts_db.contacts[0]) : -1;
@@ -968,17 +968,17 @@ bool peer_send_hello(contact_t *contact) {
         our_dh_private,
         our_dh_public,
         ratchet_get_state(),
-        hello_auth_private  // Session 34: per-contact key
+        hello_auth_private  // per-contact key
     );
 
     free(block);
     return ok;
 }
 
-// ============== Auftrag 44a: Send Chat Message ==============
+// ============== Send Chat Message ==============
 
 bool peer_send_chat_message(contact_t *contact, const char *message) {
-    // Session 34: Load correct peer state for THIS contact
+    // Load correct peer state for THIS contact
     if (!peer_prepare_for_contact(contact)) {
         ESP_LOGE(TAG, "❌ peer_send_chat_message: peer_prepare failed!");
         return false;
@@ -1015,7 +1015,7 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
     memcpy(our_dh_private, contact->rcv_dh_secret, 32);
     memcpy(our_dh_public,  contact->rcv_dh_public,  32);
 
-    // Session 34: Resolve per-contact auth key
+    // Resolve per-contact auth key
     int msg_cidx = (contact >= &contacts_db.contacts[0] &&
                     contact < &contacts_db.contacts[MAX_CONTACTS])
                    ? (int)(contact - &contacts_db.contacts[0]) : -1;
@@ -1037,7 +1037,7 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
         our_dh_private,
         our_dh_public,
         ratchet_get_state(),
-        msg_auth_private,  // Session 34: per-contact key
+        msg_auth_private,  // per-contact key
         message
     );
 
@@ -1045,12 +1045,12 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
     return ok;
 }
 
-// ============== Auftrag 49b: Send Delivery Receipt ==============
+// ============== Send Delivery Receipt ==============
 
 bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8_t *msg_hash) {
     ESP_LOGI(TAG, "📬 SENDING DELIVERY RECEIPT (A_RCVD)");
     
-    // Session 34: Load correct peer state for THIS contact
+    // Load correct peer state for THIS contact
     if (!peer_prepare_for_contact(contact)) {
         ESP_LOGE(TAG, "❌ peer_send_receipt: peer_prepare failed!");
         return false;
@@ -1087,7 +1087,7 @@ bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8
     memcpy(our_dh_private, contact->rcv_dh_secret, 32);
     memcpy(our_dh_public,  contact->rcv_dh_public,  32);
 
-    // Session 34 FIX: Use per-contact reply queue auth key, not global our_queue!
+    // Use per-contact reply queue auth key, not global our_queue!
     int rcpt_cidx = (contact >= &contacts_db.contacts[0] &&
                      contact < &contacts_db.contacts[MAX_CONTACTS])
                     ? (int)(contact - &contacts_db.contacts[0]) : -1;
@@ -1118,7 +1118,7 @@ bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8
     return ok;
 }
 
-// ============== Persistence (Auftrag 50c) ==============
+// ============== Persistence ==============
 
 bool peer_save_state(uint8_t contact_idx) {
     if (!pending_peer.valid) {
@@ -1126,7 +1126,7 @@ bool peer_save_state(uint8_t contact_idx) {
         return false;
     }
 
-    // Session 34: Dynamic NVS key per contact (was hardcoded "peer_00")
+    // Dynamic NVS key per contact (was hardcoded "peer_00")
     char key[12];
     snprintf(key, sizeof(key), "peer_%02x", contact_idx);
 
@@ -1146,7 +1146,7 @@ bool peer_save_state(uint8_t contact_idx) {
 }
 
 bool peer_load_state(uint8_t contact_idx) {
-    // Session 34: Dynamic NVS key per contact (was hardcoded "peer_00")
+    // Dynamic NVS key per contact (was hardcoded "peer_00")
     char key[12];
     snprintf(key, sizeof(key), "peer_%02x", contact_idx);
 

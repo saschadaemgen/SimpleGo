@@ -91,7 +91,7 @@ int my_recv_cb(void *ctx, unsigned char *buf, size_t len) {
     int sock = *(int *)ctx;
     int ret = recv(sock, buf, len, 0);
     if (ret > 0) {
-        ESP_LOGD(TAG, "RECV: %d bytes on sock %d", ret, sock);
+        ESP_LOGI(TAG, "RECV: %d bytes on sock %d", ret, sock);
     }
     if (ret < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return MBEDTLS_ERR_SSL_WANT_READ;
@@ -194,12 +194,21 @@ int smp_write_command_block(mbedtls_ssl_context *ssl, uint8_t *block,
     // transmission data
     memcpy(&block[pos], transmission, trans_len);
     
+    // Hex dump first 16 bytes of outgoing block
+    {
+        char hex[64] = {0}; int hx = 0;
+        for (int j = 0; j < 16; j++)
+            hx += sprintf(&hex[hx], "%02x ", block[j]);
+        ESP_LOGW("SMP_NET", "BLOCK OUT first 16B: %s (content_len=%d, tx_len=%d)", 
+                 hex, (block[0]<<8)|block[1], (int)trans_len);
+    }
+    
     int written = 0;
     while (written < SMP_BLOCK_SIZE) {
         int want = SMP_BLOCK_SIZE - written;
         int ret = mbedtls_ssl_write(ssl, block + written, want);
         if (ret > 0) {
-            ESP_LOGD("BLOCK_TX", "write %d/%d -> returned %d (total %d/%d)",
+            ESP_LOGI("BLOCK_TX", "write %d/%d -> returned %d (total %d/%d)",
                      want, SMP_BLOCK_SIZE, ret, written + ret, SMP_BLOCK_SIZE);
             written += ret;
         } else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) {

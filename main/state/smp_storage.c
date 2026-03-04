@@ -3,9 +3,9 @@
  * Persistent Storage Module Implementation
  * v0.1.17-alpha
  *
- * Two-Phase Init Architecture:
- *   Phase 1: smp_storage_init()    → NVS only (before display, no SPI)
- *   Phase 2: smp_storage_init_sd() → SD card on existing SPI bus (after display)
+ * Two-Step Init Architecture:
+ *   Step 1: smp_storage_init()    → NVS only (before display, no SPI)
+ *   Step 2: smp_storage_init_sd() → SD card on existing SPI bus (after display)
  *
  * The T-Deck display owns SPI2_HOST. We share that bus for SD card
  * with a separate CS pin. Never call spi_bus_initialize() ourselves.
@@ -30,7 +30,6 @@
 #include "driver/sdspi_host.h"
 #include "driver/spi_common.h"
 #include "sdmmc_cmd.h"
-#include "mbedtls/platform_util.h"
 
 static const char *TAG = "SMP_STOR";
 
@@ -38,7 +37,7 @@ static const char *TAG = "SMP_STOR";
 // T-Deck shares SPI2_HOST with display (SCLK=40, MOSI=41, MISO=38)
 // Display CS = GPIO 12, SD card needs its OWN CS pin
 // T-Deck Plus SD_CS is typically GPIO 39
-// TODO: Verify this pin on your T-Deck — if SD won't mount, check schematic
+// SD_PIN_CS per device_config.h
 
 #define SD_PIN_CS       GPIO_NUM_39
 #define SD_SPI_HOST     SPI2_HOST       // Same bus as display — DO NOT re-initialize!
@@ -79,13 +78,13 @@ static esp_err_t mkdir_p(const char *path) {
     return ESP_OK;
 }
 
-// ============== Phase 1: NVS Init (call BEFORE display) ==============
+// ============== NVS Init (call BEFORE display) ==============
 
 esp_err_t smp_storage_init(void) {
     esp_err_t ret;
 
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "=== SimpleGo Storage Init (Phase 1: NVS) ===");
+    ESP_LOGI(TAG, "=== SimpleGo Storage Init (NVS) ===");
 
     ret = nvs_open(SMP_STORAGE_NVS_NAMESPACE, NVS_READWRITE, &storage.nvs_handle);
     if (ret != ESP_OK) {
@@ -99,11 +98,11 @@ esp_err_t smp_storage_init(void) {
     return ESP_OK;
 }
 
-// ============== Phase 2: SD Card Init (call AFTER display) ==============
+// ============== SD Card Init (call AFTER display) ==============
 
 esp_err_t smp_storage_init_sd(void) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "=== SimpleGo Storage Init (Phase 2: SD Card) ===");
+    ESP_LOGI(TAG, "=== SimpleGo Storage Init (SD Card) ===");
 
     if (storage.sd_mounted) {
         ESP_LOGW(TAG, "SD already mounted");
@@ -467,7 +466,7 @@ esp_err_t smp_storage_self_test(void) {
             goto test_b;
         }
 
-        mbedtls_platform_zeroize(read_buf, TEST_SIZE);
+        memset(read_buf, 0, TEST_SIZE);
         ret = smp_storage_load_blob(test_key, read_buf, TEST_SIZE, &read_len);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "  FAIL: load_blob returned %s", esp_err_to_name(ret));
@@ -519,7 +518,7 @@ test_b:
             goto test_c;
         }
 
-        mbedtls_platform_zeroize(read_buf, TEST_SIZE);
+        memset(read_buf, 0, TEST_SIZE);
         ret = smp_storage_load_blob(test_key, read_buf, TEST_SIZE, &read_len);
         if (ret != ESP_OK || read_len != TEST_SIZE || memcmp(test_data, read_buf, TEST_SIZE) != 0) {
             ESP_LOGE(TAG, "  FAIL: immediate read-back mismatch");
@@ -568,7 +567,7 @@ test_c:
             goto test_done;
         }
 
-        mbedtls_platform_zeroize(read_buf, TEST_SIZE);
+        memset(read_buf, 0, TEST_SIZE);
         ret = smp_storage_sd_read(test_path, read_buf, TEST_SIZE, &read_len);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "  FAIL: sd_read returned %s", esp_err_to_name(ret));

@@ -1,7 +1,5 @@
 /**
  * SimpleGo - Reply Queue E2E Decryption
- * Extracted from main.c (Auftrag 46c)
- * Extended: Session 34 Phase 6 - per-contact reply queue support
  *
  * Consolidates the Reply Queue decrypt pipeline.
  * Now supports both global keys (legacy) and explicit per-contact keys.
@@ -18,7 +16,12 @@
 #include "sodium.h"
 #include "smp_queue.h"        // our_queue, queue_save_credentials
 #include "smp_types.h"        // reply_queue_e2e_peer_public/valid
-#include "smp_crypto.h"       // decrypt_client_msg
+#include "simplex_crypto.h"   // simplex_secretbox_open_debug
+
+// TODO: move to simplex_crypto.h
+extern int decrypt_client_msg(const uint8_t *data, int data_len,
+                               const uint8_t *sender_pub, const uint8_t *rcv_priv,
+                               uint8_t *out);
 
 static const char *TAG = "SMP_E2E";
 
@@ -140,7 +143,8 @@ static bool extract_sender_key_ex(const uint8_t *envelope, size_t envelope_len,
 // ============== Internal: Multi-Method E2E Decrypt ==============
 
 /**
- * E2E decrypt using decrypt_client_msg (verified correct method since Session 24).
+ * Try multiple E2E decrypt methods against the ciphertext.
+ * Methods: decrypt_client_msg, crypto_box, crypto_secretbox, simplex_secretbox
  *
  * PARAMETERIZED: takes explicit e2e_private instead of our_queue.e2e_private.
  */
@@ -150,26 +154,57 @@ static int try_e2e_decrypt_ex(const uint8_t *envelope, size_t envelope_len,
                                const uint8_t *e2e_private,
                                uint8_t *e2e_plain, size_t cipher_len)
 {
-    (void)cipher_offset;  // nonce_offset is sufficient for decrypt_client_msg
+    const uint8_t *cm_nonce = &envelope[nonce_offset];
+    const uint8_t *ciphertext = &envelope[cipher_offset];
 
-    int block_len = envelope_len - nonce_offset;
-    uint8_t *tmp = malloc(block_len);
-    if (!tmp) {
-        ESP_LOGE(TAG, "E2E decrypt: malloc failed (%d bytes)", block_len);
+    // DH secret for methods 2-3
+    uint8_t dh_secret[32];
+    if (crypto_scalarmult(dh_secret, e2e_private, sender_pub) != 0) {
+        ESP_LOGE(TAG, "DH computation failed");
         return -1;
     }
 
-    int dec = decrypt_client_msg(&envelope[nonce_offset], block_len,
-                                  sender_pub, e2e_private, tmp);
-    if (dec > 0) {
-        memcpy(e2e_plain, tmp, dec < (int)cipher_len ? dec : (int)cipher_len);
-        free(tmp);
-        return 0;
+    int ret = -1;
+
+    // Method 0: decrypt_client_msg (Contact Queue style)
+    ESP_LOGD(TAG, "Trying decrypt_client_msg...");
+    {
+        int block_len = envelope_len - nonce_offset;
+        uint8_t *m0 = malloc(block_len);
+        if (m0) {
+            int dec = decrypt_client_msg(&envelope[nonce_offset], block_len,
+                                          sender_pub, e2e_private, m0);
+            if (dec > 0) {
+                memcpy(e2e_plain, m0, dec < (int)cipher_len ? dec : (int)cipher_len);
+                ret = 0;
+            }
+            free(m0);
+        }
     }
 
-    free(tmp);
-    ESP_LOGE(TAG, "E2E decrypt failed (decrypt_client_msg returned %d)", dec);
-    return -1;
+    // Method 1: crypto_box_open_easy
+    if (ret != 0) {
+        ESP_LOGD(TAG, "Trying crypto_box_open_easy...");
+        ret = crypto_box_open_easy(e2e_plain, ciphertext, cipher_len,
+                                    cm_nonce, sender_pub, e2e_private);
+    }
+
+    // Method 2: crypto_secretbox_open_easy with DH secret
+    if (ret != 0) {
+        ESP_LOGD(TAG, "Trying crypto_secretbox_open_easy...");
+        ret = crypto_secretbox_open_easy(e2e_plain, ciphertext, cipher_len,
+                                          cm_nonce, dh_secret);
+    }
+
+    // Method 3: Custom simplex_secretbox
+    if (ret != 0) {
+        ESP_LOGD(TAG, "Trying simplex_secretbox_open_debug...");
+        ret = simplex_secretbox_open_debug(e2e_plain, ciphertext, cipher_len,
+                                            cm_nonce, dh_secret, "REPLY_E2E");
+    }
+
+    sodium_memzero(dh_secret, 32);
+    return ret;
 }
 
 // ============== Public API: Parameterized (_ex) ==============
