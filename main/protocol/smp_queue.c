@@ -8,6 +8,7 @@
 
 #include "smp_queue.h"
 #include "smp_types.h"
+#include "smp_contacts.h"
 #include "smp_network.h"
 #include "smp_crypto.h"
 #include "smp_storage.h"

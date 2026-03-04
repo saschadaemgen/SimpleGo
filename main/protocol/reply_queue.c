@@ -10,7 +10,8 @@
 
 #include "reply_queue.h"
 #include "smp_queue.h"       // our_queue (for server info)
-#include "smp_types.h"       // MAX_CONTACTS, SPKI headers, base64url
+#include "smp_types.h"       // MAX_CONTACTS
+#include "smp_contacts.h"    // ED25519_SPKI_HEADER, X25519_SPKI_HEADER
 #include <string.h>
 #include <stdio.h>
 #include "esp_log.h"

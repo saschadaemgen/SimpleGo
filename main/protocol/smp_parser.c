@@ -9,6 +9,7 @@
 #include "smp_utils.h"
 #include "smp_crypto.h"
 #include "smp_peer.h"
+#include "smp_contacts.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
