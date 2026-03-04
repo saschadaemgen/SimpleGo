@@ -30,16 +30,17 @@
 
 static const char *TAG = "SMP_PEER";
 
+// ============== Global Definitions ==============
+
+peer_queue_t pending_peer = {0};
+peer_connection_t peer_conn = {0};
+
 // TODO: move to smp_network.h
 extern const int ciphersuites[];
 extern int my_send_cb(void *ctx, const unsigned char *buf, size_t len);
 extern int my_recv_cb(void *ctx, unsigned char *buf, size_t len);
 extern int smp_tcp_connect(const char *host, int port);
 extern int smp_read_block(mbedtls_ssl_context *ssl, uint8_t *block, int timeout_ms);
-
-// TODO: move to simplex_crypto.h
-extern const uint8_t X25519_SPKI_HEADER[12];
-extern const uint8_t ED25519_SPKI_HEADER[12];
 
 // ============== Peer Connection State ==============
 

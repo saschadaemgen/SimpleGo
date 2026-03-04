@@ -21,13 +21,6 @@
 // X448 key size (for E2E ratchet)
 #define X448_KEY_SIZE       56  // 448 / 8 = 56 bytes
 
-// SPKI headers for key encoding
-extern const uint8_t ED25519_SPKI_HEADER[12];
-extern const uint8_t X25519_SPKI_HEADER[12];
-
-// Base64URL character set
-extern const char base64url_chars[];
-
 // ============== Contact Structure ==============
 
 typedef struct {
@@ -82,12 +75,5 @@ typedef struct {
     uint8_t server_key_hash[32];
     bool connected;
 } peer_connection_t;
-
-// ============== Global State ==============
-
-extern contacts_db_t contacts_db;
-extern peer_queue_t pending_peer;
-extern peer_connection_t peer_conn;
-extern volatile bool wifi_connected;
 
 #endif // SMP_TYPES_H

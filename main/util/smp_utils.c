@@ -12,6 +12,10 @@
 
 __attribute__((unused)) static const char *TAG = "SMP_UTIL";
 
+// ============== Global Definitions ==============
+
+const char base64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
 // ============== Base64URL Encoding ==============
 
 int base64url_encode(const uint8_t *input, int input_len, char *output, int output_max) {

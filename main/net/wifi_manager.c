@@ -15,7 +15,6 @@
  */
 
 #include "wifi_manager.h"
-#include "smp_types.h"          /* wifi_connected */
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_wifi.h"
@@ -27,6 +26,10 @@
 #include <string.h>
 
 static const char *TAG = "WIFI_MGR";
+
+// ============== Global Definitions ==============
+
+volatile bool wifi_connected = false;
 
 #define NVS_WIFI_NS   "wifi_cfg"
 #define NVS_KEY_SSID  "ssid"

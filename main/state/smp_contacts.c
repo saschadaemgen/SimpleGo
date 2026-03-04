@@ -25,6 +25,16 @@ extern RingbufHandle_t net_to_app_buf;
 
 static const char *TAG = "SMP_CONT";
 
+// ============== Global Definitions ==============
+
+const uint8_t ED25519_SPKI_HEADER[12] = {
+    0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00
+};
+const uint8_t X25519_SPKI_HEADER[12] = {
+    0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e, 0x03, 0x21, 0x00
+};
+contacts_db_t contacts_db = {0};
+
 // NVS defer flag: when true, add_contact skips NVS write (for PSRAM-stack callers)
 volatile bool contacts_nvs_deferred = false;
 

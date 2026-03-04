@@ -44,7 +44,6 @@ static void refresh_values(void)
                               (unsigned long)mon.free_size, mon.used_pct);
     }
     if (s_status_val) {
-        extern volatile bool wifi_connected;
         if (wifi_connected) {
             wifi_status_t ws = wifi_manager_get_status();
             lv_label_set_text_fmt(s_status_val, "%s " LV_SYMBOL_OK, ws.ssid);

@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include "esp_wifi_types.h"
 
+extern volatile bool wifi_connected;
+
 typedef struct {
     bool   connected;
     char   ssid[33];

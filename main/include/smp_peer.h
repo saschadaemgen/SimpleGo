@@ -10,6 +10,11 @@
 #include <stdint.h>
 #include "smp_types.h"
 
+// ============== Global Declarations ==============
+
+extern peer_queue_t pending_peer;
+extern peer_connection_t peer_conn;
+
 // Connect to peer's SMP server
 bool peer_connect(const char *host, int port);
 

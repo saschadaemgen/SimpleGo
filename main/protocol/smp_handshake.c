@@ -14,6 +14,7 @@
 
 #include "smp_handshake.h"
 #include "smp_types.h"
+#include "smp_contacts.h"
 #include "smp_network.h"
 #include "smp_queue.h"
 #include "smp_ratchet.h"
@@ -235,11 +236,6 @@ bool send_skey_command(
     ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
     ESP_LOGI(TAG, "║  🔐 SENDING SKEY COMMAND (Secure Queue)                      ║");
     ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
-    
-    // Ed25519 SPKI format: 12 byte header + 32 byte key = 44 bytes
-    static const uint8_t ED25519_SPKI_HEADER[12] = {
-        0x30, 0x2A, 0x30, 0x05, 0x06, 0x03, 0x2B, 0x65, 0x70, 0x03, 0x21, 0x00
-    };
     
     // Build SKEY command body
     // Format: [corrId][entityId=peer_queue_id]SKEY [authKey]

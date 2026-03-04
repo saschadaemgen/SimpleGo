@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+extern const char base64url_chars[];
+
 // Base64URL encoding (no padding)
 int base64url_encode(const uint8_t *input, int input_len, char *output, int output_max);
 

@@ -10,6 +10,12 @@
 #include "smp_types.h"
 #include "mbedtls/ssl.h"
 
+// ============== Global Declarations ==============
+
+extern const uint8_t ED25519_SPKI_HEADER[12];
+extern const uint8_t X25519_SPKI_HEADER[12];
+extern contacts_db_t contacts_db;
+
 // NVS operations
 bool load_contacts_from_nvs(void);
 bool save_contacts_to_nvs(void);
