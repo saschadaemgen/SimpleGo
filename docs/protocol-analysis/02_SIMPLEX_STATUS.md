@@ -4,11 +4,33 @@
 
 **Project:** Native SimpleX SMP Client for ESP32  
 **Version:** v0.1.17-alpha  
-**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (670+ sections, 37 parts)
+**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (670+ sections, 38 parts)
 
 ---
 
-## LATEST: Sliding Window Chat History (2026-03-04 Session 40)
+## LATEST: Pre-GitHub Cleanup and Stabilization (2026-03-04 Session 41)
+
+```
+Pre-release code review and stabilization -- most stable build to date.
+8 sub-packets (41a-41h), 11 commits pushed.
+
+Security cleanup: debug crypto removed, CWE-14 buffer clearing       ✅
+Hardware AES fix: software fallback for DMA SRAM fragmentation        ✅
+Screen lifecycle: ephemeral screens, ~14KB pool recovered             ✅
+Dangling pointer protection: null guards on background UI calls       ✅
+Live bubble eviction: evict-before-create order fix                   ✅
+Comment cleanup: 9 files, session refs removed, German to English     ✅
+README rewrite for technical GitHub audience                          ✅
+send_agent_confirmation: 133 lines debug artifacts removed            ✅
+
+LVGL pool measurements: 960-1368 bytes/bubble (avg ~1150)
+GitHub security: CodeQL, Dependabot, secret push protection, SECURITY.md
+
+5 new lessons (#221-#225), 0 new bugs
+MILESTONE 17: Pre-GitHub Stabilization
+```
+
+## PREVIOUS: Sliding Window Chat History (2026-03-04 Session 40)
 
 ```
 Three-stage pipeline: SD (encrypted) > PSRAM Cache (30) > LVGL (5 bubbles)
@@ -711,19 +733,21 @@ Bytes 80-95: HEADER_IV (iv2)   ← FOR HEADER!
 | **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
 | **15** | **📡 On-Device WiFi Manager** | **2026-03-03** | **39** |
 | **16** | **Sliding Window Chat History** | **2026-03-04** | **40** |
+| **17** | **🧹 Pre-GitHub Stabilization** | **2026-03-04** | **41** |
 
 ---
 
-## Next Steps (Session 41)
+## Next Steps (Session 42)
 
-1. SD card on SPI3 bus (Bug #60 root cause fix)
-2. German umlaut fallback fonts
-3. Multi-network WiFi support (product tiering)
-4. Server DEL command on contact delete
+1. smp_handshake.c cleanup (73 printf/LOGW/BUFFER_HEX)
+2. smp_globals.c dissolution into correct modules
+3. SD card on SPI3 bus (Bug #60 root cause fix)
+4. German umlaut fallback fonts
+5. Server DEL command on contact delete
 
-**Status:** Sliding window operational. SD SPI contention remains the last hardware blocker.
+**Status:** Most stable build to date. Quality pass next, then production hardening.
 
 ---
 
-*Status updated: 2026-03-04 Session 40 -- Sliding Window: Unlimited Encrypted History at Constant Memory*  
-*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY -> S38 SPI HUNT -> S39 WIFI -> S40 WINDOW*
+*Status updated: 2026-03-04 Session 41 -- Pre-GitHub Cleanup and Stabilization*  
+*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY -> S38 SPI HUNT -> S39 WIFI -> S40 WINDOW -> S41 CLEANUP*

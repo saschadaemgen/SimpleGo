@@ -2918,8 +2918,108 @@ Effective text:        ~15,530 bytes (after JSON overhead 56-199B)
 
 ---
 
-*Quick Reference v34.0*  
-*Last updated: March 4, 2026 - Session 40*  
-*Status: Sliding Window -- Unlimited Encrypted History at Constant Memory*  
-*16 Milestones Achieved*  
-*Next: Session 41 -- SD on SPI3, German Umlauts*
+## Section 39: Session 41 -- Pre-GitHub Cleanup
+
+### 39.1 Hardware AES Constraint
+
+```
+ESP-IDF hardware AES accelerator (CONFIG_MBEDTLS_HARDWARE_AES):
+  Requires contiguous internal SRAM for DMA buffer
+  At runtime: only 9.6KB contiguous internal SRAM free
+  13KB+ message body decrypts FAIL silently
+
+Fix: CONFIG_MBEDTLS_HARDWARE_AES=n in sdkconfig.defaults
+  Software AES uses CPU, allocates from any heap (including PSRAM)
+  Performance impact: negligible at messaging workloads
+  Build: idf.py fullclean required (sdkconfig change)
+```
+
+### 39.2 Screen Lifecycle Pattern
+
+```
+BEFORE (leaking):
+  Screens created on first visit, NEVER deleted
+  After Main+Contacts+Chat+Settings: 4 screens in pool
+  ~14KB consumed, pool at 8.5KB free (86% used)
+
+AFTER (ephemeral):
+  Main screen: permanent (never deleted)
+  All other screens: created on enter, destroyed on leave
+  ui_manager.c: lv_obj_del(prev_screen) after lv_scr_load()
+  Pool: ~43KB free (31% used), stable across navigation
+
+Recovery: ~34KB freed by switching to ephemeral pattern
+```
+
+### 39.3 Dangling Pointer Protection
+
+```
+Problem: Background tasks call UI functions after screen destruction.
+  Protocol task calls smp_notify_ui_message() while chat screen deleted.
+  Static LVGL pointers still point to freed memory.
+
+Pattern:
+  1. ui_chat_cleanup(): nullify all 6 static LVGL pointers + reset state
+  2. Call cleanup BEFORE lv_obj_del(screen) in ui_manager
+  3. All public functions: if (!screen) return guard at entry
+  4. ui_chat_bubble.c: chat_bubble_cleanup() zeros tracked_msgs[]
+
+Protected functions (4):
+  ui_chat_add_message()
+  ui_chat_update_status()
+  ui_chat_set_contact()
+  ui_chat_clear_contact()
+```
+
+### 39.4 LVGL Pool Measurements (Definitive)
+
+```
+Per-bubble cost: 960-1368 bytes (average ~1150 bytes)
+BUBBLE_WINDOW_SIZE = 5 (confirmed optimal)
+5 bubbles: ~5500-6500 bytes from ~59KB available
+Fixed UI cost: ~28KB (status bar, header, input, textarea)
+Available for bubbles: ~25KB (33KB minus 8KB safety)
+Theoretical max: ~20 bubbles
+Operational limit: 5 (conservative, with headroom)
+
+Memory leak on contact switch: NONE detected
+Fragmentation: 44% to 48%, stabilizes over time
+```
+
+### 39.5 Bubble Eviction Order
+
+```
+WRONG (create-then-evict):
+  create_bubble()              -- pool check may fail!
+  if count > 5: evict_oldest() -- too late
+
+RIGHT (evict-before-create):
+  if count >= 5: evict_oldest() -- frees ~1.2KB
+  create_bubble()               -- pool has headroom
+
+Safety margin: 4096 bytes (was 8192, safe because eviction frees 1000-1300)
+```
+
+### 39.6 CWE-14 Buffer Clearing
+
+```
+WRONG: memset(key_buf, 0, 32)
+  Compiler may optimize away if buffer not read after clear.
+
+RIGHT: mbedtls_platform_zeroize(key_buf, 32)
+  Guaranteed not optimized away. Required for:
+  - Cryptographic keys
+  - Nonces
+  - Plaintext message content
+  - Any buffer that held sensitive material
+
+File: smp_storage.c (applied in Session 41)
+```
+
+---
+
+*Quick Reference v35.0*  
+*Last updated: March 4, 2026 - Session 41*  
+*Status: Pre-GitHub Cleanup -- Most Stable Build*  
+*17 Milestones Achieved*  
+*Next: Session 42 -- Quality Pass, SPI3 Fix*

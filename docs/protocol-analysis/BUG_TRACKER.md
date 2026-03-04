@@ -2534,3 +2534,137 @@ PSRAM cache (MSG_CACHE_SIZE=30), LVGL window (BUBBLE_WINDOW_SIZE=5), scroll trig
 *Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
 *220 lessons learned*  
 *Session 40: Sliding Window -- Unlimited Encrypted History at Constant Memory*
+
+---
+
+## Session 41 -- Pre-GitHub Cleanup and Stabilization (2026-03-04)
+
+### Pre-Release Code Review
+
+Session 41 was the most comprehensive cleanup session in the project. Eight sub-packets (41a-41h) produced 11 commits. No new bugs introduced, but several existing issues hardened and debug artifacts removed across 15+ files.
+
+### 41a: Security Cleanup
+
+```
+Deleted:
+  simplex_secretbox_open_debug() -- ~90 lines from simplex_crypto.c/h
+  Brute-force E2E decrypt loop (Methods 0-3) -- replaced with direct decrypt_client_msg()
+  KEY_DEBUG ESP_LOG_BUFFER_HEX blocks from smp_tasks.c
+  Empty ui_task() and its xTaskCreatePinnedToCore call
+  T6-Diag5 hex dump block from smp_network.c
+
+Changed:
+  RECV, BLOCK_TX, DH shared secret: LOGI to LOGD
+  smp_storage.c: memset() replaced with mbedtls_platform_zeroize() (CWE-14)
+
+GitHub Security:
+  CodeQL C/C++ analysis enabled
+  Dependabot alerts enabled
+  Secret push protection enabled
+  SECURITY.md vulnerability reporting policy added
+```
+
+### 41b: LVGL Pool Measurements (Definitive)
+
+```
+Per-bubble cost: 960-1368 bytes (average ~1150 bytes)
+BUBBLE_WINDOW_SIZE = 5 confirmed correct
+5 bubbles consume ~5500-6500 bytes from ~59KB available pool
+No memory leak detected on contact switch
+Fragmentation: 44% to 48%, stabilizes (no degradation over time)
+```
+
+### 41c: Hardware AES Fix
+
+```
+Symptom:
+  AES-GCM decrypt fails on 13KB+ message bodies
+  Only 9.6KB contiguous internal SRAM free at runtime
+
+Root Cause:
+  ESP-IDF hardware AES accelerator requires contiguous internal SRAM for DMA.
+  When internal SRAM is fragmented, hardware accelerator silently fails.
+
+Fix:
+  CONFIG_MBEDTLS_HARDWARE_AES=n in sdkconfig.defaults
+  Software AES uses CPU, allocates from any heap including PSRAM.
+
+Build: idf.py fullclean && idf.py erase-flash && idf.py build flash monitor
+```
+
+### 41d: Live Bubble Eviction Order Fix
+
+```
+Root Cause:
+  Live message handler created bubble THEN checked eviction.
+  Pool check rejected new bubble because eviction had not freed space.
+
+Fix:
+  Evict FIRST if bubble_count >= BUBBLE_WINDOW_SIZE, THEN create.
+  Safety margin lowered from 8192 to 4096 bytes (eviction frees ~1.2KB).
+  Files: ui_chat.c, ui_chat_bubble.c
+```
+
+### 41e: LVGL Pool Fragmentation Diagnosis
+
+```
+Finding: Screens created on first visit but NEVER deleted.
+  After Main + Contacts + Chat + Settings: 4 screens simultaneous
+  ~14KB permanently consumed by inactive screens
+  Pool after: 8576 bytes free (86% used) -- insufficient for 5 bubbles
+```
+
+### 41f: Screen Lifecycle Fix + Dangling Pointer Protection
+
+```
+Screen Lifecycle (ui_manager.c):
+  Delete previous screen after lv_scr_load().
+  Main screen exempt (permanent). All others: ephemeral.
+
+Dangling Pointer Protection:
+  ui_chat.c: ui_chat_cleanup() nullifies 6 static LVGL pointers.
+  if (!screen) return guards on 4 public functions.
+  ui_chat_bubble.c: chat_bubble_cleanup() zeros tracked_msgs[].
+
+Result: Pool ~42,970 bytes free (31% used), stable across 8 visits.
+        Before fix: 8,576 bytes free (86% used). Recovery: ~34KB.
+```
+
+### 41g: Comment Cleanup (9 files)
+
+```
+smp_tasks.c, smp_peer.c, smp_e2e.c, smp_network.c, smp_storage.c
+ui_manager.c, ui_chat.c, ui_chat_bubble.c, tdeck_display.c
+
+Removed: All Session/Auftrag/Phase/T-ref comments
+Translated: German comments to English
+Marked: extern declarations with TODO for header migration
+```
+
+### 41h: send_agent_confirmation() Cleanup
+
+```
+133 lines removed from smp_peer.c:
+  CONF_CMP diagnostic blocks, AUFTRAG-15a/17 blocks
+  6 printf hex-dump loops, DEBUG-Check block
+
+Zero printf remaining in production code.
+Build fix: dead call to deleted simplex_secretbox_open_debug()
+           replaced with simplex_secretbox_open().
+```
+
+### New Lessons Learned (Session 41)
+
+221. **ESP-IDF hardware AES accelerator requires contiguous internal SRAM for DMA** - When internal SRAM is fragmented (< 13KB contiguous), hardware AES silently fails. CONFIG_MBEDTLS_HARDWARE_AES=n forces software AES from any heap including PSRAM. Negligible performance impact (Session 41)
+222. **LVGL screens created but never deleted consume pool memory permanently** - After navigation sequence: ~14KB consumed by inactive screens, only 8.5KB left. Ephemeral screen pattern (create on enter, destroy on leave) recovers ~34KB, pool at 31% (Session 41)
+223. **Background tasks may call UI functions after screen destruction** - All public UI functions need if (!screen) return guards. All static LVGL pointers must be nullified in cleanup. Without this, protocol task crashes on destroyed chat (Session 41)
+224. **Bubble eviction order: evict-before-create, not create-then-evict** - Create-then-evict fails because pool check rejects new bubble before eviction frees space (~1.2KB). Evict first provides headroom (Session 41)
+225. **mbedtls_platform_zeroize() for sensitive buffer clearing (CWE-14)** - Unlike memset(), guaranteed not optimized away by compiler. Required for cryptographic material (Session 41)
+
+---
+
+*Bug Tracker v36.0*  
+*Last updated: March 4, 2026 - Session 41*  
+*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
+*225 lessons learned*  
+*Session 41: Pre-GitHub Cleanup and Stabilization*

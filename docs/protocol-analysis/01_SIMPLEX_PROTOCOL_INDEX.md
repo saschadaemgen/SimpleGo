@@ -4,21 +4,28 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation  
 **Version:** v0.1.18-alpha  
-**Last Updated:** 2026-03-04 (Session 40 -- Sliding Window: Unlimited Encrypted History at Constant Memory)
+**Last Updated:** 2026-03-04 (Session 41 -- Pre-GitHub Cleanup and Stabilization)
 
 ---
 
-## LATEST: Sliding Window Chat History (Session 40)
+## LATEST: Pre-GitHub Cleanup (Session 41)
 
-Session 40 implemented a three-stage sliding window architecture for unlimited encrypted chat history at constant memory consumption:
+Session 41 was the pre-GitHub cleanup and stabilization session. Full code review with systematic bug fixes, 11 commits, most stable build to date:
 
-- Three-stage pipeline: SD Card (unlimited, AES-256-GCM) to PSRAM Cache (30 messages) to LVGL Window (5 bubbles, ~6KB)
-- Crypto-separation from SPI mutex (hold time reduced from ~500ms to < 10ms)
-- LVGL pool profiling: ~1.2KB per bubble, 64KB pool effectively ~61KB
-- Bidirectional scroll with position correction and re-entrancy guard
+- Security cleanup: debug crypto removed, CWE-14 buffer clearing, GitHub CodeQL/Dependabot enabled
+- Hardware AES fix: software fallback for fragmented internal SRAM
+- Screen lifecycle fix: ephemeral screens (create on enter, destroy on leave)
+- Dangling pointer protection: null guards on all background-callable UI functions
+- Live bubble eviction: evict-before-create order fix
+- Comment cleanup: 9 files, session refs removed, German to English
+- README rewrite for technical GitHub audience
 
-Bugs: 71 total (1 new in S40: #71 scroll re-entrancy)
-Lessons: 220 total (7 new in S40: #214-#220)
+Bugs: 71 total (no new bugs, existing fixes hardened)
+Lessons: 225 total (5 new in S41: #221-#225)
+
+## PREVIOUS: Sliding Window Chat History (Session 40)
+
+Session 40 implemented a three-stage sliding window architecture for unlimited encrypted chat history at constant memory consumption. Three-stage pipeline: SD Card (unlimited, AES-256-GCM) to PSRAM Cache (30 messages) to LVGL Window (5 bubbles, ~6KB). Crypto-separation from SPI mutex (500ms to < 10ms). Bidirectional scroll with re-entrancy guard.
 
 ## PREVIOUS: On-Device WiFi Manager (Session 39)
 
@@ -82,7 +89,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 37 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 38 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -123,6 +130,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 37 
 | **35** | [**37_PART35_SESSION_38.md**](37_PART35_SESSION_38.md) | **~324** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** |
 | **36** | [**38_PART36_SESSION_39.md**](38_PART36_SESSION_39.md) | **~310** | **WiFi Manager: First On-Device WiFi Setup for T-Deck** |
 | **37** | [**39_PART37_SESSION_40.md**](39_PART37_SESSION_40.md) | **~273** | **Sliding Window: Unlimited Encrypted History at Constant Memory** |
+| **38** | [**40_PART38_SESSION_41.md**](40_PART38_SESSION_41.md) | **~145** | **🧹 Pre-GitHub Cleanup and Stabilization** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -178,6 +186,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 37 
 | **38** | **Feb 28 - Mar 1, 2026** | **SPI HUNT** | **🔍 Eight Hypotheses, One Root Cause** |
 | **39** | **Mar 3, 2026** | **WIFI** | **📡 First On-Device WiFi Manager for T-Deck** |
 | **40** | **Mar 3-4, 2026** | **WINDOW** | **Sliding Window: Unlimited Encrypted History** |
+| **41** | **Mar 4, 2026** | **CLEANUP** | **🧹 Pre-GitHub Cleanup and Stabilization** |
 
 ---
 
@@ -268,6 +277,14 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 37 
 - **LVGL Pool Profiling (~1.2KB/bubble, 64KB pool)**
 - **Bidirectional Scroll with Re-Entrancy Guard**
 - **MILESTONE 16: Sliding Window Chat History**
+- **Pre-Release Security Cleanup (debug crypto removed, CWE-14)** 🧹
+- **Hardware AES Fix (software fallback for DMA SRAM fragmentation)** 🧹
+- **Screen Lifecycle Fix (ephemeral screens, ~14KB pool recovered)** 🧹
+- **Dangling Pointer Protection (null guards on background-callable UI)** 🧹
+- **Live Bubble Eviction Order Fix (evict-before-create)** 🧹
+- **Comment Cleanup (9 files, session refs removed, German to English)** 🧹
+- **README Rewrite for GitHub Audience** 🧹
+- **MILESTONE 17: Pre-GitHub Stabilization** 🧹
 
 ### ✅ Session 23: The 7-Step Handshake
 ```
@@ -306,7 +323,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 37 
 | Bidirectional + Receipt bugs | 8 | S25 |
 | Multi-Contact Routing bugs | 11 | S34b |
 
-**Lessons Learned: 192** (documented in BUG_TRACKER.md)
+**Lessons Learned: 225** (documented in BUG_TRACKER.md)
 
 **Session 35: Zero new protocol bugs. Multi-contact routing + UI fixes only.**
 
@@ -532,18 +549,22 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 41)
+## Next Steps (Session 42)
 
-### Phase 1: Hardware
+### Phase 1: Quality Pass
 ```
-P0: SD card on SPI3 bus (Bug #60 root cause fix)
+P0: smp_handshake.c cleanup (73 printf/LOGW/BUFFER_HEX)
+P1: smp_globals.c dissolution into correct modules
+P2: extern-TODO header migration (4 markers)
+P3: License headers AGPL-3.0 consistency
+P4: smp_app_run() splitting (450 lines)
 ```
 
-### Phase 2: Features
+### Phase 2: Hardware + Features
 ```
-P1: German umlaut fallback fonts (LVGL, task prepared)
-P2: Multi-network WiFi support (product tiering)
-P3: Server DEL command on contact delete
+P5: SD card on SPI3 bus (Bug #60 root cause fix)
+P6: German umlaut fallback fonts (LVGL, task prepared)
+P7: Server DEL command on contact delete
 ```
 
 ---
@@ -569,7 +590,8 @@ P3: Server DEL command on contact delete
 | **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
 | **15** | **📡 On-Device WiFi Manager** | **2026-03-03** | **39** |
 | **16** | **Sliding Window Chat History** | **2026-03-04** | **40** |
+| **17** | **🧹 Pre-GitHub Stabilization** | **2026-03-04** | **41** |
 
 ---
 
-*Index updated: 2026-03-04 Session 40 -- Sliding Window: Unlimited Encrypted History at Constant Memory*
+*Index updated: 2026-03-04 Session 41 -- Pre-GitHub Cleanup and Stabilization*
