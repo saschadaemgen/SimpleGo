@@ -16,6 +16,8 @@
 #include "smp_storage.h"
 #include "smp_ratchet.h"
 
+#include "mbedtls/platform_util.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
