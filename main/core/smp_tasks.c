@@ -457,13 +457,6 @@ static void network_task(void *arg)
                         memcpy(&key_trans[kt], key_body, key_body_len);
                         kt += key_body_len;
 
-                        // Sanity-Check: Hex dump of KEY transmission (compare with SUB!)
-                        ESP_LOGW("KEY_DEBUG", "KEY transmission (%d bytes):", kt);
-                        ESP_LOGW("KEY_DEBUG", "  sigLen=%d, corrIdLen=%d, entIdLen=%d, peerKeyLen=%d",
-                                 key_trans[0], key_body[0], key_body[25], cmd->peer_auth_key_len);
-                        int dump_len = kt < 96 ? kt : 96;
-                        ESP_LOG_BUFFER_HEX_LEVEL("KEY_DEBUG", key_trans, dump_len, ESP_LOG_WARN);
-
                         int ret = smp_write_command_block(s_ssl, block, key_trans, kt);
                         if (ret != 0) {
                             ESP_LOGE(TAG, "NET: KEY send failed for contact [%d]!", cmd->rq_slot);
@@ -490,8 +483,6 @@ static void network_task(void *arg)
                                     }
                                 } else {
                                     ESP_LOGW(TAG, "NET: KEY response not OK for contact [%d]", cmd->rq_slot);
-                                    ESP_LOG_BUFFER_HEX_LEVEL("KEY_DEBUG", kr,
-                                        resp_len < 48 ? resp_len : 48, ESP_LOG_WARN);
                                     // 36c: Signal even on failure (App Task must not hang)
                                     if (s_app_task_handle) {
                                         xTaskNotify(s_app_task_handle, NOTIFY_KEY_DONE, eSetBits);
@@ -1242,16 +1233,6 @@ void smp_app_run(QueueHandle_t kbd_queue)
     heap_caps_free(local_block);
 }
 
-static void ui_task(void *arg)
-{
-    ESP_LOGI(TAG, "UI task running on core %d", xPortGetCoreID());
-    log_heap("ui_task");
-
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
-
 // --- Public API ---
 
 int smp_tasks_init(void)
@@ -1328,19 +1309,7 @@ int smp_tasks_start(mbedtls_ssl_context *ssl_context, const uint8_t *session_id,
     // crash with PSRAM stack (SPI Flash disables cache = PSRAM inaccessible)
     // Call smp_app_run() from main.c after smp_tasks_start()
 
-    // UI task on Core 1 (stack in PSRAM)
-    ret = xTaskCreatePinnedToCoreWithCaps(
-        ui_task, "ui_task",
-        UI_TASK_STACK, NULL,
-        UI_TASK_PRIO, &ui_task_handle, 1,
-        MALLOC_CAP_SPIRAM);
-    if (ret != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create UI task");
-        smp_tasks_stop();
-        return -1;
-    }
-
-    ESP_LOGI(TAG, "Tasks started (net+ui PSRAM, app on main task)");
+    ESP_LOGI(TAG, "Tasks started (net PSRAM, app on main task)");
     log_heap("after_tasks");
 
     return 0;
