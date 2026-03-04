@@ -13,66 +13,62 @@
 
 ## What is SimpleGo?
 
-SimpleGo is the world's first native C implementation of the [SimpleX Messaging Protocol](https://github.com/simplex-chat/simplexmq) (SMP), built from the ground up for embedded microcontrollers. It is the first third-party implementation outside the official Haskell codebase.
+SimpleGo is the world's first native C implementation of the [SimpleX Messaging Protocol](https://github.com/simplex-chat/simplexmq) (SMP), built from the ground up for embedded microcontrollers. It is the first third-party implementation outside the official Haskell codebase — verified and endorsed by the protocol's creator.
 
-What comes out of this is a new class of device: a dedicated, smartphone-independent messenger with hardware-enforced security that nothing on the market currently provides. Not a modified phone. Not an app. A purpose-built machine whose only job is to send and receive encrypted messages.
+The result is a new class of device: a dedicated, smartphone-independent messenger with hardware-enforced security that no existing product provides. Not a modified phone. Not an app. A purpose-built machine whose only job is to send and receive encrypted messages.
 
-> *"This is literally the most private and secure device that is possible."*
-> — **Evgeny Poberezkin**, creator of the SimpleX Protocol, at MoneroTopia Conference 2026
+> *"This will literally be the most private and secure device that is possible, and it's exciting to see that they chose our network and protocol for it."*
+> — **Evgeny Poberezkin**, creator of the SimpleX Protocol, MoneroTopia Conference, February 15, 2026
 
 ## Why This Matters
 
-The encrypted communications market is projected to reach $8.36 billion by 2034. Yet after going through more than 70 devices across consumer, military, and open-source domains, we couldn't find a single product that combines even four of these six security properties:
+After surveying more than 70 devices across consumer, military, criminal, and open-source domains, the research is unambiguous: no existing device — not a hardened smartphone, not a military radio, not any dedicated hardware messenger — combines all six of the following properties simultaneously. The maximum overlap found in any single device is three. SimpleGo is designed to achieve all six.
 
-| Security Property | SimpleGo | Best Existing Device |
-|-------------------|:--------:|:-------------------:|
-| **Triple-layer per-message encryption** | ✓ | ✗ (max 2 layers) |
-| **Bare-metal firmware (no smartphone OS)** | ✓ | ✓ (Meshtastic) |
-| **No baseband processor** | ✓ | ✓ (Meshtastic) |
-| **No persistent identity** | ✓ | ✗ |
-| **Multi-vendor hardware secure elements** | ✓ | ✗ (no device, ever) |
-| **Fully open source** | ✓ | ✓ (Meshtastic) |
+These properties are not marketing claims. They are verifiable architectural decisions, each addressing a specific and documented threat:
 
-The maximum overlap we found in any single device is three out of six, achieved only by LoRa mesh devices like Meshtastic and Reticulum. They cover bare-metal firmware, no baseband, and open source, but entirely lack multi-layer encryption, identity-free design, and hardware secure elements.
+**Triple-layer per-message encryption.** Every message passes through three independent cryptographic envelopes: a Double Ratchet with perfect forward secrecy, a per-queue NaCl cryptobox that prevents traffic correlation if TLS is compromised, and a server-to-recipient NaCl layer that prevents correlation between incoming and outgoing traffic. No other messaging protocol — and no existing hardware device — implements comparable per-message layering.
 
-SimpleGo sits in the gap between two worlds that have never overlapped: high-assurance military devices with classified algorithms and tamper resistance but proprietary, closed-source platforms on one side, and open-source mesh devices with full transparency and no baseband but zero hardware security on the other. No product, prototype, or published concept bridges that gap.
+**Bare-metal firmware.** SimpleGo runs on a purpose-specific firmware stack with a trusted computing base orders of magnitude smaller than any smartphone OS. There is no browser, no app runtime, no background process that does anything other than send and receive encrypted messages.
 
-## The Smartphone Problem
+**No baseband processor.** Every hardened smartphone on the market contains a baseband processor — a secondary computer running proprietary firmware with direct memory access, no user visibility, and a documented history of critical vulnerabilities. Academic research has found NAS AKA bypasses, hundreds of undisclosed commands, and remotely exploitable bugs in widely deployed baseband chipsets. SimpleGo eliminates this entire attack surface by design.
 
-Every hardened smartphone on the market retains a cellular baseband processor. That's a secondary computer running proprietary firmware with direct memory access. Academic research (BASECOMP, USENIX Security '23) has found critical exploitable vulnerabilities in these chips, including NAS AKA bypasses and hundreds of undisclosed commands. Even the most security-conscious phones merely attempt to isolate the baseband rather than eliminate it.
+**No persistent identity.** SimpleX Protocol was designed from the ground up to prevent identity correlation. There are no phone numbers, no usernames, no persistent cryptographic identifiers visible to servers or the network. Every message queue uses one-time invitation links. Servers see only encrypted blobs and cannot construct a communication graph.
 
-| | Smartphone | SimpleGo Device |
-|---|---|---|
-| **Codebase** | ~50,000,000 lines | ~50,000 lines |
-| **Baseband processor** | Closed-source, DMA access, always active | None |
-| **Background services** | Hundreds, many with network access | One |
-| **Telemetry** | Continuous, by OS vendor and apps | None |
-| **Key storage** | Software or TEE | Hardware secure element |
-| **Tamper detection** | None | Active monitoring (Tier 2+) |
-| **Physical profile** | Obviously a phone | Generic electronics |
-| **Disposability** | Impractical ($500+) | Designed for it (from €100) |
+**Multi-vendor hardware secure elements.** Tier 2 and Tier 3 devices use secure elements from two and three independent manufacturers respectively. This architecture directly addresses the supply-chain risk demonstrated by the 2024 Eucleak attack, which recovered ECDSA private keys from Infineon SLE78 chips — chips carrying CC EAL5+ certification, embedded in millions of YubiKeys and hardware wallets for 14 years before the vulnerability was disclosed. With multi-vendor secure elements, no single manufacturer's vulnerability is sufficient to compromise the device.
 
-SimpleGo eliminates entire categories of attacks by simply not having the attack surface in the first place. No browser means no browser exploits. No app installation means no malware vector. No baseband with DMA means no cellular-based memory attacks. The trusted computing base shrinks by three orders of magnitude.
+**Fully open source.** The complete firmware, protocol implementation, and hardware designs are published under open licenses. Every cryptographic decision is auditable. There are no proprietary blobs, no closed drivers, no black boxes.
 
-## Triple-Layer Encryption
+## Encryption Architecture
 
-SimpleGo implements the full SimpleX encryption architecture. That means three cryptographically independent layers per message, each defending against a different threat:
+SimpleGo implements the full SimpleX encryption stack in native C, verified byte-for-byte against the Haskell reference implementation.
 
-**Layer 1 — Double Ratchet (end-to-end):** X3DH key agreement followed by Double Ratchet with AES-256-GCM, providing perfect forward secrecy and post-compromise security. Every message uses a unique key. Future versions will add hybrid post-quantum key exchange (CRYSTALS-Kyber + Streamlined NTRU Prime).
+**Layer 1 — Double Ratchet (end-to-end):** X3DH key agreement over X448 followed by Double Ratchet with AES-256-GCM. Every message uses a unique derived key. Compromise of any single message key does not affect past or future messages. The architecture is prepared for hybrid post-quantum key exchange using CRYSTALS-Kyber + Streamlined NTRU Prime, scheduled for the production release.
 
-**Layer 2 — Per-Queue NaCl (queue isolation):** Each message queue has its own X25519 + XSalsa20-Poly1305 encryption envelope, preventing traffic correlation between queues if TLS is compromised.
+**Layer 2 — Per-Queue NaCl cryptobox (queue isolation):** Each message queue carries its own independent X25519 + XSalsa20-Poly1305 encryption envelope. An attacker who compromises TLS cannot correlate traffic across queues.
 
-**Layer 3 — Server-to-Recipient NaCl (metadata protection):** An additional NaCl encryption layer prevents correlation between incoming and outgoing server traffic, even if TLS is compromised.
+**Layer 3 — Server-to-Recipient NaCl (metadata protection):** A third NaCl layer wraps each message server-side, ensuring that even an attacker with access to server infrastructure cannot correlate incoming and outgoing traffic for a given recipient.
 
-Content padding to a fixed 16KB block size is applied at each layer. No other messaging protocol implements comparable per-message triple encryption. Signal uses two layers. Matrix uses two layers. Among hardware devices, the maximum we found was two. SimpleGo is the first hardware implementation of this architecture.
+All messages are padded to a fixed 16KB block size at each layer, eliminating message-length side channels.
+
+## Keys at Rest
+
+Cryptographic state — ratchet keys, queue credentials, contact data — is persisted to the device across reboots. The complete at-rest security architecture for the production release consists of four independent layers working together:
+
+**eFuse-bound NVS encryption.** The ESP32-S3 eFuse block is a one-time-writable memory region physically embedded in the silicon. During device provisioning, a device-unique AES-256 key is generated by the hardware TRNG and burned permanently into eFuse. This key encrypts the entire NVS flash partition — the vault where all cryptographic material lives. Once burned, the key is inaccessible to any software interface; it is only usable by the AES hardware block for encryption and decryption. Physical extraction requires destructive chip decapping. This replaces the current development-phase plaintext NVS storage and ships together with post-quantum activation.
+
+**Secure Boot.** The firmware boot chain is signed with an RSA-3072 key. Only firmware signed with the correct key can execute on the device. Combined with eFuse write-protection, this prevents both firmware replacement attacks and key extraction through modified firmware.
+
+**Hardware secure elements.** Tier 2 and Tier 3 devices use dedicated secure element chips from independent manufacturers for long-term key storage. These chips perform all cryptographic operations internally and never expose raw key material on any bus.
+
+**Cryptographic erasure on contact delete.** When a contact is removed, all associated NVS keys are overwritten with cryptographic-strength random data before deletion, preventing forensic recovery. This addresses a documented forensic vulnerability — recovering "deleted" data from flash storage was a primary vector in the takedown of EncroChat.
 
 ## Hardware Tiers
 
-SimpleGo defines three hardware security tiers for different threat models. The design philosophy starts with the highest-specification Tier 3 and creates lower tiers by removing components, which keeps the architecture consistent across the entire product line.
+SimpleGo defines three hardware security tiers for different threat models. The design philosophy starts at the highest specification and creates lower tiers by removing components, keeping the architecture consistent across the entire product line.
 
 ### Tier 1: DIY — *For makers and privacy enthusiasts*
 
-The entry point. Uses off-the-shelf LilyGo T-Deck Plus hardware that anyone can purchase and flash.
+Off-the-shelf LilyGo T-Deck Plus hardware, available today, flashable by anyone.
 
 | Specification | Detail |
 |---------------|--------|
@@ -80,13 +76,13 @@ The entry point. Uses off-the-shelf LilyGo T-Deck Plus hardware that anyone can 
 | **Secure element** | ATECC608B (Microchip) |
 | **Security features** | Secure Boot v2, Flash Encryption, eFuse protection |
 | **Connectivity** | WiFi 802.11 b/g/n, Bluetooth 5.0 |
-| **Display** | 320×240 LCD with hardware keyboard |
+| **Display** | 320×240 LCD with physical QWERTY keyboard |
 | **Target price** | €100–200 |
 | **Threat model** | Protection against casual and opportunistic adversaries |
 
 ### Tier 2: Secure — *For journalists, activists, and legal professionals*
 
-Custom PCB with enhanced security architecture and hardware separation between processing and communication.
+Custom PCB with hardware separation between processing and communication.
 
 | Specification | Detail |
 |---------------|--------|
@@ -97,8 +93,6 @@ Custom PCB with enhanced security architecture and hardware separation between p
 | **Enclosure** | CNC-milled aluminum with security screws |
 | **Target price** | €400–600 |
 | **Threat model** | Protection against skilled adversaries with equipment |
-
-The dual-vendor secure element architecture means a vulnerability in one manufacturer's chip (like the Eucleak side-channel attack on Infineon SLE78, disclosed 2024) does not compromise the device. Cryptographic operations are split across vendors so that both must be compromised simultaneously.
 
 ### Tier 3: Vault — *For high-value targets facing state-level threats*
 
@@ -116,13 +110,9 @@ Maximum security with triple-vendor secure elements and active tamper response.
 | **Target price** | €1,000+ |
 | **Threat model** | Protection against state-level adversaries with physical access |
 
-The triple-vendor secure element concept is entirely novel. No device in any category, whether consumer, military, or academic prototype, has ever used secure elements from three different manufacturers. This architecture ensures that no single supply-chain compromise, manufacturing backdoor, or undiscovered silicon vulnerability can defeat the device.
-
-**Regarding cellular connectivity:** Tier 2 and 3 devices include isolated cellular modules that function purely as data modems through a defined serial interface. Unlike smartphone baseband processors, these modules have no DMA access and no shared memory with the main processor. The cellular module can be physically disabled or removed without affecting WiFi operation.
-
 ## Project Status
 
-The core protocol stack is functional. Bidirectional encrypted messaging between ESP32 hardware and the official SimpleX Chat application works, including delivery receipts, multi-contact management, and persistent crypto state across reboots.
+The core protocol stack is functional and verified against the official SimpleX Chat application across 7 simultaneous contacts, including delivery receipts, encrypted chat history, and persistent crypto state across reboots.
 
 ### Implementation Status
 
@@ -135,24 +125,21 @@ The core protocol stack is functional. Bidirectional encrypted messaging between
 | Double Ratchet | ✅ Complete | Forward secrecy, post-compromise security |
 | Triple-layer encryption | ✅ Complete | E2E + per-queue NaCl + server-recipient NaCl |
 | Wire format encoding | ✅ Complete | Matches Haskell reference implementation |
-| Bidirectional messaging | ✅ Complete | ESP32 ↔ SimpleX App confirmed |
+| Bidirectional messaging | ✅ Complete | ESP32 ↔ SimpleX App, 7 contacts verified |
 | Delivery receipts | ✅ Complete | ✓ sent, ✓✓ delivered |
 | Multi-contact architecture | ✅ Complete | 128 contacts, per-contact reply queues in PSRAM |
-| Persistent crypto state | ✅ Complete | Survives reboots, 7.5ms verified write |
+| Persistent crypto state | ✅ Complete | Survives reboots, verified write |
+| WiFi Manager | ✅ Complete | Multi-network storage, scan & connect UI, WPA3 |
+| SD card encrypted history | ✅ Complete | AES-256-GCM, HKDF-SHA256 per-contact key derivation |
+| Sliding window chat view | ✅ Complete | 5 visible bubbles, scroll loads older from SD |
+| Cryptographic erasure on delete | ✅ Complete | NVS keys overwritten on contact removal |
 | FreeRTOS multi-task system | ✅ Complete | Cross-core communication, ring buffers |
 | Hardware Abstraction Layer | ✅ Complete | Device-independent protocol layer |
-| Contact management UI | ✅ Complete | Long-press menu, delete, info, message counts |
-| NTP time synchronization | ✅ Complete | Real timestamps in chat bubbles |
-| Display & keyboard backlight | ✅ Complete | 16-level display, I2C keyboard with auto-off |
-| SD card chat history | ✅ Complete | Per-contact storage, FAT32, 64GB verified |
-| SD card encrypted history | 🔧 In Progress | AES-256-GCM per-contact encryption layer |
-| Sliding window chat view | 🔧 In Progress | 8–12 visible bubbles, load older from SD |
+| eFuse-bound NVS encryption | 📋 Production | Device-unique AES-256 key burned to eFuse at provisioning |
+| Post-quantum crypto (Kyber) | 📋 Production | Ships together with eFuse release |
 | Keep-alive (PING/PONG) | 📋 Planned | |
-| WiFi Manager | 📋 Planned | Multi-network NVS storage, scan & connect UI |
 
 ### Memory Footprint
-
-The entire multi-contact architecture fits comfortably within the ESP32-S3:
 
 | Resource | Used | Available | Utilization |
 |----------|------|-----------|:-----------:|
@@ -178,7 +165,7 @@ The entire multi-contact architecture fits comfortably within the ESP32-S3:
 └───────────────┴───────────────┴───────────────┴───────────────┘
 ```
 
-The Protocol and Application layers are identical across all devices. Only the HAL implementations change. Adding a new hardware platform means implementing five interface files, and the entire protocol stack and UI come for free.
+The Protocol and Application layers are identical across all devices. Only the HAL implementations change. Adding a new hardware platform means implementing five interface files — the entire protocol stack and UI come for free.
 
 ### Source Structure
 
@@ -202,44 +189,6 @@ SimpleGo/
 └── docs/               # Documentation and legal notices
 ```
 
-## Supported Platforms
-
-### Currently Active
-
-| Device | MCU | Display | Input | Status |
-|--------|-----|---------|-------|--------|
-| LilyGo T-Deck Plus | ESP32-S3 | 320×240 LCD | Keyboard, trackball, touch | Active development |
-
-### Planned
-
-| Device | MCU | Target |
-|--------|-----|--------|
-| LilyGo T-Deck Pro | ESP32-S3 | Q2 2026 |
-| SimpleGo Secure (Tier 2) | STM32U585 | Custom PCB design phase |
-| SimpleGo Vault (Tier 3) | STM32U5A9 | Custom PCB planning |
-
-Adding support for new hardware requires implementing the HAL interfaces. See `devices/template/` for a reference implementation.
-
-## Kickstarter
-
-SimpleGo will launch a Kickstarter campaign once the Tier 1 prototype reaches feature completeness. The campaign will offer three backer tiers corresponding to the hardware security tiers.
-
-### Backer Rewards
-
-**Tier 1 — DIY Device** — A fully assembled and tested T-Deck Plus, pre-flashed with SimpleGo firmware, ready to use. Fully open source, so you can build your own or flash updates anytime.
-
-**Tier 2 — Secure Device** — A SimpleGo Secure with custom PCB, dual secure elements, CNC aluminum enclosure, and a lifetime premium features license.
-
-**Tier 3 — Vault Device** — A SimpleGo Vault with triple secure elements, active tamper detection, potted enclosure, hand-assembled in Germany with individual serial numbers, and a lifetime premium features license.
-
-### Campaign Goals
-
-The funding will cover custom PCB design and manufacturing for Tier 2 and Tier 3 devices, establishing the supply chain for secure element components from three independent vendors, commissioning an independent security audit of the protocol implementation, building initial production inventory, and completing German UG company formation and regulatory compliance.
-
-The Kickstarter model fits what SimpleGo is about: direct community funding, full transparency about development progress and costs, and backers who care about privacy as a fundamental right rather than a premium feature.
-
-Follow this repository to be notified when the campaign launches.
-
 ## Building from Source
 
 ### Prerequisites
@@ -257,7 +206,6 @@ cd SimpleGo
 
 # Set up ESP-IDF environment
 . $HOME/esp/esp-idf/export.sh          # Linux/macOS
-# or
 %IDF_PATH%\export.bat                   # Windows
 
 # Configure WiFi and device settings
@@ -268,26 +216,30 @@ idf.py build flash monitor -p /dev/ttyUSB0    # Linux
 idf.py build flash monitor -p COM6            # Windows
 ```
 
-All settings including WiFi credentials, SMP server, UI theme, and security options are managed through menuconfig. The `sdkconfig` file is excluded from version control via `.gitignore`.
+All settings including WiFi credentials, SMP server, and security options are managed through menuconfig. The `sdkconfig` file is excluded from version control.
+
+## Supported Platforms
+
+| Device | MCU | Status |
+|--------|-----|--------|
+| LilyGo T-Deck Plus | ESP32-S3 | Active development |
+| LilyGo T-Deck Pro | ESP32-S3 | Q2 2026 |
+| SimpleGo Secure (Tier 2) | STM32U585 | PCB design phase |
+| SimpleGo Vault (Tier 3) | STM32U5A9 | PCB planning |
+
+## Kickstarter
+
+SimpleGo will launch a Kickstarter campaign once the Tier 1 prototype reaches feature completeness. Funding will cover custom PCB manufacturing for Tier 2 and Tier 3, secure element components from three independent vendors, an independent security audit as a prerequisite for v1.0, and company formation in Germany.
+
+Follow this repository to be notified when the campaign launches.
 
 ## Security
 
-### Disclosure Policy
+Vulnerabilities should be reported privately via GitHub's private vulnerability reporting feature. Do not open public issues for security concerns.
 
-Security vulnerabilities should be reported privately. Do not open public issues for security concerns. Contact details for responsible disclosure will be published with the v1.0 release.
+The codebase has not yet undergone formal security audit. An independent audit is planned as a Kickstarter stretch goal and a prerequisite for the v1.0 release.
 
-### Audit Status
-
-The codebase has not yet undergone formal security audit. An independent audit is planned as a Kickstarter stretch goal and a prerequisite for the v1.0 release. Users should consider this when evaluating the software for sensitive applications.
-
-### What SimpleGo does not protect against
-
-We want to be upfront about the limits:
-
-- Compromise of SMP relay servers (mitigated by the protocol's metadata protection, but not eliminated)
-- Physical attacks on Tier 1 devices (Tier 2 and 3 provide physical security)
-- Rubber-hose cryptanalysis
-- Network-level traffic analysis (mitigation via Private Message Routing is planned)
+**What SimpleGo does not protect against:** compromise of SMP relay servers (mitigated by the protocol's metadata protection architecture, not eliminated), physical attacks on Tier 1 devices (addressed in Tier 2 and 3), and network-level traffic analysis (Private Message Routing is planned for a future release).
 
 ## License
 
@@ -296,7 +248,7 @@ We want to be upfront about the limits:
 | Software | [AGPL-3.0](LICENSE) |
 | Hardware designs | CERN-OHL-W-2.0 |
 
-AGPL-3.0 ensures the open-source core remains open, including any network-facing modifications. Anyone running a modified version of SimpleGo as a service must also publish their source code. Tier 1 firmware is fully open, while proprietary additions for Tier 2 and 3 devices (secure element drivers, tamper detection firmware, premium features) are developed separately under a commercial license. Hardware designs are published under the CERN Open Hardware License to enable community manufacturing and modification.
+AGPL-3.0 ensures that any network-facing modifications to SimpleGo must also be published as open source. Hardware designs are published under the CERN Open Hardware License to enable community manufacturing and modification.
 
 ## Legal
 
@@ -310,6 +262,8 @@ AGPL-3.0 ensures the open-source core remains open, including any network-facing
 - [Espressif](https://www.espressif.com/) — ESP-IDF and ESP32 platform
 - [LVGL](https://lvgl.io/) — Embedded graphics library
 - [mbedTLS](https://github.com/Mbed-TLS/mbedtls) — TLS and cryptography
+
+---
 
 *SimpleGo is an independent project. It is not affiliated with, endorsed by, or connected to SimpleX Chat Ltd. The SimpleX name and protocol are used for interoperability purposes only. This software is provided as-is, without warranty. See [docs/DISCLAIMER.md](docs/DISCLAIMER.md) for full legal notices.*
 
