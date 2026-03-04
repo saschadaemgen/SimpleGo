@@ -796,201 +796,341 @@ void smp_request_load_history(int slot)
 
 // App logic runs on Main Task (64KB Internal SRAM stack)
 // Required because NVS writes crash with PSRAM stack (SPI Flash disables cache)
-void smp_app_run(QueueHandle_t kbd_queue)
+
+// --- smp_app_run helpers (static, defined before smp_app_run) ---
+
+static void app_init_run(QueueHandle_t kbd_queue, uint8_t **local_block_out)
 {
-    s_app_task_handle = xTaskGetCurrentTaskHandle();  // for KEY notification
+    s_app_task_handle = xTaskGetCurrentTaskHandle();
     ESP_LOGI(TAG_APP, "App logic running on main task, core %d", xPortGetCoreID());
     log_heap("app_run");
 
-    // Initialize encrypted chat history (SD card)
-    {
-        esp_err_t hist_ret = smp_history_init();
-        if (hist_ret != ESP_OK) {
-            ESP_LOGW(TAG_APP, "History init failed -- SD not available?");
-            // Non-fatal: system works without SD card
-        }
-    }
+    esp_err_t hist_ret = smp_history_init();
+    if (hist_ret != ESP_OK)
+        ESP_LOGW(TAG_APP, "History init failed -- SD not available?");
 
-    // Allocate local parse buffer in PSRAM (once, not per iteration)
-    uint8_t *local_block = (uint8_t *)heap_caps_malloc(SMP_BLOCK_SIZE + 2, MALLOC_CAP_SPIRAM);
-    if (!local_block) {
+    *local_block_out = (uint8_t *)heap_caps_malloc(SMP_BLOCK_SIZE + 2, MALLOC_CAP_SPIRAM);
+    if (!*local_block_out) {
         ESP_LOGE(TAG_APP, "Failed to allocate parse buffer in PSRAM!");
         return;
     }
 
     ESP_LOGI(TAG_APP, "App logic: parse loop starting...");
-
-    // Re-subscribe after task handover to ensure server delivers on this connection
     ESP_LOGI(TAG_APP, "APP: Sending initial re-subscribe...");
     app_request_subscribe_all();
-    // Send wildcard ACK to clear any stuck delivery state
-    // Per SMP spec: empty msgId resets delivered = Nothing on server
-    // Wildcard ACK for active contact
+
     if (contacts_db.num_contacts > 0) {
         contact_t *c = &contacts_db.contacts[s_active_contact_idx];
         ESP_LOGI(TAG_APP, "APP: Sending wildcard ACK for [%s] to clear delivery state", c->name);
         uint8_t empty_msg_id[1] = {0};
         app_send_ack(c->recipient_id, c->recipient_id_len,
-                     empty_msg_id, 0,
-                     c->rcv_auth_secret);
+                     empty_msg_id, 0, c->rcv_auth_secret);
     }
     vTaskDelay(pdMS_TO_TICKS(500));
     ESP_LOGI(TAG_APP, "APP: Initial re-subscribe sent, entering main loop");
+}
+
+static void app_process_deferred_work(void)
+{
+    if (s_contacts_dirty) {
+        s_contacts_dirty = false;
+        save_contacts_to_nvs();
+    }
+
+    if (s_rq_save_pending >= 0) {
+        int rq_slot = s_rq_save_pending;
+        s_rq_save_pending = -1;
+        if (reply_queue_save(rq_slot))
+            ESP_LOGI(TAG_APP, "RQ[%d] NVS save completed (deferred)", rq_slot);
+        else
+            ESP_LOGE(TAG_APP, "RQ[%d] NVS save FAILED!", rq_slot);
+    }
+
+    if (s_history_load_pending >= 0) {
+        int slot = s_history_load_pending;
+        s_history_load_pending = -1;
+
+        if (!smp_history_batch) {
+            smp_history_batch = heap_caps_malloc(
+                HISTORY_MAX_LOAD * sizeof(history_message_t), MALLOC_CAP_SPIRAM);
+        }
+
+        if (smp_history_batch) {
+            int loaded = 0;
+            esp_err_t err = smp_history_load_recent(
+                (uint8_t)slot, smp_history_batch, HISTORY_MAX_LOAD, &loaded);
+
+            ui_event_t evt = {0};
+            evt.type = UI_EVT_HISTORY_BATCH;
+            evt.contact_idx = slot;
+
+            if (err == ESP_OK && loaded > 0) {
+                smp_history_batch_count = loaded;
+                smp_history_batch_slot = slot;
+                smp_history_mark_read((uint8_t)slot);
+                ESP_LOGI(TAG_APP, "History: %d messages loaded for slot %d", loaded, slot);
+            } else {
+                smp_history_batch_count = 0;
+                smp_history_batch_slot = -1;
+                ESP_LOGD(TAG_APP, "History: no messages for slot %d", slot);
+            }
+            xQueueSend(app_to_ui_queue, &evt, 0);
+        } else {
+            ESP_LOGE(TAG_APP, "History: PSRAM alloc failed for batch buffer");
+        }
+    }
+}
+
+static void app_process_keyboard_queue(QueueHandle_t kbd_queue)
+{
+    char kbd_msg[256];
+    while (kbd_queue && xQueueReceive(kbd_queue, kbd_msg, 0) == pdTRUE) {
+        ESP_LOGI(TAG_APP, "⌨️ Sending: \"%s\"", kbd_msg);
+        uint32_t seq = ui_chat_get_last_seq();
+        contact_t *msg_contact = &contacts_db.contacts[s_active_contact_idx];
+
+        if (!msg_contact->active) {
+            ESP_LOGE(TAG_APP, "   ❌ Active contact [%d] is not active!", s_active_contact_idx);
+            smp_notify_ui_delivery_status(seq, MSG_STATUS_FAILED);
+            continue;
+        }
+
+        if (peer_send_chat_message(msg_contact, kbd_msg)) {
+            ESP_LOGI(TAG_APP, "   ✅ Message sent! seq=%lu", (unsigned long)seq);
+            smp_notify_ui_delivery_status(seq, MSG_STATUS_SENT);
+            uint64_t sent_msg_id = handshake_get_last_msg_id();
+            smp_register_msg_mapping(seq, sent_msg_id);
+
+            history_message_t hist_msg = {
+                .direction = HISTORY_DIR_SENT,
+                .delivery_status = 0,
+                .timestamp = time(NULL),
+                .text_len = (uint16_t)strlen(kbd_msg),
+            };
+            if (hist_msg.text_len > HISTORY_MAX_TEXT)
+                hist_msg.text_len = HISTORY_MAX_TEXT;
+            memcpy(hist_msg.text, kbd_msg, hist_msg.text_len);
+            hist_msg.text[hist_msg.text_len] = '\0';
+            smp_history_append((uint8_t)s_active_contact_idx, &hist_msg);
+        } else {
+            ESP_LOGE(TAG_APP, "   ❌ Send failed! seq=%lu", (unsigned long)seq);
+            smp_notify_ui_delivery_status(seq, MSG_STATUS_FAILED);
+        }
+    }
+}
+
+static void app_handle_reply_queue_msg(
+    int rq_contact, bool is_legacy_rq,
+    uint8_t *resp, int p, int enc_len,
+    uint8_t *msg_id, uint8_t msgIdLen)
+{
+    ESP_LOGI(TAG_APP, "   Decrypting REPLY QUEUE message for contact [%d] (legacy=%d)...", rq_contact, is_legacy_rq);
+
+    uint8_t *e2e_plain = NULL;
+    size_t e2e_plain_len = 0;
+    int e2e_ret = -99;
+
+    reply_queue_t *rq = reply_queue_get(rq_contact);
+    if (!is_legacy_rq && rq && rq->valid) {
+        uint8_t new_peer[32];
+        bool new_peer_found = false;
+
+        e2e_ret = smp_e2e_decrypt_reply_message_ex(
+            &resp[p], enc_len, msg_id, msgIdLen,
+            rq->shared_secret,
+            rq->e2e_private,
+            rq->e2e_peer_public,
+            rq->e2e_peer_valid,
+            new_peer, &new_peer_found,
+            &e2e_plain, &e2e_plain_len);
+
+        if (new_peer_found) {
+            memcpy(rq->e2e_peer_public, new_peer, 32);
+            rq->e2e_peer_valid = true;
+            reply_queue_save(rq_contact);
+            ESP_LOGI(TAG_APP, "   RQ[%d] peer E2E key updated + saved", rq_contact);
+        }
+    } else {
+        ESP_LOGW(TAG_APP, "   Using legacy our_queue for decrypt (legacy=%d, rq_valid=%d)", is_legacy_rq, rq ? rq->valid : -1);
+        e2e_ret = smp_e2e_decrypt_reply_message(
+            &resp[p], enc_len, msg_id, msgIdLen,
+            &e2e_plain, &e2e_plain_len);
+    }
+
+    if (e2e_ret == 0 && e2e_plain) {
+        int hs_contact = rq_contact;
+        ESP_LOGI(TAG_APP, "   Reply Queue: handshake for contact [%d]", hs_contact);
+
+        ratchet_set_active(hs_contact);
+        handshake_set_active(hs_contact);
+        ESP_LOGI(TAG_APP, "   35a: Active slot set to [%d] BEFORE agent_process", hs_contact);
+
+        smp_agent_process_message(e2e_plain, e2e_plain_len,
+               &contacts_db.contacts[hs_contact],
+               s_peer_sender_auth_key, &s_has_peer_sender_auth);
+        free(e2e_plain);
+    } else {
+        ESP_LOGE(TAG_APP, "   Reply Queue decrypt failed! ret=%d", e2e_ret);
+    }
+
+    // === Post-Confirmation Block (per-contact) ===
+    int hs_contact = rq_contact;
+    if (s_has_peer_sender_auth && !is_42d_done(hs_contact)) {
+        mark_42d_done(hs_contact);
+        ratchet_set_active(hs_contact);
+        handshake_set_active(hs_contact);
+        ESP_LOGI(TAG_APP, "APP: 42d — Starting for contact [%d] (ratchet+handshake set)", hs_contact);
+
+        // 1. Send KEY via Network Task (async, on main SSL)
+        {
+            net_cmd_t key_cmd = {0};
+            key_cmd.cmd = NET_CMD_SEND_KEY;
+            key_cmd.rq_slot = is_legacy_rq ? -1 : hs_contact;
+            memcpy(key_cmd.peer_auth_key, s_peer_sender_auth_key, 44);
+            key_cmd.peer_auth_key_len = 44;
+
+            if (xRingbufferSend(app_to_net_buf, &key_cmd, sizeof(key_cmd),
+                                pdMS_TO_TICKS(5000)) != pdTRUE) {
+                ESP_LOGE(TAG_APP, "APP: 42d -- Failed to queue SEND_KEY!");
+                goto skip_42d_app;
+            }
+            ESP_LOGI(TAG_APP, "APP: 42d -- SEND_KEY queued (slot=%d)", key_cmd.rq_slot);
+            smp_notify_ui_status("Securing channel...");
+            {
+                uint32_t notify_val = 0;
+                BaseType_t got = xTaskNotifyWait(0, NOTIFY_KEY_DONE, &notify_val,
+                                                  pdMS_TO_TICKS(5000));
+                if (got == pdTRUE) {
+                    ESP_LOGI(TAG_APP, "APP: 42d -- KEY confirmed by Net Task!");
+                } else {
+                    ESP_LOGW(TAG_APP, "APP: 42d -- KEY timeout (5s)! Proceeding anyway...");
+                }
+            }
+        }
+
+        // 2. HELLO auf Contact Queue
+        {
+            contact_t *hello_contact = &contacts_db.contacts[hs_contact];
+            smp_notify_ui_status("Sending HELLO...");
+            if (peer_send_hello(hello_contact)) {
+                ESP_LOGI(TAG_APP, "APP: 42d -- HELLO sent!");
+            } else {
+                ESP_LOGE(TAG_APP, "APP: 42d -- HELLO failed!");
+            }
+        }
+
+        // 3. Brief wait for peer response
+        smp_notify_ui_status("Waiting for peer...");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        // 4. Connection complete - update status, stay on connect screen
+        s_active_contact_idx = hs_contact;
+        smp_notify_ui_status("Connected!");
+        ESP_LOGI(TAG_APP, "APP: 42d -- Contact [%d] connected!", hs_contact);
+
+        s_has_peer_sender_auth = false;
+
+        skip_42d_app: ;
+    }
+
+    // ACK Reply Queue with per-contact auth keys
+    {
+        reply_queue_t *ack_rq = reply_queue_get(rq_contact);
+        if (!is_legacy_rq && ack_rq && ack_rq->valid) {
+            app_send_ack(ack_rq->rcv_id, ack_rq->rcv_id_len,
+                         msg_id, msgIdLen, ack_rq->rcv_auth_private);
+        } else {
+            app_send_ack(our_queue.rcv_id, our_queue.rcv_id_len,
+                         msg_id, msgIdLen, our_queue.rcv_auth_private);
+        }
+    }
+
+    app_request_subscribe_all();
+    ESP_LOGI(TAG_APP, "APP: Reply Queue processing complete.");
+}
+
+static void app_handle_contact_queue_msg(
+    contact_t *contact, bool is_reply_queue,
+    uint8_t *resp, int p, int enc_len,
+    uint8_t *msg_id, uint8_t msgIdLen)
+{
+    if (contact && contact->have_srv_dh && enc_len > crypto_box_MACBYTES) {
+        int cq_contact_idx = (int)(contact - contacts_db.contacts);
+        if (cq_contact_idx >= 0 && cq_contact_idx < MAX_CONTACTS) {
+            ratchet_set_active(cq_contact_idx);
+            handshake_set_active(cq_contact_idx);
+        }
+
+        ESP_LOGW(TAG_APP, "APP: Contact Queue decrypt for [%s] (slot %d), enc_len=%d",
+                 contact->name, cq_contact_idx, enc_len);
+
+        uint8_t *plain = heap_caps_malloc(enc_len, MALLOC_CAP_SPIRAM);
+        if (plain) {
+            int plain_len = 0;
+            if (decrypt_smp_message(contact, &resp[p], enc_len,
+                                    msg_id, msgIdLen, plain, &plain_len)) {
+                ESP_LOGI(TAG_APP, "   SMP Decrypt OK! (%d bytes)", plain_len);
+                parse_agent_message(contact, plain, plain_len);
+            } else {
+                ESP_LOGE(TAG_APP, "   Decrypt FAILED!");
+            }
+            heap_caps_free(plain);
+        } else {
+            ESP_LOGE(TAG_APP, "   Failed to allocate decrypt buffer!");
+        }
+
+        app_send_ack(contact->recipient_id, contact->recipient_id_len,
+                     msg_id, msgIdLen, contact->rcv_auth_secret);
+    } else if (!is_reply_queue) {
+        ESP_LOGW(TAG_APP, "   Cannot decrypt - contact=%s, have_srv_dh=%d, enc_len=%d",
+                 contact ? contact->name : "NULL",
+                 contact ? contact->have_srv_dh : -1,
+                 enc_len);
+    }
+}
+
+void smp_app_run(QueueHandle_t kbd_queue)
+{
+    uint8_t *local_block = NULL;
+    app_init_run(kbd_queue, &local_block);
+    if (!local_block) return;
 
     while (1) {
-        // Deferred NVS save from network task (flash needs Internal SRAM stack)
-        if (s_contacts_dirty) {
-            s_contacts_dirty = false;
-            save_contacts_to_nvs();
-        }
+        app_process_deferred_work();
+        app_process_keyboard_queue(kbd_queue);
 
-        // Deferred RQ NVS save (reply_queue_create defers because PSRAM stack)
-        if (s_rq_save_pending >= 0) {
-            int rq_slot = s_rq_save_pending;
-            s_rq_save_pending = -1;
-            if (reply_queue_save(rq_slot)) {
-                ESP_LOGI(TAG_APP, "RQ[%d] NVS save completed (deferred)", rq_slot);
-            } else {
-                ESP_LOGE(TAG_APP, "RQ[%d] NVS save FAILED!", rq_slot);
-            }
-        }
-
-        // Deferred history load (UI requested via smp_request_load_history)
-        if (s_history_load_pending >= 0) {
-            int slot = s_history_load_pending;
-            s_history_load_pending = -1;
-
-            // Allocate batch buffer in PSRAM (freed after UI processes it)
-            if (!smp_history_batch) {
-                smp_history_batch = heap_caps_malloc(
-                    HISTORY_MAX_LOAD * sizeof(history_message_t),
-                    MALLOC_CAP_SPIRAM);
-            }
-
-            if (smp_history_batch) {
-                int loaded = 0;
-                esp_err_t err = smp_history_load_recent(
-                    (uint8_t)slot, smp_history_batch, HISTORY_MAX_LOAD, &loaded);
-
-                if (err == ESP_OK && loaded > 0) {
-                    smp_history_batch_count = loaded;
-                    smp_history_batch_slot = slot;
-
-                    // Mark messages as read
-                    smp_history_mark_read((uint8_t)slot);
-
-                    // Signal UI timer to process the batch
-                    ui_event_t evt = {0};
-                    evt.type = UI_EVT_HISTORY_BATCH;
-                    evt.contact_idx = slot;
-                    xQueueSend(app_to_ui_queue, &evt, 0);
-
-                    ESP_LOGI(TAG_APP, "History: %d messages loaded for slot %d", loaded, slot);
-                } else {
-                    smp_history_batch_count = 0;
-                    smp_history_batch_slot = -1;
-
-                    // Signal UI even for empty history (hides "Loading...")
-                    ui_event_t evt = {0};
-                    evt.type = UI_EVT_HISTORY_BATCH;
-                    evt.contact_idx = slot;
-                    xQueueSend(app_to_ui_queue, &evt, 0);
-
-                    ESP_LOGD(TAG_APP, "History: no messages for slot %d", slot);
-                }
-            } else {
-                ESP_LOGE(TAG_APP, "History: PSRAM alloc failed for batch buffer");
-            }
-        }
-
-        // Keyboard send (non-blocking poll)
-        // Keyboard send with delivery status
-        {
-            char kbd_msg[256];
-            while (kbd_queue && xQueueReceive(kbd_queue, kbd_msg, 0) == pdTRUE) {
-                ESP_LOGI(TAG_APP, "⌨️ Sending: \"%s\"", kbd_msg);
-
-                // Seq was incremented by ui_chat_next_seq() in on_input_ready
-                uint32_t seq = ui_chat_get_last_seq();
-
-                // Send to active contact
-                contact_t *msg_contact = &contacts_db.contacts[s_active_contact_idx];
-                if (!msg_contact->active) {
-                    ESP_LOGE(TAG_APP, "   ❌ Active contact [%d] is not active!", s_active_contact_idx);
-                    smp_notify_ui_delivery_status(seq, MSG_STATUS_FAILED);
-                    continue;  // Skip this message in while loop
-                }
-                if (peer_send_chat_message(msg_contact, kbd_msg)) {
-                    ESP_LOGI(TAG_APP, "   ✅ Message sent! seq=%lu", (unsigned long)seq);
-                    smp_notify_ui_delivery_status(seq, MSG_STATUS_SENT);
-
-                    // Register seq->msg_id for receipt matching
-                    uint64_t sent_msg_id = handshake_get_last_msg_id();
-                    smp_register_msg_mapping(seq, sent_msg_id);
-
-                    // Save sent message to encrypted SD history
-                    {
-                        history_message_t hist_msg = {
-                            .direction = HISTORY_DIR_SENT,
-                            .delivery_status = 0,
-                            .timestamp = time(NULL),
-                            .text_len = (uint16_t)strlen(kbd_msg),
-                        };
-                        if (hist_msg.text_len > HISTORY_MAX_TEXT)
-                            hist_msg.text_len = HISTORY_MAX_TEXT;
-                        memcpy(hist_msg.text, kbd_msg, hist_msg.text_len);
-                        hist_msg.text[hist_msg.text_len] = '\0';
-                        smp_history_append((uint8_t)s_active_contact_idx, &hist_msg);
-                    }
-                } else {
-                    ESP_LOGE(TAG_APP, "   ❌ Send failed! seq=%lu", (unsigned long)seq);
-                    smp_notify_ui_delivery_status(seq, MSG_STATUS_FAILED);
-                }
-            }
-        }
-
-        // 1. Read frame from ring buffer (blocking with timeout)
+        // Read frame from ring buffer (blocking with timeout)
         size_t item_size = 0;
         void *item = xRingbufferReceive(net_to_app_buf, &item_size, pdMS_TO_TICKS(1000));
+        if (!item) continue;
 
-        if (!item) continue;  // Timeout, keep waiting
-
-        // 2. Copy to local buffer and return ring buffer item immediately
+        // Copy to local buffer and return ring buffer item immediately
         if (item_size > SMP_BLOCK_SIZE + 2) item_size = SMP_BLOCK_SIZE + 2;
         memcpy(local_block, item, item_size);
         vRingbufferReturnItem(net_to_app_buf, item);
 
-        // 3. Transport-Parsing (ported from main.c Z. 353-391)
+        // Transport-Parsing
         int content_len = (int)item_size - 2;
-        if (content_len < 4) {
-            ESP_LOGW(TAG_APP, "Frame too short: %d bytes", content_len);
-            continue;
-        }
+        if (content_len < 4) { ESP_LOGW(TAG_APP, "Frame too short: %d bytes", content_len); continue; }
         uint8_t *resp = local_block + 2;
-
         int p = 0;
 
         // txCount + 2 skip bytes
         if (p + 3 > content_len) { ESP_LOGW(TAG_APP, "Frame truncated at txCount"); continue; }
         uint8_t tx_count = resp[p]; p++;
-        (void)tx_count;  // will be used in later phases
-        p += 2;  // skip 2 bytes
+        (void)tx_count;
+        p += 2;
 
-        // authLen
         if (p >= content_len) { ESP_LOGW(TAG_APP, "Frame truncated at authLen"); continue; }
         int authLen = resp[p++];
         if (p + authLen > content_len) { ESP_LOGW(TAG_APP, "Frame truncated in auth"); continue; }
         p += authLen;
 
-        // v7: no sessLen in response
-
-        // corrLen
         if (p >= content_len) { ESP_LOGW(TAG_APP, "Frame truncated at corrLen"); continue; }
         int corrLen = resp[p++];
         if (p + corrLen > content_len) { ESP_LOGW(TAG_APP, "Frame truncated in corr"); continue; }
         p += corrLen;
 
-        // entLen + entity_id
         if (p >= content_len) { ESP_LOGW(TAG_APP, "Frame truncated at entLen"); continue; }
         int entLen = resp[p++];
         if (p + entLen > content_len) { ESP_LOGW(TAG_APP, "Frame truncated in entity"); continue; }
@@ -999,30 +1139,27 @@ void smp_app_run(QueueHandle_t kbd_queue)
         memcpy(entity_id, &resp[p], entLen);
         p += entLen;
 
-        // Contact-Lookup
+        // Contact + Reply Queue Lookup
         int contact_idx = find_contact_by_recipient_id(entity_id, entLen);
         contact_t *contact = (contact_idx >= 0) ? &contacts_db.contacts[contact_idx] : NULL;
 
-        // Reply Queue Check: per-contact lookup
         int rq_contact = find_reply_queue_by_rcv_id(entity_id, entLen);
         bool is_reply_queue = (rq_contact >= 0);
         bool is_legacy_rq = false;
 
-        // Legacy fallback: check old global our_queue too
         if (!is_reply_queue && our_queue.rcv_id_len > 0 &&
             entLen == our_queue.rcv_id_len &&
             memcmp(entity_id, our_queue.rcv_id, entLen) == 0) {
             is_reply_queue = true;
             is_legacy_rq = true;
-            rq_contact = s_handshake_contact_idx;  // Best guess for legacy
+            rq_contact = s_handshake_contact_idx;
             ESP_LOGW(TAG_APP, "Reply Queue matched via legacy our_queue (contact [%d])", rq_contact);
         }
 
-        if (is_reply_queue) {
+        if (is_reply_queue)
             ESP_LOGI(TAG_APP, "MSG on REPLY_Q for contact [%d]", rq_contact);
-        }
 
-        // 4. Command-Dispatch: ONLY LOG, no processing yet
+        // Command dispatch
         if (p + 1 < content_len && resp[p] == 'O' && resp[p+1] == 'K') {
             ESP_LOGI(TAG_APP, "APP: OK [%s]",
                      contact ? contact->name : (is_reply_queue ? "reply_q" : "unknown"));
@@ -1034,7 +1171,6 @@ void smp_app_run(QueueHandle_t kbd_queue)
         else if (p + 3 < content_len && resp[p] == 'M' && resp[p+1] == 'S' && resp[p+2] == 'G' && resp[p+3] == ' ') {
             p += 4;
 
-            // MsgId extrahieren
             if (p >= content_len) { ESP_LOGW(TAG_APP, "Frame truncated at msgIdLen"); continue; }
             uint8_t msgIdLen = resp[p++];
             uint8_t msg_id[24];
@@ -1049,182 +1185,10 @@ void smp_app_run(QueueHandle_t kbd_queue)
             ESP_LOGW(TAG_APP, "APP: MSG for [%s] reply_q=%d, enc_len=%d",
                      contact ? contact->name : "unknown", is_reply_queue, enc_len);
 
-            // ==============================================================
-            // REPLY QUEUE: E2E Decrypt + Agent Process + 42d
-            // ==============================================================
-            if (is_reply_queue && enc_len > crypto_box_MACBYTES) {
-                ESP_LOGI(TAG_APP, "   Decrypting REPLY QUEUE message for contact [%d] (legacy=%d)...", rq_contact, is_legacy_rq);
+            if (is_reply_queue && enc_len > crypto_box_MACBYTES)
+                app_handle_reply_queue_msg(rq_contact, is_legacy_rq, resp, p, enc_len, msg_id, msgIdLen);
 
-                uint8_t *e2e_plain = NULL;
-                size_t e2e_plain_len = 0;
-                int e2e_ret = -99;
-
-                // Try per-contact reply queue ONLY if NOT legacy match
-                reply_queue_t *rq = reply_queue_get(rq_contact);
-                if (!is_legacy_rq && rq && rq->valid) {
-                    uint8_t new_peer[32];
-                    bool new_peer_found = false;
-
-                    e2e_ret = smp_e2e_decrypt_reply_message_ex(
-                        &resp[p], enc_len, msg_id, msgIdLen,
-                        rq->shared_secret,
-                        rq->e2e_private,
-                        rq->e2e_peer_public,
-                        rq->e2e_peer_valid,
-                        new_peer, &new_peer_found,
-                        &e2e_plain, &e2e_plain_len);
-
-                    // Update per-contact peer key if extracted
-                    if (new_peer_found) {
-                        memcpy(rq->e2e_peer_public, new_peer, 32);
-                        rq->e2e_peer_valid = true;
-                        reply_queue_save(rq_contact);
-                        ESP_LOGI(TAG_APP, "   RQ[%d] peer E2E key updated + saved", rq_contact);
-                    }
-                } else {
-                    // Legacy fallback: use global our_queue
-                    ESP_LOGW(TAG_APP, "   Using legacy our_queue for decrypt (legacy=%d, rq_valid=%d)", is_legacy_rq, rq ? rq->valid : -1);
-                    e2e_ret = smp_e2e_decrypt_reply_message(
-                        &resp[p], enc_len, msg_id, msgIdLen,
-                        &e2e_plain, &e2e_plain_len);
-                }
-
-                if (e2e_ret == 0 && e2e_plain) {
-                    int hs_contact = rq_contact;  // Use routed contact, not global!
-                    ESP_LOGI(TAG_APP, "   Reply Queue: handshake for contact [%d]", hs_contact);
-
-                    // Set active ratchet+handshake BEFORE decrypt!
-                    // Without this, Contact 1's Confirmation is decrypted with Slot 0's keys.
-                    ratchet_set_active(hs_contact);
-                    handshake_set_active(hs_contact);
-                    ESP_LOGI(TAG_APP, "   35a: Active slot set to [%d] BEFORE agent_process", hs_contact);
-
-                    smp_agent_process_message(e2e_plain, e2e_plain_len,
-                           &contacts_db.contacts[hs_contact],
-                           s_peer_sender_auth_key, &s_has_peer_sender_auth);
-                    free(e2e_plain);
-                } else {
-                    ESP_LOGE(TAG_APP, "   Reply Queue decrypt failed! ret=%d", e2e_ret);
-                }
-
-                // === Post-Confirmation Block (per-contact) ===
-                int hs_contact = rq_contact;  // From reply queue routing!
-                if (s_has_peer_sender_auth && !is_42d_done(hs_contact)) {
-                    mark_42d_done(hs_contact);
-                    ratchet_set_active(hs_contact);
-                    handshake_set_active(hs_contact);  // was missing!
-                    ESP_LOGI(TAG_APP, "APP: 42d — Starting for contact [%d] (ratchet+handshake set)", hs_contact);
-
-                    // 1. Send KEY via Network Task (async, on main SSL)
-                    {
-                        net_cmd_t key_cmd = {0};
-                        key_cmd.cmd = NET_CMD_SEND_KEY;
-                        key_cmd.rq_slot = is_legacy_rq ? -1 : hs_contact;
-                        memcpy(key_cmd.peer_auth_key, s_peer_sender_auth_key, 44);
-                        key_cmd.peer_auth_key_len = 44;
-
-                        if (xRingbufferSend(app_to_net_buf, &key_cmd, sizeof(key_cmd),
-                                            pdMS_TO_TICKS(5000)) != pdTRUE) {
-                            ESP_LOGE(TAG_APP, "APP: 42d -- Failed to queue SEND_KEY!");
-                            goto skip_42d_app;
-                        }
-                        ESP_LOGI(TAG_APP, "APP: 42d -- SEND_KEY queued (slot=%d)", key_cmd.rq_slot);
-                        smp_notify_ui_status("Securing channel...");
-                        // Wait for Net Task to confirm KEY was accepted
-                        {
-                            uint32_t notify_val = 0;
-                            BaseType_t got = xTaskNotifyWait(0, NOTIFY_KEY_DONE, &notify_val,
-                                                              pdMS_TO_TICKS(5000));
-                            if (got == pdTRUE) {
-                                ESP_LOGI(TAG_APP, "APP: 42d -- KEY confirmed by Net Task!");
-                            } else {
-                                ESP_LOGW(TAG_APP, "APP: 42d -- KEY timeout (5s)! Proceeding anyway...");
-                            }
-                        }
-                    }
-
-                    // 2. HELLO auf Contact Queue
-                    {
-                        contact_t *hello_contact = &contacts_db.contacts[hs_contact];
-                        smp_notify_ui_status("Sending HELLO...");
-                        if (peer_send_hello(hello_contact)) {
-                            ESP_LOGI(TAG_APP, "APP: 42d -- HELLO sent!");
-                        } else {
-                            ESP_LOGE(TAG_APP, "APP: 42d -- HELLO failed!");
-                        }
-                    }
-
-                    // 3. Brief wait for peer response
-                    smp_notify_ui_status("Waiting for peer...");
-                    vTaskDelay(pdMS_TO_TICKS(1000));
-
-                    // 4. Connection complete - update status, stay on connect screen
-                    s_active_contact_idx = hs_contact;
-                    smp_notify_ui_status("Connected!");
-                    ESP_LOGI(TAG_APP, "APP: 42d -- Contact [%d] connected!", hs_contact);
-
-                    s_has_peer_sender_auth = false;  // Don't re-trigger
-
-                    skip_42d_app: ;
-                }
-
-                // ACK Reply Queue with per-contact auth keys
-                {
-                    reply_queue_t *ack_rq = reply_queue_get(rq_contact);
-                    if (!is_legacy_rq && ack_rq && ack_rq->valid) {
-                        app_send_ack(ack_rq->rcv_id, ack_rq->rcv_id_len,
-                                     msg_id, msgIdLen, ack_rq->rcv_auth_private);
-                    } else {
-                        // Legacy fallback
-                        app_send_ack(our_queue.rcv_id, our_queue.rcv_id_len,
-                                     msg_id, msgIdLen, our_queue.rcv_auth_private);
-                    }
-                }
-
-                // Re-subscribe after handshake
-                app_request_subscribe_all();
-
-                ESP_LOGI(TAG_APP, "APP: Reply Queue processing complete.");
-            }
-
-            // ==============================================================
-            // CONTACT QUEUE: SMP Decrypt + Agent Parse + ACK
-            // ==============================================================
-            if (contact && contact->have_srv_dh && enc_len > crypto_box_MACBYTES) {
-                // Compute contact index and switch ratchet BEFORE decrypt
-                int cq_contact_idx = (int)(contact - contacts_db.contacts);
-                if (cq_contact_idx >= 0 && cq_contact_idx < MAX_CONTACTS) {
-                    ratchet_set_active(cq_contact_idx);
-                    handshake_set_active(cq_contact_idx);
-                }
-
-                ESP_LOGW(TAG_APP, "APP: Contact Queue decrypt for [%s] (slot %d), enc_len=%d",
-                         contact->name, cq_contact_idx, enc_len);
-
-                uint8_t *plain = heap_caps_malloc(enc_len, MALLOC_CAP_SPIRAM);
-                if (plain) {
-                    int plain_len = 0;
-                    if (decrypt_smp_message(contact, &resp[p], enc_len,
-                                            msg_id, msgIdLen, plain, &plain_len)) {
-                        ESP_LOGI(TAG_APP, "   SMP Decrypt OK! (%d bytes)", plain_len);
-                        parse_agent_message(contact, plain, plain_len);
-                    } else {
-                        ESP_LOGE(TAG_APP, "   Decrypt FAILED!");
-                    }
-                    heap_caps_free(plain);
-                } else {
-                    ESP_LOGE(TAG_APP, "   Failed to allocate decrypt buffer!");
-                }
-
-                // ACK Contact Queue
-                app_send_ack(contact->recipient_id, contact->recipient_id_len,
-                             msg_id, msgIdLen, contact->rcv_auth_secret);
-            } else if (!is_reply_queue) {
-                ESP_LOGW(TAG_APP, "   Cannot decrypt - contact=%s, have_srv_dh=%d, enc_len=%d",
-                         contact ? contact->name : "NULL",
-                         contact ? contact->have_srv_dh : -1,
-                         enc_len);
-            }
+            app_handle_contact_queue_msg(contact, is_reply_queue, resp, p, enc_len, msg_id, msgIdLen);
         }
         else if (p + 2 < content_len && resp[p] == 'E' && resp[p+1] == 'R' && resp[p+2] == 'R') {
             ESP_LOGE(TAG_APP, "APP: ERR [%s]",
@@ -1241,6 +1205,7 @@ void smp_app_run(QueueHandle_t kbd_queue)
     ESP_LOGW(TAG_APP, "App logic: parse loop ended, cleaning up");
     heap_caps_free(local_block);
 }
+
 
 static void ui_task(void *arg)
 {
