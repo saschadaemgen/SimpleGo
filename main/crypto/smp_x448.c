@@ -172,7 +172,7 @@ bool x448_dh(const uint8_t *their_public,
     // REVERSE output to standard format (cryptonite compatibility)
     reverse_bytes(secret_tmp, shared_secret, 56);
     
-    ESP_LOGI(TAG, "🤝 X448 DH complete! Secret: %02x%02x%02x%02x...",
+    ESP_LOGD(TAG, "🤝 X448 DH complete! Secret: %02x%02x%02x%02x...",
              shared_secret[0], shared_secret[1], shared_secret[2], shared_secret[3]);
     return true;
 }
