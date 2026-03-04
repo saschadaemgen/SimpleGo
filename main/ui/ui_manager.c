@@ -90,6 +90,15 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
     
     // Immer direkt laden - Animationen machen die Screens selbst
     lv_scr_load(screens[screen]);
+
+    /* 42f: Delete previous screen to free LVGL pool (MAIN stays permanent) */
+    if (prev != UI_SCREEN_SPLASH && prev != UI_SCREEN_MAIN) {
+        if (screens[prev] != NULL) {
+            lv_obj_del(screens[prev]);
+            screens[prev] = NULL;
+            ESP_LOGI(TAG, "Screen %d deleted from pool", prev);
+        }
+    }
     
     // Refresh contacts list when navigating to it
     if (screen == UI_SCREEN_CONTACTS) {
@@ -142,8 +151,19 @@ void ui_manager_go_back(void)
         screens[target] = screen_creators[target]();
     }
     
+    ui_screen_t old = current_screen;  /* 42f: save before overwrite */
     current_screen = target;
+
     lv_scr_load(screens[target]);
+
+    /* 42f: Delete old screen to free LVGL pool (MAIN stays permanent) */
+    if (old != UI_SCREEN_SPLASH && old != UI_SCREEN_MAIN) {
+        if (screens[old] != NULL) {
+            lv_obj_del(screens[old]);
+            screens[old] = NULL;
+            ESP_LOGI(TAG, "Screen %d deleted from pool", old);
+        }
+    }
     
     // Refresh contacts list when navigating back to it
     if (target == UI_SCREEN_CONTACTS) {
