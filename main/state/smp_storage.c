@@ -466,7 +466,7 @@ esp_err_t smp_storage_self_test(void) {
             goto test_b;
         }
 
-        memset(read_buf, 0, TEST_SIZE);
+        mbedtls_platform_zeroize(read_buf, TEST_SIZE);
         ret = smp_storage_load_blob(test_key, read_buf, TEST_SIZE, &read_len);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "  FAIL: load_blob returned %s", esp_err_to_name(ret));
@@ -518,7 +518,7 @@ test_b:
             goto test_c;
         }
 
-        memset(read_buf, 0, TEST_SIZE);
+        mbedtls_platform_zeroize(read_buf, TEST_SIZE);
         ret = smp_storage_load_blob(test_key, read_buf, TEST_SIZE, &read_len);
         if (ret != ESP_OK || read_len != TEST_SIZE || memcmp(test_data, read_buf, TEST_SIZE) != 0) {
             ESP_LOGE(TAG, "  FAIL: immediate read-back mismatch");
@@ -567,7 +567,7 @@ test_c:
             goto test_done;
         }
 
-        memset(read_buf, 0, TEST_SIZE);
+        mbedtls_platform_zeroize(read_buf, TEST_SIZE);
         ret = smp_storage_sd_read(test_path, read_buf, TEST_SIZE, &read_len);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "  FAIL: sd_read returned %s", esp_err_to_name(ret));
