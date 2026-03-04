@@ -10,8 +10,6 @@
  * 3. We send HELLO message
  * 4. App sends HELLO back
  * 5. CONNECTED!
- *
- * Auftrag 44a: Added send_chat_message() for A_MSG
  */
 
 #include "smp_handshake.h"
@@ -26,11 +24,11 @@
 #include "esp_heap_caps.h"
 #include "esp_random.h"
 #include "mbedtls/sha256.h"
-#include "smp_storage.h"   // Auftrag 50d: NVS persistence
+#include "smp_storage.h"
 
 static const char *TAG = "SMP_HAND";
 
-// Session 33: Per-contact handshake state
+// Per-contact handshake state
 #define MAX_HANDSHAKE_STATES 128
 
 typedef struct {
@@ -69,12 +67,11 @@ bool handshake_multi_init(void) {
 
 void handshake_set_active(uint8_t idx) {
     if (idx < MAX_HANDSHAKE_STATES && handshake_array) {
-        // 35h: Save current state before switching
+        // Save current state before switching
         if (active_handshake_idx != idx) {
-            handshake_save_state();  // persist current slot
+            handshake_save_state();
         }
         active_handshake_idx = idx;
-        // 35h: Load state for new slot from NVS
         handshake_load_state();
     }
 }
@@ -120,17 +117,11 @@ static int build_hello_message(uint8_t *output, int max_len) {
     }
     // aMessage = HELLO = %s"H"
     output[p++] = 'H';
-    // ===== AUFTRAG 18c: Layer 6 — AgentMessage (Ratchet plaintext) =====
-    ESP_LOGI(TAG, "🔬 [L6] AgentMessage: %d bytes", p);
-    printf("   L6 complete:  ");
-    for (int i = 0; i < p; i++) printf("%02x ", output[i]);
-    printf("\n");
-    // ===== END =====
 
     return p;
 }
 
-// ============== Auftrag 44a: Chat Message Building ==============
+// ============== Chat Message Building (A_MSG) ==============
 
 /**
  * Build A_MSG message:
@@ -186,20 +177,6 @@ static int build_chat_message(const char *message, uint8_t *output, int max_len)
         message);
     memcpy(&output[p], json_buf, json_len);
     p += json_len;
-    
-    // === 44a: Hex-dump AgentMessage before encrypt ===
-    ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "🔬 [44a] AgentMessage (A_MSG): %d bytes, msg_id=%llu", p, (unsigned long long)msg_id);
-    printf("   HEX: ");
-    for (int i = 0; i < p && i < 64; i++) printf("%02x ", output[i]);
-    if (p > 64) printf("...");
-    printf("\n");
-    printf("   ASC: ");
-    for (int i = 0; i < p && i < 64; i++) {
-        char c = (char)output[i];
-        printf("%c", (c >= 32 && c < 127) ? c : '.');
-    }
-    printf("\n");
     
     return p;
 }
@@ -289,10 +266,7 @@ bool send_skey_command(
     memcpy(&skey_body[sbp], our_auth_public, 32);
     sbp += 32;
     
-    ESP_LOGI(TAG, "   📮 SKEY body: %d bytes", sbp);
-    ESP_LOGI(TAG, "   🔑 Auth key: %02x%02x%02x%02x...", 
-             our_auth_public[0], our_auth_public[1], 
-             our_auth_public[2], our_auth_public[3]);
+    ESP_LOGD(TAG, "   SKEY body: %d bytes", sbp);
     
     // Build transmission (no signature for SKEY - it's sender securing)
     uint8_t transmission[200];
@@ -310,7 +284,7 @@ bool send_skey_command(
     memcpy(&transmission[tp], skey_body, sbp);
     tp += sbp;
     
-    ESP_LOGI(TAG, "   📡 Transmission: %d bytes", tp);
+    ESP_LOGD(TAG, "   Transmission: %d bytes", tp);
     
     // Send
     int ret = smp_write_command_block(ssl, block, transmission, tp);
@@ -339,11 +313,7 @@ bool send_skey_command(
     }
     
     // Debug: show response
-    ESP_LOGW(TAG, "   ⚠️  SKEY Response:");
-    for (int i = 0; i < content_len && i < 50; i++) {
-        printf("%02x ", resp[i]);
-    }
-    printf("\n");
+    ESP_LOGW(TAG, "   SKEY response not OK (%d bytes)", content_len);
     
     // Check for specific errors
     for (int i = 0; i < content_len - 3; i++) {
@@ -413,21 +383,7 @@ bool send_hello_message(
     
     // Prepend PrivHeader = '_' (PHEmpty)
     agent_envelope[0] = '_';
-    int total_plain_len = 1 + envelope_len;  // '_' + AgentMsgEnvelope
-
-    // ===== AUFTRAG 18c: Layer 3 — AgentMsgEnvelope =====
-    ESP_LOGI(TAG, "🔬 [L3] AgentMsgEnvelope: %d bytes", envelope_len);
-    printf("   L3 first 16: ");
-    for (int i = 0; i < 16 && i < envelope_len; i++) printf("%02x ", agent_envelope[1 + i]);
-    printf("\n");
-    // ===== END =====
-
-    // ===== AUFTRAG 18c: Layer 2 — ClientMessage ('_' + AgentMsgEnvelope) =====
-    ESP_LOGI(TAG, "🔬 [L2] ClientMessage: %d bytes", total_plain_len);
-    printf("   L2 first 16: ");
-    for (int i = 0; i < 16 && i < total_plain_len; i++) printf("%02x ", agent_envelope[i]);
-    printf("\n");
-    // ===== END =====
+    int total_plain_len = 1 + envelope_len;
 
     // 3. cbEncrypt: Pad plaintext before crypto_box
     //    Format: [Word16 BE len of ClientMessage][ClientMessage][0x23 padding to 16000]
@@ -451,17 +407,7 @@ bool send_hello_message(
     int pad_start = 2 + total_plain_len;
     memset(&padded[pad_start], '#', E2E_ENC_HELLO_LENGTH - pad_start);
     
-    free(agent_envelope);  // No longer needed after copy
-
-    // ===== AUFTRAG 18c: Layer 1 — cbEncrypt Padded =====
-    ESP_LOGI(TAG, "🔬 [L1] cbEncrypt Padded: %d bytes", E2E_ENC_HELLO_LENGTH);
-    printf("   L1 first 16: ");
-    for (int i = 0; i < 16; i++) printf("%02x ", padded[i]);
-    printf("\n");
-    printf("   L1 last 4:   ");
-    for (int i = E2E_ENC_HELLO_LENGTH - 4; i < E2E_ENC_HELLO_LENGTH; i++) printf("%02x ", padded[i]);
-    printf("\n");
-    // ===== END =====
+    free(agent_envelope);
 
     // 4. Encrypt with SMP-level crypto (NaCL crypto_box)
     uint8_t nonce[24];
@@ -514,15 +460,8 @@ bool send_hello_message(
 
     free(enc_envelope);
 
-    ESP_LOGI(TAG, "   📦 Client message: %d bytes (3 PubHeader + 24 nonce + %d encrypted)",
+    ESP_LOGD(TAG, "   Client message: %d bytes (3 PubHeader + 24 nonce + %d encrypted)",
              cmp, enc_envelope_len);
-
-    // ===== AUFTRAG 18c: Layer 0 — ClientMsgEnvelope (PubHeader + Nonce + cmEncBody) =====
-    ESP_LOGI(TAG, "🔬 [L0] ClientMsgEnvelope: %d bytes", cmp);
-    printf("   L0 first 32: ");
-    for (int i = 0; i < 32 && i < cmp; i++) printf("%02x ", client_msg[i]);
-    printf("\n");
-    // ===== END =====
 
     // 4. Build SEND command body
     uint8_t *send_body = malloc(HELLO_BUFFER_SIZE);
@@ -554,9 +493,9 @@ bool send_hello_message(
     memcpy(&send_body[sbp], client_msg, cmp);
     sbp += cmp;
 
-    free(client_msg);  // Nicht mehr benötigt
+    free(client_msg);  // No longer needed
 
-    ESP_LOGI(TAG, "   📮 SEND body: %d bytes", sbp);
+    ESP_LOGD(TAG, "   SEND body: %d bytes", sbp);
 
     // 5. Build the "authorized" part (what we sign)
     // authorized = sessionIdentifier corrId entityId smpCommand
@@ -583,7 +522,7 @@ bool send_hello_message(
     uint8_t signature[64];
     crypto_sign_detached(signature, NULL, authorized, ap, snd_auth_private);
     
-    ESP_LOGI(TAG, "   🔏 Signed SEND command (%d bytes)", ap);
+    ESP_LOGD(TAG, "   Signed SEND (%d bytes)", ap);
     
     // 7. Build transmission = authorization + authorized
     uint8_t *transmission = malloc(HELLO_BUFFER_SIZE);
@@ -605,11 +544,11 @@ bool send_hello_message(
     
     free(authorized);
     
-    ESP_LOGI(TAG, "   📡 Transmission: %d bytes (with signature)", tp);
+    ESP_LOGD(TAG, "   Transmission: %d bytes (with signature)", tp);
 
     // 8. Send
     int ret = smp_write_command_block(ssl, block, transmission, tp);
-    free(transmission);  // Nicht mehr benötigt
+    free(transmission);  // No longer needed
     
     if (ret != 0) {
         ESP_LOGE(TAG, "   ❌ Send failed: %d", ret);
@@ -636,7 +575,7 @@ bool send_hello_message(
             // Update prev_msg_hash for next message
             mbedtls_sha256(hello_plain, hello_plain_len, handshake_state.prev_msg_hash, 0);
             
-            // Auftrag 50d: Persist msg_id + prev_msg_hash
+            // Evgeny's Rule: persist msg_id + prev_msg_hash before next send
             handshake_save_state();
             
             return true;
@@ -644,14 +583,7 @@ bool send_hello_message(
     }
     
     // Debug: show full response with better parsing
-    ESP_LOGW(TAG, "   ⚠️  Response not OK (%d bytes):", content_len);
-    
-    // Show first 80 bytes hex
-    printf("   HEX: ");
-    for (int i = 0; i < content_len && i < 80; i++) {
-        printf("%02x ", resp[i]);
-    }
-    printf("\n");
+    ESP_LOGW(TAG, "   Response not OK (%d bytes)", content_len);
     
     // Try to find and show error message
     for (int i = 0; i < content_len - 3; i++) {
@@ -670,11 +602,11 @@ bool send_hello_message(
     return false;
 }
 
-// ============== Auftrag 49b: Shared Encrypt+Send Pipeline ==============
+// ============== Shared Encrypt+Send Pipeline ==============
 
 /**
  * Shared encrypt+send pipeline for all outgoing agent messages.
- * Extracted from send_chat_message (Auftrag 49b) — zero code duplication.
+ * Extracted from send_chat_message — zero code duplication.
  *
  * Pipeline: AgentMessage → Ratchet Encrypt → AgentMsgEnvelope →
  *   PrivHeader('_') → ClientMessage → E2E Pad → crypto_box →
@@ -722,7 +654,7 @@ static bool encrypt_and_send_agent_msg(
     }
     int total_plain_len = 1 + envelope_len;
     
-    ESP_LOGI(TAG, "   [%s] ClientMessage ('_' + envelope): %d bytes", label, total_plain_len);
+    ESP_LOGD(TAG, "   [%s] ClientMessage: %d bytes", label, total_plain_len);
     
     // 2. E2E Pad: [Word16 BE len][ClientMessage][0x23 padding → 16000]
     uint8_t *padded = malloc(E2E_PADDED_LENGTH);
@@ -785,7 +717,7 @@ static bool encrypt_and_send_agent_msg(
     cmp += enc_len;
     free(enc_buf);
     
-    ESP_LOGI(TAG, "   [%s] ClientMsgEnvelope: %d bytes", label, cmp);
+    ESP_LOGD(TAG, "   [%s] ClientMsgEnvelope: %d bytes", label, cmp);
     
     // 4. Build SEND command
     uint8_t *send_body = malloc(SEND_BUFFER_SIZE);
@@ -817,7 +749,7 @@ static bool encrypt_and_send_agent_msg(
     sbp += cmp;
     free(client_msg);
     
-    ESP_LOGI(TAG, "   [%s] SEND body: %d bytes (notify=%c)", label, sbp, notify ? 'T' : 'F');
+    ESP_LOGD(TAG, "   [%s] SEND body: %d bytes (notify=%c)", label, sbp, notify ? 'T' : 'F');
     
     // 5. Sign: authorized = sessionId + send_body
     uint8_t *authorized = malloc(SEND_BUFFER_SIZE);
@@ -838,7 +770,7 @@ static bool encrypt_and_send_agent_msg(
     uint8_t signature[64];
     crypto_sign_detached(signature, NULL, authorized, ap, snd_auth_private);
     
-    ESP_LOGI(TAG, "   🔏 [%s] Signed SEND (%d bytes)", label, ap);
+    ESP_LOGD(TAG, "   [%s] Signed SEND (%d bytes)", label, ap);
     
     // 6. Transmission = [sigLen][signature][authorized]
     uint8_t *transmission = malloc(SEND_BUFFER_SIZE);
@@ -856,7 +788,7 @@ static bool encrypt_and_send_agent_msg(
     tp += ap;
     free(authorized);
     
-    ESP_LOGI(TAG, "   📡 [%s] Transmission: %d bytes", label, tp);
+    ESP_LOGD(TAG, "   [%s] Transmission: %d bytes", label, tp);
     
     // 7. Send!
     int ret = smp_write_command_block(ssl, block, transmission, tp);
@@ -885,7 +817,7 @@ static bool encrypt_and_send_agent_msg(
             // Update prev_msg_hash for next message
             mbedtls_sha256(msg_plain, msg_plain_len, handshake_state.prev_msg_hash, 0);
             
-            // Auftrag 50d: Persist msg_id + prev_msg_hash (Evgeny's Rule: before next send!)
+            // Evgeny's Rule: persist before next send
             handshake_save_state();
             
             return true;
@@ -893,10 +825,7 @@ static bool encrypt_and_send_agent_msg(
     }
     
     // Check for error
-    ESP_LOGW(TAG, "   ⚠️  [%s] Response not OK (%d bytes):", label, content_len);
-    printf("   HEX: ");
-    for (int i = 0; i < content_len && i < 80; i++) printf("%02x ", resp[i]);
-    printf("\n");
+    ESP_LOGW(TAG, "   [%s] Response not OK (%d bytes)", label, content_len);
     
     for (int i = 0; i < content_len - 3; i++) {
         if (resp[i] == 'E' && resp[i+1] == 'R' && resp[i+2] == 'R' && resp[i+3] == ' ') {
@@ -913,11 +842,10 @@ static bool encrypt_and_send_agent_msg(
     return false;
 }
 
-// ============== Auftrag 44a: Send Chat Message (A_MSG) ==============
+// ============== Send Chat Message ==============
 
 /**
  * Send a chat message to peer via A_MSG.
- * Refactored in Auftrag 49b to use shared encrypt_and_send_agent_msg().
  */
 bool send_chat_message(
     mbedtls_ssl_context *ssl,
@@ -936,7 +864,6 @@ bool send_chat_message(
     ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
     ESP_LOGI(TAG, "║  📤 SENDING CHAT MESSAGE (A_MSG)                              ║");
     ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
-    ESP_LOGI(TAG, "   Message: \"%s\"", message);
     
     handshake_state.ratchet = ratchet;
     
@@ -967,7 +894,7 @@ bool send_chat_message(
     return ok;
 }
 
-// ============== Auftrag 49b: Delivery Receipt (A_RCVD) ==============
+// ============== Delivery Receipt (A_RCVD) ==============
 
 /**
  * Build A_RCVD (delivery receipt) message.
@@ -1181,8 +1108,7 @@ bool complete_handshake(
     // Reset handshake state
     memset(&handshake_state, 0, sizeof(handshake_state));
     
-    // Auftrag 24: HELLO moved to main.c (after KEY command)
-    // complete_handshake() now only marks Confirmation as done
+    // HELLO is sent from main.c after KEY command
     ESP_LOGI(TAG, "   [1/2] AgentConfirmation ✅ (already sent)");
     ESP_LOGI(TAG, "   [2/2] HELLO will be sent from main.c after KEY ⏳");
     
@@ -1217,7 +1143,7 @@ uint64_t handshake_get_last_msg_id(void) {
     return handshake_state.msg_id;
 }
 
-// ============== Persistence (Auftrag 50d) ==============
+// ============== Persistence ==============
 
 // Compact struct for NVS — only the fields needed after reboot
 typedef struct {
@@ -1255,7 +1181,7 @@ bool handshake_load_state(void) {
     snprintf(key, sizeof(key), "hand_%02x", active_handshake_idx);
 
     if (!smp_storage_exists(key)) {
-        // Session 33: Fallback to legacy key "hand_00" for backward compat
+        // Fallback to legacy key "hand_00" for backward compatibility
         if (active_handshake_idx == 0 && smp_storage_exists("hand_00")) {
             snprintf(key, sizeof(key), "hand_00");
             ESP_LOGI(TAG, "handshake_load_state: using legacy key 'hand_00'");
