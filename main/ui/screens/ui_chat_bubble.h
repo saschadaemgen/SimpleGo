@@ -79,6 +79,44 @@ uint32_t chat_bubble_next_seq(void);
  */
 uint32_t chat_bubble_get_last_seq(void);
 
+/* ============== Session 40b: Bubble Count Tracking ============== */
+
+/**
+ * @brief Get current number of active bubbles in LVGL pool
+ */
+int chat_bubble_get_count(void);
+
+/**
+ * @brief Reset bubble count to 0 (call when clearing all bubbles)
+ */
+void chat_bubble_reset_count(void);
+
+/**
+ * @brief Decrement bubble count by N (call when removing bubbles)
+ * @param n  Number of bubbles removed
+ */
+void chat_bubble_decrement_count(int n);
+
+/* ============== Session 40c: Bubble Remove Helpers ============== */
+
+/**
+ * @brief Delete the oldest N bubbles for a contact (from top of container)
+ * @param container   Message container
+ * @param count       Max number of bubbles to remove
+ * @param contact_idx Only remove bubbles for this contact
+ * @return Number of bubbles actually removed
+ */
+int chat_bubble_remove_oldest(lv_obj_t *container, int count, int contact_idx);
+
+/**
+ * @brief Delete the newest N bubbles for a contact (from bottom of container)
+ * @param container   Message container
+ * @param count       Max number of bubbles to remove
+ * @param contact_idx Only remove bubbles for this contact
+ * @return Number of bubbles actually removed
+ */
+int chat_bubble_remove_newest(lv_obj_t *container, int count, int contact_idx);
+
 #ifdef __cplusplus
 }
 #endif

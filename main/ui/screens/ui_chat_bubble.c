@@ -16,6 +16,7 @@
 
 #include "ui_chat_bubble.h"
 #include "ui_theme.h"
+#include "smp_history.h"       /* Session 40b: HISTORY_DISPLAY_TEXT for bubble truncation */
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -59,6 +60,14 @@ typedef struct {
 
 static tracked_msg_t tracked_msgs[MAX_TRACKED_MSGS] = {0};
 static uint32_t msg_seq_counter = 0;
+
+/* ============== Session 40b: Bubble Count Tracking ============== */
+
+static int s_bubble_count = 0;   /* Active bubbles in LVGL 64KB pool */
+
+/* LVGL pool safety: refuse new bubbles when free memory drops below this.
+ * 8KB reserve for UI updates, animations, temporary LVGL allocations. */
+#define LVGL_POOL_SAFETY_MARGIN  8192
 
 /* ============== Timestamp Helpers ============== */
 
@@ -248,6 +257,31 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
 {
     if (!container || !text) return;
 
+    /* Session 40b: LVGL pool safety check.
+     * Refuse new bubbles when the 64KB built-in pool is critically low.
+     * Prevents display freeze from pool exhaustion. */
+    lv_mem_monitor_t mon_pre;
+    lv_mem_monitor(&mon_pre);
+    if (mon_pre.free_size < LVGL_POOL_SAFETY_MARGIN) {
+        ESP_LOGW(TAG, "LVGL pool low: %u bytes free (need %u), skipping bubble #%d",
+                 (unsigned)mon_pre.free_size, LVGL_POOL_SAFETY_MARGIN, s_bubble_count);
+        return;
+    }
+
+    /* Session 40b: Truncate long messages to protect LVGL 64KB pool.
+     * A single 4KB message label would consume significant pool space.
+     * Full text remains in PSRAM cache, only display portion in LVGL. */
+    char display_text[HISTORY_DISPLAY_TEXT + 4];  /* +4 for "..." + null */
+    const char *label_text = text;
+    size_t text_strlen = strlen(text);
+    if (text_strlen > HISTORY_DISPLAY_TEXT) {
+        memcpy(display_text, text, HISTORY_DISPLAY_TEXT);
+        memcpy(display_text + HISTORY_DISPLAY_TEXT, "...", 4);
+        label_text = display_text;
+        ESP_LOGD(TAG, "Truncated %u -> %u chars for LVGL pool safety",
+                 (unsigned)text_strlen, HISTORY_DISPLAY_TEXT);
+    }
+
     lv_coord_t cont_inner = lv_obj_get_content_width(container);
     lv_coord_t bubble_max = cont_inner * 72 / 100;
     lv_coord_t margin_push = cont_inner - bubble_max;
@@ -296,7 +330,7 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
 
     /* ---- Message text (Font 12 — between SM and LG) ---- */
     lv_obj_t *label = lv_label_create(bubble);
-    lv_label_set_text(label, text);
+    lv_label_set_text(label, label_text);  /* Session 40b: uses truncated text */
     lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(label, LV_PCT(100));
     lv_obj_set_style_text_color(label, lv_color_hex(0xe0e0e0), 0);
@@ -356,6 +390,20 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
         lv_obj_set_style_text_font(time_lbl, UI_FONT_SM, 0);
         lv_obj_align(time_lbl, LV_ALIGN_RIGHT_MID, 0, 0);
     }
+
+    /* Session 40b: LVGL pool monitoring -- measure actual cost per bubble */
+    s_bubble_count++;
+    lv_mem_monitor_t mon_post;
+    lv_mem_monitor(&mon_post);
+    size_t bubble_cost = (mon_pre.free_size > mon_post.free_size)
+                        ? (mon_pre.free_size - mon_post.free_size) : 0;
+    ESP_LOGI(TAG, "LVGL Pool: bubble #%d cost=%u bytes, free=%u/%u (%u%% used), frags=%u%%",
+             s_bubble_count,
+             (unsigned)bubble_cost,
+             (unsigned)mon_post.free_size,
+             (unsigned)mon_post.total_size,
+             (unsigned)mon_post.used_pct,
+             (unsigned)mon_post.frag_pct);
 
     /* Scroll + refresh (only for live messages) */
     if (auto_scroll) {
@@ -437,4 +485,73 @@ uint32_t chat_bubble_next_seq(void)
 uint32_t chat_bubble_get_last_seq(void)
 {
     return msg_seq_counter;
+}
+
+/* ============== Session 40b: Bubble Count API ============== */
+
+int chat_bubble_get_count(void)
+{
+    return s_bubble_count;
+}
+
+void chat_bubble_reset_count(void)
+{
+    s_bubble_count = 0;
+    ESP_LOGD(TAG, "Bubble count reset to 0");
+}
+
+void chat_bubble_decrement_count(int n)
+{
+    s_bubble_count -= n;
+    if (s_bubble_count < 0) s_bubble_count = 0;
+    ESP_LOGD(TAG, "Bubble count decremented by %d, now %d", n, s_bubble_count);
+}
+
+/* ============== Session 40c: Bubble Remove Helpers ============== */
+
+int chat_bubble_remove_oldest(lv_obj_t *container, int count, int contact_idx)
+{
+    if (!container || count <= 0) return 0;
+
+    int removed = 0;
+    uint32_t i = 0;
+    while (i < lv_obj_get_child_count(container) && removed < count) {
+        lv_obj_t *child = lv_obj_get_child(container, i);
+        int tag = (int)(intptr_t)lv_obj_get_user_data(child);
+        if (tag != 0 && (tag - 1) == contact_idx) {
+            lv_obj_delete(child);
+            removed++;
+            /* Don't increment i: next child shifts into this position */
+        } else {
+            i++;
+        }
+    }
+    s_bubble_count -= removed;
+    if (s_bubble_count < 0) s_bubble_count = 0;
+    ESP_LOGD(TAG, "Removed %d oldest bubbles (contact %d), count now %d",
+             removed, contact_idx, s_bubble_count);
+    return removed;
+}
+
+int chat_bubble_remove_newest(lv_obj_t *container, int count, int contact_idx)
+{
+    if (!container || count <= 0) return 0;
+
+    int removed = 0;
+    /* Iterate from last child backward */
+    int32_t i = (int32_t)lv_obj_get_child_count(container) - 1;
+    while (i >= 0 && removed < count) {
+        lv_obj_t *child = lv_obj_get_child(container, i);
+        int tag = (int)(intptr_t)lv_obj_get_user_data(child);
+        if (tag != 0 && (tag - 1) == contact_idx) {
+            lv_obj_delete(child);
+            removed++;
+        }
+        i--;
+    }
+    s_bubble_count -= removed;
+    if (s_bubble_count < 0) s_bubble_count = 0;
+    ESP_LOGD(TAG, "Removed %d newest bubbles (contact %d), count now %d",
+             removed, contact_idx, s_bubble_count);
+    return removed;
 }
