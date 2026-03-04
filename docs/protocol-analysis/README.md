@@ -1,4 +1,4 @@
-![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
 
 # SimpleGo Protocol Analysis
 
@@ -8,7 +8,16 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## 📡 LATEST: On-Device WiFi Manager (2026-03-03 Session 39)
+## LATEST: Sliding Window Chat History (2026-03-04 Session 40)
+
+```
+Three-stage pipeline: SD (AES-256-GCM) > PSRAM Cache (30) > LVGL (5 bubbles)
+Crypto outside SPI mutex (< 10ms hold), ~1.2KB per bubble
+Bidirectional scroll with position correction and re-entrancy guard
+1 bug (#71), 7 lessons (#214-#220), 7 files, 3 commits
+```
+
+## Session 39: On-Device WiFi Manager (2026-03-03)
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -412,11 +421,12 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | [35_PART33_SESSION_36.md](35_PART33_SESSION_36.md) | ~389 | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | [36_PART34_SESSION_37.md](36_PART34_SESSION_37.md) | ~332 | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
 | [37_PART35_SESSION_38.md](37_PART35_SESSION_38.md) | ~324 | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** |
-| [38_PART36_SESSION_39.md](38_PART36_SESSION_39.md) | ~310 | **📡 WiFi Manager: First On-Device WiFi Setup for T-Deck** |
-| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2500 | Complete bug documentation (70 bugs, 213 lessons) |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2850 | Constants, wire formats, verified values |
+| [38_PART36_SESSION_39.md](38_PART36_SESSION_39.md) | ~310 | **WiFi Manager: First On-Device WiFi Setup for T-Deck** |
+| [39_PART37_SESSION_40.md](39_PART37_SESSION_40.md) | ~273 | **Sliding Window: Unlimited Encrypted History at Constant Memory** |
+| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2600 | Complete bug documentation (71 bugs, 220 lessons) |
+| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2950 | Constants, wire formats, verified values |
 
-**Total: ~32,000+ lines of detailed protocol analysis (Session docs + reference docs)**
+**Total: ~33,000+ lines of detailed protocol analysis (Session docs + reference docs)**
 
 ---
 
@@ -461,10 +471,23 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **37** | **Feb 25-27** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** | **2 bugs, 2 lessons** |
 | **38** | **Feb 28 - Mar 1** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** | **2 bugs, 5 lessons** |
 | **39** | **Mar 3** | **📡 WiFi Manager: First On-Device WiFi for T-Deck** | **9 bugs, 4 lessons** |
+| **40** | **Mar 3-4** | **Sliding Window: Unlimited Encrypted History** | **1 bug, 7 lessons** |
 
 ---
 
-## Session 39 Key Achievements — 📡 On-Device WiFi Manager
+## Session 40 Key Achievements -- Sliding Window Chat History
+
+```
+Three-stage pipeline: SD (AES-256-GCM) > PSRAM Cache (30) > LVGL (5 bubbles)
+Crypto-separation from SPI mutex: hold time reduced from ~500ms to < 10ms
+LVGL pool profiled: ~1.2KB/bubble, 64KB pool effectively ~61KB
+Bidirectional scroll with position correction, re-entrancy guard (Bug #71)
+Unlimited encrypted history at constant 6KB memory consumption
+```
+
+---
+
+## Session 39 Key Achievements -- On-Device WiFi Manager
 
 ### First On-Device WiFi for T-Deck Hardware
 
@@ -1302,4 +1325,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 3, 2026 - Session 39 (📡 WiFi Manager: First On-Device WiFi Setup for T-Deck)*
+*Last updated: March 4, 2026 - Session 40 (Sliding Window: Unlimited Encrypted History at Constant Memory)*

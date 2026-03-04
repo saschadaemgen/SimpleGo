@@ -1,3 +1,5 @@
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
+
 # SimpleX Protocol Analysis - Part 35: Session 38
 # The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause
 

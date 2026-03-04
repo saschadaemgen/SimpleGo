@@ -1,3 +1,5 @@
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
+
 # SimpleX Protocol Analysis - Part 34: Session 37
 # Encrypted Chat History: SD Card, SPI Bus Wars, Progressive Rendering
 

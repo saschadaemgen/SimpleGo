@@ -1,8 +1,8 @@
-![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
 
 # Bug Tracker
 
-## Complete Documentation of All 70 Bugs
+## Complete Documentation of All 71 Bugs
 
 This document provides detailed documentation of all bugs discovered during SimpleGo development, including the incorrect code, correct code, and root cause analysis.
 
@@ -52,7 +52,7 @@ This document provides detailed documentation of all bugs discovered during Simp
 | **38** | **Receipt rcptInfo=Word32** | **25** | **FIXED** |
 | **39** | **NULL contact Reply Queue** | **25** | **FIXED** |
 
-**Total: 70 bugs documented, 68 FIXED, 1 identified (SPI3), 1 temp fix**
+**Total: 71 bugs documented, 69 FIXED, 1 identified (SPI3), 1 temp fix**
 
 ---
 
@@ -2481,3 +2481,56 @@ No T-Deck project has an on-device WiFi manager:
 *Total bugs documented: 70 (68 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
 *213 lessons learned!*  
 *📡 Session 39: WiFi Manager — First On-Device WiFi Setup for T-Deck*
+
+---
+
+## Session 40 -- Sliding Window Chat History (2026-03-03 to 2026-03-04)
+
+### Three-Stage Pipeline Architecture
+
+Session 40 solved the chat history display problem with a three-stage sliding window: SD card (unlimited, AES-256-GCM) to PSRAM cache (30 messages) to LVGL window (5 bubbles, ~6KB). One bug fixed, seven lessons learned.
+
+### Bug #71: Scroll Re-Entrancy
+
+```
+Symptom:
+  7 bubbles rendered instead of 5 during scroll operations.
+
+Root Cause:
+  lv_obj_scroll_to_y() inside load_older_messages() synchronously fires
+  a new LV_EVENT_SCROLL, triggering load_newer_messages() in the same frame.
+
+Fix:
+  s_window_busy flag prevents re-entrant scroll handling.
+  Set before scroll operations, cleared after completion.
+```
+
+### Package 40a: Crypto-Separation from SPI Mutex
+
+SD operations held the LVGL/SPI2 mutex during AES-GCM crypto, blocking display rendering for ~500ms. Refactored to two-pass architecture: file I/O inside mutex (< 10ms), crypto outside. File handles closed between passes (FATFS safety).
+
+### Package 40b: LVGL Pool Profiling
+
+Measured actual per-bubble cost at ~1.2KB (vs estimated 3-4KB). LVGL pool total ~61KB (TLSF overhead ~3KB from 64KB configured). Fixed UI costs ~28KB. Safety: 8KB margin check before bubble creation, text truncation to 512 chars.
+
+### Package 40c: Bidirectional Scroll
+
+PSRAM cache (MSG_CACHE_SIZE=30), LVGL window (BUBBLE_WINDOW_SIZE=5), scroll triggers at 10px threshold. Scroll-up removes bottom bubbles, inserts older at top with position correction. Scroll-down symmetric reverse. Setup guard blocks scroll events during construction. Progressive render 3 bubbles per 50ms tick.
+
+### New Lessons Learned (Session 40)
+
+214. LVGL v9 with LV_STDLIB_BUILTIN has a fixed 64KB pool (TLSF, effectively ~61KB). This is NOT the ESP32 system heap and NOT PSRAM (Session 40)
+215. A single 15KB message would consume nearly the entire LVGL pool. Text truncation in the bubble layer is essential for survival (Session 40)
+216. lv_obj_scroll_to_y() inside LV_EVENT_SCROLL fires a synchronous new scroll event. Re-entrancy guard is mandatory (Session 40)
+217. Crypto operations (AES-GCM, HKDF) are pure CPU work and do not belong inside SPI mutex blocks. Separation reduces hold time from ~500ms to < 10ms (Session 40)
+218. File handles must be closed between mutex passes. Open handles across mutex release are FATFS-unsafe on ESP-IDF (Session 40)
+219. HISTORY_MAX_TEXT (storage) and HISTORY_DISPLAY_TEXT (UI) must be separate constants. Conflation causes data loss or pool overflow (Session 40)
+220. Per-bubble LVGL pool cost is predictable (~1.2KB) with text truncation active. Without truncation, cost varies by factor 10+ (Session 40)
+
+---
+
+*Bug Tracker v35.0*  
+*Last updated: March 4, 2026 - Session 40*  
+*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
+*220 lessons learned*  
+*Session 40: Sliding Window -- Unlimited Encrypted History at Constant Memory*

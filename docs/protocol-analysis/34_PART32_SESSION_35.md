@@ -1,4 +1,4 @@
-![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
 
 # SimpleX Protocol Analysis - Part 32: Session 35
 # 🏁 Multi-Contact Victory: Bidirectional Messenger with Chat Filter

@@ -1,4 +1,4 @@
-![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
 
 # SimpleX Protocol Analysis - Part 29: Session 32
 # 🖥️ "The Demonstration" - From Protocol to Messenger

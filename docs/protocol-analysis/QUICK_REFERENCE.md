@@ -1,17 +1,27 @@
-![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
 
 # Quick Reference
 
 ## Constants, Wire Formats, Verified Values
 
-**Updated: 2026-03-03 - Session 39 (📡 WiFi Manager: First On-Device WiFi Setup for T-Deck)**
+**Updated: 2026-03-04 - Session 40 (Sliding Window: Unlimited Encrypted History at Constant Memory)**
 
 ---
 
 ## Current Status
 
 ```
-SESSION 39 - 📡 ON-DEVICE WIFI MANAGER
+SESSION 40 - SLIDING WINDOW CHAT HISTORY
+==========================================
+Three-stage pipeline: SD > PSRAM Cache (30) > LVGL (5 bubbles)
+Crypto outside SPI mutex (hold time < 10ms)
+Per-bubble cost ~1.2KB, pool 52-55% at 5 bubbles
+Bidirectional scroll with re-entrancy guard
+1 bug (#71), 7 lessons (#214-#220), 220 total
+```
+
+```
+SESSION 39 - ON-DEVICE WIFI MANAGER
 ========================================
 
 Unified WiFi backend (single state machine, NVS-only)   ✅
@@ -2823,6 +2833,93 @@ CHANGED (15 files):
 
 *Quick Reference v33.0*  
 *Last updated: March 3, 2026 - Session 39*  
-*Status: 📡 On-Device WiFi Manager — First for T-Deck Hardware*  
+*Status: On-Device WiFi Manager -- First for T-Deck Hardware*  
 *15 Milestones Achieved!*  
-*Next: Session 40 — SD on SPI3, Sliding Window History*
+*Next: Session 40 -- SD on SPI3, Sliding Window History*
+
+---
+
+## Section 38: Session 40 -- Sliding Window Chat History (2026-03-03 to 2026-03-04)
+
+### 38.1 Three-Stage Pipeline Constants
+
+```
+HISTORY_MAX_TEXT      = 4096 bytes   SD storage per message
+HISTORY_MAX_PAYLOAD   = 16000 bytes  SD limit (SMP block 16384, no chunking)
+HISTORY_DISPLAY_TEXT  = 512 chars    UI-only truncation (LVGL bubble layer)
+MSG_CACHE_SIZE        = 30           PSRAM ring cache
+BUBBLE_WINDOW_SIZE    = 5            Simultaneous LVGL bubbles
+SCROLL_LOAD_COUNT     = 2            Bubbles loaded per scroll trigger
+SCROLL_TOP_THRESHOLD  = 10px         Scroll-up trigger
+SCROLL_BTM_THRESHOLD  = 10px         Scroll-down trigger
+
+CRITICAL: Truncation only at LVGL layer, never before SD storage.
+```
+
+### 38.2 LVGL Pool Budget
+
+```
+LVGL pool total:      ~61KB (64KB configured, ~3KB TLSF overhead)
+Fixed UI cost:        ~28KB (status bar, header, input, textarea)
+Available for bubbles: ~25KB (33KB minus 8KB safety reserve)
+Per-bubble cost:       ~1.2KB (with 512-char truncation)
+Operational limit:     5 bubbles (conservative, theoretical max ~20)
+Pool usage at 5:       52-55%
+```
+
+### 38.3 Two-Pass Crypto Separation
+
+```
+APPEND:
+  Pass 1 (Mutex, < 5ms): fopen > fread header > fclose
+  CPU (no mutex):         derive_key > encrypt AES-GCM
+  Pass 2 (Mutex, < 5ms): fopen > fseek > fwrite record+header > fclose
+
+LOAD:
+  CPU (no mutex):         derive_key
+  Pass 1 (Mutex):         fopen > fread header > fread all raw > fclose
+  CPU (no mutex):         decrypt each record in-place
+  Free:                   release PSRAM buffer
+
+File handle closed between passes (FATFS safety).
+Total mutex hold: < 10ms (was ~500ms before separation).
+```
+
+### 38.4 Scroll Mechanics
+
+```
+Chat open:
+  smp_history_load_recent(20) > ui_chat_cache_history() > setup guard
+  Progressive render: 3 bubbles / 50ms tick > render_done clears guard
+
+Scroll-up (older):
+  scroll_y <= 10 and window_start > 0 > busy guard
+  Remove 2 bottom > measure height > insert 2 top > correct position
+
+Scroll-down (newer):
+  Symmetric reverse. Remove top, append bottom, correct position.
+
+Live messages:
+  Add to PSRAM cache > increment window_end > remove oldest if > 5
+
+Re-entrancy (Bug #71):
+  lv_obj_scroll_to_y() fires synchronous LV_EVENT_SCROLL
+  Fix: s_window_busy flag prevents nested scroll handling
+```
+
+### 38.5 SMP Message Size Limits
+
+```
+SMP Transport Block:   16,384 bytes  (Transport.hs:152)
+Max encoded message:   15,602 bytes  (Protocol.hs:668)
+Max with PQ (Kyber):   13,380 bytes  (PQ header 2,345B vs 123B)
+Effective text:        ~15,530 bytes (after JSON overhead 56-199B)
+```
+
+---
+
+*Quick Reference v34.0*  
+*Last updated: March 4, 2026 - Session 40*  
+*Status: Sliding Window -- Unlimited Encrypted History at Constant Memory*  
+*16 Milestones Achieved*  
+*Next: Session 41 -- SD on SPI3, German Umlauts*

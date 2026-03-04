@@ -1,3 +1,5 @@
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
+
 # SimpleX Protocol Analysis - Part 33: Session 36
 # Contact Lifecycle: Delete, Recreate, Zero Compromise
 

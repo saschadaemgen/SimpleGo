@@ -1,43 +1,26 @@
-![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
 
-# SimpleGo - Current Status (2026-03-03)
+# SimpleGo - Current Status (2026-03-04)
 
 **Project:** Native SimpleX SMP Client for ESP32  
 **Version:** v0.1.17-alpha  
-**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (660+ sections, 36 parts)
+**Archive:** See `01_SIMPLEX_PROTOCOL_INDEX.md` for complete documentation (670+ sections, 37 parts)
 
 ---
 
-## 📡 LATEST: On-Device WiFi Manager (2026-03-03 Session 39)
+## LATEST: Sliding Window Chat History (2026-03-04 Session 40)
 
 ```
-═══════════════════════════════════════════════════════════════════════════════
-
-  📡📡📡 FIRST ON-DEVICE WIFI MANAGER FOR T-DECK HARDWARE 📡📡📡
-
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                                                                         │
-  │   Unified WiFi backend (single state machine, NVS-only)     ✅        │
-  │   First-boot auto-launch (WiFi Manager opens on fresh start)✅        │
-  │   WPA3 SAE fix (WIFI_AUTH_WPA2_PSK threshold)               ✅        │
-  │   SPI DMA buffer pinned to internal SRAM                    ✅        │
-  │   Dynamic main header (SSID/unread/NoWiFi + 3s refresh)     ✅        │
-  │   Info tab redesign (live heap/PSRAM/LVGL stats)            ✅        │
-  │   First on-device WiFi for T-Deck (no other project has it) ✅        │
-  │                                                                         │
-  │   9 bugs fixed (#62-#70), 4 lessons (#210-#213)                        │
-  │   15 files changed, 100+ WPA3 test attempts                            │
-  │                                                                         │
-  │   Date: March 3, 2026                                                   │
-  │                                                                         │
-  └─────────────────────────────────────────────────────────────────────────┘
-
-═══════════════════════════════════════════════════════════════════════════════
+Three-stage pipeline: SD (encrypted) > PSRAM Cache (30) > LVGL (5 bubbles)
+Crypto-separation from SPI mutex (500ms > < 10ms hold time)
+LVGL pool profiling: ~1.2KB/bubble, 64KB pool effectively ~61KB
+Bidirectional scroll with position correction, re-entrancy guard
+1 bug (#71), 7 lessons (#214-#220), 7 files changed, 3 commits
 ```
 
 ---
 
-## 🔍 PREVIOUS: The SPI2 Bus Hunt (2026-03-01 Session 38)
+## PREVIOUS: On-Device WiFi Manager (2026-03-03 Session 39)
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -701,9 +684,9 @@ Bytes 80-95: HEADER_IV (iv2)   ← FOR HEADER!
 | `01_SIMPLEX_PROTOCOL_INDEX.md` | Navigation index |
 | `02_SIMPLEX_STATUS.md` | This file - quick status |
 | `README.md` | Project overview |
-| `BUG_TRACKER.md` | All 70 bugs, 213 lessons |
+| `BUG_TRACKER.md` | All 71 bugs, 220 lessons |
 | `QUICK_REFERENCE.md` | Constants, wire formats |
-| `03-38_PART*.md` | Sessions 1-39 documentation |
+| `03-39_PART*.md` | Sessions 1-40 documentation |
 
 ---
 
@@ -727,19 +710,20 @@ Bytes 80-95: HEADER_IV (iv2)   ← FOR HEADER!
 | **13** | **💾 Encrypted Chat History** | **2026-02-27** | **37** |
 | **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
 | **15** | **📡 On-Device WiFi Manager** | **2026-03-03** | **39** |
+| **16** | **Sliding Window Chat History** | **2026-03-04** | **40** |
 
 ---
 
-## 🎯 Next Steps (Session 40)
+## Next Steps (Session 41)
 
-1. **P0:** SD card on SPI3 bus (display freeze root cause fix)
-2. **P1:** Sliding window chat history (8 visible bubbles, bubble recycling)
-3. **P2:** WiFi scan intermittent bug (second scan sometimes empty, observe)
-4. **P3:** Multi-network support (backend extension, product tiering)
+1. SD card on SPI3 bus (Bug #60 root cause fix)
+2. German umlaut fallback fonts
+3. Multi-network WiFi support (product tiering)
+4. Server DEL command on contact delete
 
-**Status:** WiFi Manager complete. SD card SPI contention is the last hardware blocker.
+**Status:** Sliding window operational. SD SPI contention remains the last hardware blocker.
 
 ---
 
-*Status updated: 2026-03-03 Session 39 — 📡 WiFi Manager: First On-Device WiFi Setup for T-Deck*  
-*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY -> S38 SPI HUNT -> S39 WIFI!*
+*Status updated: 2026-03-04 Session 40 -- Sliding Window: Unlimited Encrypted History at Constant Memory*  
+*History: S8 Breakthrough -> S23 CONNECTED -> S24 First MSG -> S25 Bidirectional -> S26 Persistence -> S27 Architecture -> S28 Tasks -> S29 Multi-Task -> S30 Debug -> S31 RESOLVED -> S32 Messenger UI -> S34 Multi-Contact -> S34b BIDIRECTIONAL -> S35 VICTORY -> S36 LIFECYCLE -> S37 HISTORY -> S38 SPI HUNT -> S39 WIFI -> S40 WINDOW*

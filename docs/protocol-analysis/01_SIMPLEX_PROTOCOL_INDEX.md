@@ -1,29 +1,26 @@
-![SimpleGo](../gfx/sg_multi_agent_ft_header.png)
+![SimpleGo Protocol Analysis](../../.github/assets/github_header_protocol_analysis.png)
 
 # SimpleX Protocol Analysis - Documentation Index
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation  
 **Version:** v0.1.18-alpha  
-**Last Updated:** 2026-03-03 (Session 39 — 📡 WiFi Manager: First On-Device WiFi Setup for T-Deck)
+**Last Updated:** 2026-03-04 (Session 40 -- Sliding Window: Unlimited Encrypted History at Constant Memory)
 
 ---
 
-## 📡 LATEST: On-Device WiFi Manager (Session 39)
+## LATEST: Sliding Window Chat History (Session 40)
 
-On March 3, 2026, Session 39 delivered the first on-device WiFi manager for T-Deck hardware:
+Session 40 implemented a three-stage sliding window architecture for unlimited encrypted chat history at constant memory consumption:
 
-- **Unified WiFi Backend:** ✅ Single wifi_manager.c, NVS-only storage
-- **First-Boot Auto-Launch:** ✅ WiFi Manager opens automatically on fresh device
-- **WPA3 SAE Fix:** ✅ WIFI_AUTH_WPA2_PSK threshold (100+ test attempts)
-- **SPI DMA OOM Fix:** ✅ Draw buffer pinned to internal SRAM
-- **Dynamic Main Header:** ✅ SSID/unread count/NoWiFi with 3s refresh
-- **Info Tab Redesign:** ✅ Row-based with live heap/PSRAM/LVGL stats
-- **Market First:** No other T-Deck project has on-device WiFi setup
+- Three-stage pipeline: SD Card (unlimited, AES-256-GCM) to PSRAM Cache (30 messages) to LVGL Window (5 bubbles, ~6KB)
+- Crypto-separation from SPI mutex (hold time reduced from ~500ms to < 10ms)
+- LVGL pool profiling: ~1.2KB per bubble, 64KB pool effectively ~61KB
+- Bidirectional scroll with position correction and re-entrancy guard
 
-**Bugs: 70 total (9 new in S39: #62-#70)**
-**Lessons Learned:** 213 total (4 new in S39)
+Bugs: 71 total (1 new in S40: #71 scroll re-entrancy)
+Lessons: 220 total (7 new in S40: #214-#220)
 
-## 🔍 PREVIOUS: The SPI2 Bus Hunt (Session 38)
+## PREVIOUS: On-Device WiFi Manager (Session 39)
 
 On February 28 - March 1, 2026, Session 38 added backlight control and identified the display freeze root cause:
 
@@ -85,7 +82,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~32,000+ lines, 660+ sections) is split into 36 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 37 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -124,8 +121,9 @@ The complete protocol analysis (~32,000+ lines, 660+ sections) is split into 36 
 | **33** | [**35_PART33_SESSION_36.md**](35_PART33_SESSION_36.md) | **~389** | **🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise** |
 | **34** | [**36_PART34_SESSION_37.md**](36_PART34_SESSION_37.md) | **~332** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
 | **35** | [**37_PART35_SESSION_38.md**](37_PART35_SESSION_38.md) | **~324** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** |
-| **36** | [**38_PART36_SESSION_39.md**](38_PART36_SESSION_39.md) | **~310** | **📡 WiFi Manager: First On-Device WiFi Setup for T-Deck** |
-| **Total** | | **~32,000+** | **660+ Sections** |
+| **36** | [**38_PART36_SESSION_39.md**](38_PART36_SESSION_39.md) | **~310** | **WiFi Manager: First On-Device WiFi Setup for T-Deck** |
+| **37** | [**39_PART37_SESSION_40.md**](39_PART37_SESSION_40.md) | **~273** | **Sliding Window: Unlimited Encrypted History at Constant Memory** |
+| **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
 
@@ -133,9 +131,9 @@ The complete protocol analysis (~32,000+ lines, 660+ sections) is split into 36 
 
 | Document | Lines | Description |
 |----------|-------|-------------|
-| [README.md](README.md) | ~1,350 | Project overview and navigation |
-| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,500 | All 70 bugs documented, 213 lessons |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2,800 | Constants, wire formats, verified values |
+| [README.md](README.md) | ~1,370 | Project overview and navigation |
+| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,600 | All 71 bugs documented, 220 lessons |
+| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2,950 | Constants, wire formats, verified values |
 
 ---
 
@@ -179,6 +177,7 @@ The complete protocol analysis (~32,000+ lines, 660+ sections) is split into 36 
 | **37** | **Feb 25-27, 2026** | **HISTORY** | **💾 Encrypted Chat History: SD Card, SPI Bus Wars** |
 | **38** | **Feb 28 - Mar 1, 2026** | **SPI HUNT** | **🔍 Eight Hypotheses, One Root Cause** |
 | **39** | **Mar 3, 2026** | **WIFI** | **📡 First On-Device WiFi Manager for T-Deck** |
+| **40** | **Mar 3-4, 2026** | **WINDOW** | **Sliding Window: Unlimited Encrypted History** |
 
 ---
 
@@ -264,6 +263,11 @@ The complete protocol analysis (~32,000+ lines, 660+ sections) is split into 36 
 - **Info Tab Redesign (Live Heap/PSRAM/LVGL Stats)** 📡
 - **First On-Device WiFi Manager for T-Deck Hardware** 📡
 - **MILESTONE 15: On-Device WiFi Manager** 📡
+- **Three-Stage Pipeline: SD > PSRAM Cache > LVGL Window**
+- **Crypto-Separation from SPI Mutex (500ms to < 10ms)**
+- **LVGL Pool Profiling (~1.2KB/bubble, 64KB pool)**
+- **Bidirectional Scroll with Re-Entrancy Guard**
+- **MILESTONE 16: Sliding Window Chat History**
 
 ### ✅ Session 23: The 7-Step Handshake
 ```
@@ -285,7 +289,7 @@ The complete protocol analysis (~32,000+ lines, 660+ sections) is split into 36 
 
 ## Bug Summary
 
-**Total bugs found and fixed: 70** (68 fixed, #60 identified for SPI3 fix, #61 temp fix)
+**Total bugs found and fixed: 71** (69 fixed, #60 identified for SPI3 fix, #61 temp fix)
 
 | Category | Count | Sessions |
 |----------|-------|----------|
@@ -528,18 +532,18 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 40)
+## Next Steps (Session 41)
 
-### Phase 1: SD Card Fix
+### Phase 1: Hardware
 ```
-P0: SD card on SPI3 bus (display freeze root cause fix)
-P1: Sliding window chat history (8 visible bubbles, bubble recycling)
+P0: SD card on SPI3 bus (Bug #60 root cause fix)
 ```
 
-### Phase 2: Monitoring
+### Phase 2: Features
 ```
-P2: WiFi scan intermittent bug (second scan sometimes empty, observe)
-P3: Multi-network support (backend extension, product tiering)
+P1: German umlaut fallback fonts (LVGL, task prepared)
+P2: Multi-network WiFi support (product tiering)
+P3: Server DEL command on contact delete
 ```
 
 ---
@@ -564,7 +568,8 @@ P3: Multi-network support (backend extension, product tiering)
 | **13** | **💾 Encrypted Chat History** | **2026-02-27** | **37** |
 | **14** | **🔍 Backlight + SPI Root Cause** | **2026-03-01** | **38** |
 | **15** | **📡 On-Device WiFi Manager** | **2026-03-03** | **39** |
+| **16** | **Sliding Window Chat History** | **2026-03-04** | **40** |
 
 ---
 
-*Index updated: 2026-03-03 Session 39 — 📡 WiFi Manager: First On-Device WiFi Setup for T-Deck*
+*Index updated: 2026-03-04 Session 40 -- Sliding Window: Unlimited Encrypted History at Constant Memory*
