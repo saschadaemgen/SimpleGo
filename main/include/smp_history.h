@@ -24,6 +24,8 @@
 #define HISTORY_HEADER_SIZE   32
 #define HISTORY_MAX_LOAD      20
 #define HISTORY_MAX_TEXT       4096
+#define HISTORY_MAX_PAYLOAD  16000   /* Max SMP message stored on SD */
+#define HISTORY_DISPLAY_TEXT   512   /* Max displayed chars in LVGL bubble (UI truncation) */
 #define HISTORY_GCM_IV_LEN    12
 #define HISTORY_GCM_TAG_LEN   16
 #define HISTORY_MASTER_KEY_LEN 32
@@ -56,6 +58,11 @@ typedef struct __attribute__((packed)) {
 /**
  * Plaintext message structure -- this gets encrypted before writing.
  * Also used as output when loading messages.
+ *
+ * Session 40a: text[] holds full message (up to HISTORY_MAX_TEXT = 4096).
+ * On SD, records may contain longer text (up to HISTORY_MAX_PAYLOAD).
+ * UI truncation to HISTORY_DISPLAY_TEXT (512) happens in the bubble layer,
+ * NOT here. Full text is preserved in the PSRAM cache for future use.
  */
 typedef struct {
     uint8_t   direction;       // HISTORY_DIR_SENT or HISTORY_DIR_RECEIVED

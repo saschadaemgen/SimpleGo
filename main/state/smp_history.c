@@ -30,6 +30,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "tdeck_lvgl.h"        // Session 37b: LVGL recursive mutex = SPI2 bus lock
+#include "esp_heap_caps.h"     // Session 40a: PSRAM allocation for raw record buffer
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -184,6 +185,16 @@ esp_err_t smp_history_init(void)
 
 /* ============================================================
  * Append: Encrypt and append one message to the history file
+ *
+ * Session 40a: Crypto separated from SPI mutex.
+ *   Existing file: Pass 1 (read header) → CPU crypto → Pass 2 (write)
+ *   New file:      CPU crypto → single Pass (write header + record)
+ *
+ * NOTE: Between Pass 1 (read msg_count) and Pass 2 (write),
+ * another append could theoretically change msg_count and cause
+ * a GCM nonce collision. Currently safe: all history ops run on
+ * single App Task. If ever multi-tasked, atomize nonce assignment
+ * inside write mutex or use a sequence counter in PSRAM.
  * ============================================================ */
 esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
 {
@@ -194,15 +205,15 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
     char path[64];
     history_build_path(slot, path, sizeof(path));
 
-    // Take SD mutex for entire file operation
+    /* ---- Pass 1: Read header from SD (short mutex) ---- */
+    history_header_t header;
+    bool new_file = false;
+
     if (!sd_lock()) {
-        ESP_LOGE(TAG, "SD mutex timeout (append slot %u)", slot);
+        ESP_LOGE(TAG, "SD mutex timeout (append pass1 slot %u)", slot);
         return ESP_ERR_TIMEOUT;
     }
 
-    // Read or create header
-    history_header_t header;
-    bool new_file = false;
     FILE *f = fopen(path, "rb");
     if (f) {
         if (fread(&header, 1, HISTORY_HEADER_SIZE, f) != HISTORY_HEADER_SIZE) {
@@ -212,7 +223,8 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
             return ESP_FAIL;
         }
         fclose(f);
-        // Validate magic
+
+        /* Validate magic */
         if (header.magic[0] != HISTORY_MAGIC_0 || header.magic[1] != HISTORY_MAGIC_1 ||
             header.magic[2] != HISTORY_MAGIC_2 || header.magic[3] != HISTORY_MAGIC_3) {
             ESP_LOGE(TAG, "Invalid magic in %s", path);
@@ -220,7 +232,7 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
             return ESP_FAIL;
         }
     } else {
-        // New file
+        /* New file: no header to read, initialize in memory */
         new_file = true;
         memset(&header, 0, sizeof(header));
         header.magic[0] = HISTORY_MAGIC_0;
@@ -234,28 +246,31 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
         header.last_delivered_idx = 0;
     }
 
-    // Derive per-contact key (no SD access, no mutex needed for this)
+    sd_unlock();
+    /* ---- End Pass 1 ---- */
+
+    /* ---- CPU Work: Key derivation + encryption (NO mutex) ---- */
+
+    /* Derive per-contact key */
     uint8_t contact_key[HISTORY_MASTER_KEY_LEN];
     esp_err_t err = history_derive_key(slot, contact_key);
     if (err != ESP_OK) {
-        sd_unlock();
         return err;
     }
 
-    // Build plaintext payload: direction(1) + timestamp(8) + text_len(2) + text(N)
+    /* Build plaintext payload: direction(1) + timestamp(8) + text_len(2) + text(N) */
     uint16_t text_len = msg->text_len;
     if (text_len > HISTORY_MAX_TEXT) text_len = HISTORY_MAX_TEXT;
     size_t plaintext_len = 1 + 8 + 2 + text_len;
     uint8_t *plaintext = malloc(plaintext_len);
     if (!plaintext) {
         memset(contact_key, 0, sizeof(contact_key));
-        sd_unlock();
         return ESP_ERR_NO_MEM;
     }
 
     size_t offset = 0;
     plaintext[offset++] = msg->direction;
-    // timestamp big-endian
+    /* timestamp big-endian */
     int64_t ts = msg->timestamp;
     for (int i = 7; i >= 0; i--) {
         plaintext[offset++] = (uint8_t)((ts >> (i * 8)) & 0xFF);
@@ -264,17 +279,16 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
     plaintext[offset++] = (uint8_t)(text_len & 0xFF);
     memcpy(&plaintext[offset], msg->text, text_len);
 
-    // Build nonce
+    /* Build nonce from msg_count obtained in Pass 1 */
     uint8_t iv[HISTORY_GCM_IV_LEN];
     history_build_nonce(slot, header.msg_count, iv);
 
-    // Encrypt with AES-256-GCM
+    /* Encrypt with AES-256-GCM */
     uint8_t *ciphertext = malloc(plaintext_len);
     uint8_t tag[HISTORY_GCM_TAG_LEN];
     if (!ciphertext) {
         free(plaintext);
         memset(contact_key, 0, sizeof(contact_key));
-        sd_unlock();
         return ESP_ERR_NO_MEM;
     }
 
@@ -288,14 +302,13 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
         free(plaintext);
         free(ciphertext);
         memset(contact_key, 0, sizeof(contact_key));
-        sd_unlock();
         return ESP_FAIL;
     }
 
     ret = mbedtls_gcm_crypt_and_tag(&gcm, MBEDTLS_GCM_ENCRYPT,
                                      plaintext_len,
                                      iv, HISTORY_GCM_IV_LEN,
-                                     NULL, 0,  // no AAD
+                                     NULL, 0,  /* no AAD */
                                      plaintext, ciphertext,
                                      HISTORY_GCM_TAG_LEN, tag);
     mbedtls_gcm_free(&gcm);
@@ -305,14 +318,22 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
         ESP_LOGE(TAG, "GCM encrypt failed: -0x%04X", (unsigned)-ret);
         free(ciphertext);
         memset(contact_key, 0, sizeof(contact_key));
-        sd_unlock();
         return ESP_FAIL;
     }
 
-    // Build record: record_len(2) + iv(12) + ciphertext(N) + tag(16)
+    /* Build record: record_len(2) + iv(12) + ciphertext(N) + tag(16) */
     uint16_t record_len = 2 + HISTORY_GCM_IV_LEN + plaintext_len + HISTORY_GCM_TAG_LEN;
 
-    // Write to file (still inside SD mutex)
+    /* ---- End CPU Work ---- */
+
+    /* ---- Pass 2: Write record to SD (short mutex) ---- */
+    if (!sd_lock()) {
+        ESP_LOGE(TAG, "SD mutex timeout (append pass2 slot %u)", slot);
+        free(ciphertext);
+        memset(contact_key, 0, sizeof(contact_key));
+        return ESP_ERR_TIMEOUT;
+    }
+
     f = fopen(path, new_file ? "wb" : "r+b");
     if (!f) {
         ESP_LOGE(TAG, "Cannot open %s for writing", path);
@@ -323,14 +344,14 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
     }
 
     if (new_file) {
-        // Write header first
+        /* Write header first for new file */
         fwrite(&header, 1, HISTORY_HEADER_SIZE, f);
     }
 
-    // Seek to end for append
+    /* Seek to end for append */
     fseek(f, 0, SEEK_END);
 
-    // Write record
+    /* Write record */
     uint8_t rec_len_bytes[2] = {
         (uint8_t)((record_len >> 8) & 0xFF),
         (uint8_t)(record_len & 0xFF)
@@ -342,26 +363,26 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
 
     free(ciphertext);
 
-    // Update header counters
+    /* Update header counters */
     header.msg_count++;
     if (msg->direction == HISTORY_DIR_RECEIVED) {
         header.unread_count++;
     }
 
-    // Seek back to header and overwrite
+    /* Seek back to header and overwrite */
     fseek(f, 0, SEEK_SET);
     fwrite(&header, 1, HISTORY_HEADER_SIZE, f);
 
     fflush(f);
     fclose(f);
 
-    // Release SD mutex
     sd_unlock();
+    /* ---- End Pass 2 ---- */
 
     ESP_LOGI(TAG, "Appended msg #%u to slot %u (%u bytes)",
              header.msg_count - 1, slot, record_len);
 
-    // Clear derived key from stack
+    /* Clear derived key from stack */
     memset(contact_key, 0, sizeof(contact_key));
 
     return ESP_OK;
@@ -370,6 +391,12 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
 /* ============================================================
  * Load Recent: Read and decrypt the last N messages from file.
  * Delivery status reconstructed from header.last_delivered_idx.
+ *
+ * Session 40a: Crypto separated from SPI mutex.
+ *   CPU:    derive_key (no mutex)
+ *   Pass 1: sd_lock → read header + skip + read ALL raw records → sd_unlock
+ *   CPU:    decrypt all records, parse, truncate text (no mutex)
+ *   Free:   PSRAM buffer
  * ============================================================ */
 esp_err_t smp_history_load_recent(uint8_t slot, history_message_t *out,
                                    int count, int *loaded)
@@ -382,42 +409,44 @@ esp_err_t smp_history_load_recent(uint8_t slot, history_message_t *out,
     char path[64];
     history_build_path(slot, path, sizeof(path));
 
-    // Take SD mutex for entire read+decrypt operation
+    /* ---- CPU Work: Derive key (NO mutex) ---- */
+    uint8_t contact_key[HISTORY_MASTER_KEY_LEN];
+    esp_err_t err = history_derive_key(slot, contact_key);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    /* ---- Pass 1: Read header + raw records from SD (single mutex) ---- */
     if (!sd_lock()) {
         ESP_LOGE(TAG, "SD mutex timeout (load slot %u)", slot);
+        memset(contact_key, 0, sizeof(contact_key));
         return ESP_ERR_TIMEOUT;
     }
 
     FILE *f = fopen(path, "rb");
     if (!f) {
         sd_unlock();
-        return ESP_OK;  // No history yet -- not an error
+        memset(contact_key, 0, sizeof(contact_key));
+        return ESP_OK;  /* No history yet -- not an error */
     }
 
-    // Read header
+    /* Read header */
     history_header_t header;
     if (fread(&header, 1, HISTORY_HEADER_SIZE, f) != HISTORY_HEADER_SIZE) {
         fclose(f);
         sd_unlock();
+        memset(contact_key, 0, sizeof(contact_key));
         return ESP_FAIL;
     }
 
     if (header.msg_count == 0) {
         fclose(f);
         sd_unlock();
+        memset(contact_key, 0, sizeof(contact_key));
         return ESP_OK;
     }
 
-    // Derive key (pure computation, but keep inside mutex for simplicity)
-    uint8_t contact_key[HISTORY_MASTER_KEY_LEN];
-    esp_err_t err = history_derive_key(slot, contact_key);
-    if (err != ESP_OK) {
-        fclose(f);
-        sd_unlock();
-        return err;
-    }
-
-    // Determine start index (skip older messages)
+    /* Determine start index (skip older messages) */
     int start_idx = 0;
     if (header.msg_count > count) {
         start_idx = header.msg_count - count;
@@ -425,7 +454,23 @@ esp_err_t smp_history_load_recent(uint8_t slot, history_message_t *out,
     int to_load = header.msg_count - start_idx;
     if (to_load > count) to_load = count;
 
-    // Seek forward through records to reach start_idx
+    /* Allocate PSRAM buffer for raw encrypted records.
+     * Worst case per record: 2(len) + 12(IV) + 11(hdr) + HISTORY_MAX_PAYLOAD + 16(tag)
+     * Old records (pre-40a) may be up to 4096+11 bytes payload.
+     * Using HISTORY_MAX_PAYLOAD for safety margin with any stored records. */
+    size_t worst_per_record = 2 + HISTORY_GCM_IV_LEN + 11 + HISTORY_MAX_PAYLOAD + HISTORY_GCM_TAG_LEN;
+    size_t buf_alloc = (size_t)to_load * worst_per_record;
+    uint8_t *raw_buf = heap_caps_malloc(buf_alloc, MALLOC_CAP_SPIRAM);
+    if (!raw_buf) {
+        ESP_LOGE(TAG, "PSRAM alloc failed for %u bytes (load %d records)",
+                 (unsigned)buf_alloc, to_load);
+        fclose(f);
+        sd_unlock();
+        memset(contact_key, 0, sizeof(contact_key));
+        return ESP_ERR_NO_MEM;
+    }
+
+    /* Seek forward through records to reach start_idx */
     fseek(f, HISTORY_HEADER_SIZE, SEEK_SET);
 
     for (int i = 0; i < start_idx; i++) {
@@ -434,48 +479,86 @@ esp_err_t smp_history_load_recent(uint8_t slot, history_message_t *out,
             ESP_LOGE(TAG, "Unexpected EOF skipping record %d", i);
             fclose(f);
             sd_unlock();
+            heap_caps_free(raw_buf);
             memset(contact_key, 0, sizeof(contact_key));
             return ESP_FAIL;
         }
         uint16_t rec_len = ((uint16_t)len_bytes[0] << 8) | len_bytes[1];
-        // Skip rest of record (rec_len includes the 2 length bytes)
+        /* Skip rest of record (rec_len includes the 2 length bytes) */
         fseek(f, rec_len - 2, SEEK_CUR);
     }
 
-    // Now read and decrypt the desired records
+    /* Read ALL raw records into PSRAM buffer */
+    size_t offsets[HISTORY_MAX_LOAD];  /* Stack array: record offsets within raw_buf */
+    int records_read = 0;
+    size_t buf_used = 0;
+
+    for (int i = 0; i < to_load && i < HISTORY_MAX_LOAD; i++) {
+        /* Read record_len */
+        uint8_t len_bytes[2];
+        if (fread(len_bytes, 1, 2, f) != 2) {
+            ESP_LOGW(TAG, "EOF reading record %d of %d", i, to_load);
+            break;
+        }
+        uint16_t rec_len = ((uint16_t)len_bytes[0] << 8) | len_bytes[1];
+        size_t data_len = rec_len - 2;  /* IV + ciphertext + tag */
+
+        /* Safety check: record fits in remaining buffer */
+        if (buf_used + 2 + data_len > buf_alloc) {
+            ESP_LOGE(TAG, "Record %d exceeds buffer: need %zu, have %zu",
+                     i, buf_used + 2 + data_len, buf_alloc);
+            break;
+        }
+
+        offsets[i] = buf_used;
+
+        /* Store len_bytes + rest of record in buffer */
+        raw_buf[buf_used++] = len_bytes[0];
+        raw_buf[buf_used++] = len_bytes[1];
+
+        if (fread(&raw_buf[buf_used], 1, data_len, f) != data_len) {
+            ESP_LOGW(TAG, "Partial read on record %d", i);
+            break;
+        }
+        buf_used += data_len;
+        records_read++;
+    }
+
+    fclose(f);
+    sd_unlock();
+    /* ---- End Pass 1 ---- */
+
+    /* ---- CPU Work: Decrypt all records (NO mutex) ---- */
     mbedtls_gcm_context gcm;
 
-    for (int i = 0; i < to_load; i++) {
+    for (int i = 0; i < records_read; i++) {
         uint16_t msg_idx = start_idx + i;
+        size_t off = offsets[i];
 
-        // Read record_len
-        uint8_t len_bytes[2];
-        if (fread(len_bytes, 1, 2, f) != 2) break;
-        uint16_t rec_len = ((uint16_t)len_bytes[0] << 8) | len_bytes[1];
+        /* Parse record header from buffer */
+        uint16_t rec_len = ((uint16_t)raw_buf[off] << 8) | raw_buf[off + 1];
+        off += 2;
 
-        // Read IV
-        uint8_t iv[HISTORY_GCM_IV_LEN];
-        if (fread(iv, 1, HISTORY_GCM_IV_LEN, f) != HISTORY_GCM_IV_LEN) break;
+        /* IV */
+        uint8_t *iv = &raw_buf[off];
+        off += HISTORY_GCM_IV_LEN;
 
-        // Ciphertext length = rec_len - 2(len) - 12(iv) - 16(tag)
+        /* Ciphertext length = rec_len - 2(len) - 12(iv) - 16(tag) */
         size_t ct_len = rec_len - 2 - HISTORY_GCM_IV_LEN - HISTORY_GCM_TAG_LEN;
-        if (ct_len > HISTORY_MAX_TEXT + 11) {  // 1+8+2+text
+        if (ct_len > 11 + HISTORY_MAX_PAYLOAD) {
             ESP_LOGE(TAG, "Record %d too large: %zu", msg_idx, ct_len);
-            fseek(f, ct_len + HISTORY_GCM_TAG_LEN, SEEK_CUR);
             continue;
         }
 
-        uint8_t *ciphertext = malloc(ct_len);
-        uint8_t tag[HISTORY_GCM_TAG_LEN];
-        if (!ciphertext) break;
+        uint8_t *ciphertext = &raw_buf[off];
+        off += ct_len;
 
-        if (fread(ciphertext, 1, ct_len, f) != ct_len) { free(ciphertext); break; }
-        if (fread(tag, 1, HISTORY_GCM_TAG_LEN, f) != HISTORY_GCM_TAG_LEN) { free(ciphertext); break; }
+        /* Tag */
+        uint8_t *tag = &raw_buf[off];
 
-        // Decrypt
-        uint8_t *plaintext = malloc(ct_len);
-        if (!plaintext) { free(ciphertext); break; }
-
+        /* Decrypt in-place: output overwrites ciphertext in PSRAM buffer.
+         * mbedtls GCM supports input == output. IV and tag are at
+         * different positions in the buffer and remain intact. */
         mbedtls_gcm_init(&gcm);
         mbedtls_gcm_setkey(&gcm, MBEDTLS_CIPHER_ID_AES, contact_key, 256);
 
@@ -483,27 +566,26 @@ esp_err_t smp_history_load_recent(uint8_t slot, history_message_t *out,
                                             iv, HISTORY_GCM_IV_LEN,
                                             NULL, 0,
                                             tag, HISTORY_GCM_TAG_LEN,
-                                            ciphertext, plaintext);
+                                            ciphertext, ciphertext);
         mbedtls_gcm_free(&gcm);
-        free(ciphertext);
 
         if (ret != 0) {
             ESP_LOGE(TAG, "GCM decrypt failed for msg %d: -0x%04X", msg_idx, (unsigned)-ret);
-            free(plaintext);
             continue;
         }
 
-        // Parse plaintext into history_message_t
+        /* Parse plaintext (now at ciphertext pointer) into history_message_t */
+        uint8_t *plaintext = ciphertext;
         history_message_t *m = &out[*loaded];
         memset(m, 0, sizeof(history_message_t));
 
         size_t p = 0;
         m->direction = plaintext[p++];
-        m->delivery_status = 0;  // Default: sent (v)
+        m->delivery_status = 0;  /* Default: sent (v) */
 
-        // Reconstruct delivery status from header high-water mark
+        /* Reconstruct delivery status from header high-water mark */
         if (m->direction == HISTORY_DIR_SENT && msg_idx <= header.last_delivered_idx) {
-            m->delivery_status = 1;  // delivered (vv)
+            m->delivery_status = 1;  /* delivered (vv) */
         }
 
         m->timestamp = 0;
@@ -511,25 +593,26 @@ esp_err_t smp_history_load_recent(uint8_t slot, history_message_t *out,
             m->timestamp |= ((int64_t)plaintext[p++]) << (b * 8);
         }
 
-        m->text_len = ((uint16_t)plaintext[p] << 8) | plaintext[p + 1];
+        /* Parse text: full text preserved in history_message_t (up to HISTORY_MAX_TEXT).
+         * UI truncation to HISTORY_DISPLAY_TEXT happens in create_bubble_internal(),
+         * NOT here. This preserves full text in PSRAM cache for future features. */
+        uint16_t pt_text_len = ((uint16_t)plaintext[p] << 8) | plaintext[p + 1];
         p += 2;
 
-        if (m->text_len > HISTORY_MAX_TEXT) m->text_len = HISTORY_MAX_TEXT;
-        memcpy(m->text, &plaintext[p], m->text_len);
-        m->text[m->text_len] = '\0';  // Null-terminate
+        if (pt_text_len > HISTORY_MAX_TEXT) pt_text_len = HISTORY_MAX_TEXT;
+        memcpy(m->text, &plaintext[p], pt_text_len);
+        m->text[pt_text_len] = '\0';
+        m->text_len = pt_text_len;
 
-        free(plaintext);
         (*loaded)++;
     }
 
-    fclose(f);
-
-    // Release SD mutex
-    sd_unlock();
-
+    /* ---- Cleanup ---- */
+    heap_caps_free(raw_buf);
     memset(contact_key, 0, sizeof(contact_key));
 
-    ESP_LOGI(TAG, "Loaded %d messages from slot %u", *loaded, slot);
+    ESP_LOGI(TAG, "Loaded %d messages from slot %u (read %d raw records)",
+             *loaded, slot, records_read);
     return ESP_OK;
 }
 
