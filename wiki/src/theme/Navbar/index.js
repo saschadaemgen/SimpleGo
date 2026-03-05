@@ -7,13 +7,12 @@ export default function Navbar() {
   const navRef = useRef(null);
 
   useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
     let ticking = false;
     const onScroll = () => {
       if (!ticking) {
         requestAnimationFrame(() => {
-          nav.classList.toggle('scrolled', window.scrollY > 60);
+          const nav = navRef.current;
+          if (nav) nav.classList.toggle('scrolled', window.scrollY > 60);
           ticking = false;
         });
         ticking = true;
