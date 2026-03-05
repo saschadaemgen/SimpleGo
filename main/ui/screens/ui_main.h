@@ -1,6 +1,9 @@
-﻿/**
- * @file ui_main.h
- * @brief Main Screen - Chat List
+/**
+ * SimpleGo - ui_main.h
+ * Main screen interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef UI_MAIN_H

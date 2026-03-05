@@ -1,6 +1,9 @@
-﻿/**
- * @file ui_connect.c
- * @brief Connect Screen with QR Code - Full Screen
+/**
+ * SimpleGo - ui_connect.c
+ * Connect screen with QR code display
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 #include "ui_connect.h"
 #include "ui_theme.h"

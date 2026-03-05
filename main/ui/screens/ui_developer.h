@@ -1,6 +1,9 @@
-﻿/**
- * @file ui_developer.h
- * @brief Developer Screen - Debug Info, Logs, Tests
+/**
+ * SimpleGo - ui_developer.h
+ * Developer screen interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef UI_DEVELOPER_H
