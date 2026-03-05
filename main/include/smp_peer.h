@@ -1,6 +1,9 @@
 /**
  * SimpleGo - smp_peer.h
- * Peer server connection for AgentConfirmation
+ * Peer server connection interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SMP_PEER_H

@@ -1,6 +1,9 @@
 /**
  * SimpleGo - smp_tasks.h
- * FreeRTOS task management for multi-task architecture
+ * FreeRTOS task management and UI event bridge interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 #ifndef SMP_TASKS_H
 #define SMP_TASKS_H

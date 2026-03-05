@@ -1,21 +1,9 @@
 /**
- * SimpleGo - Native SimpleX SMP Client for ESP32
- * v0.1.17-alpha - AgentConfirmation with Reply Queue
- * github.com/cannatoshi/SimpleGo
- * Autor: cannatoshi
+ * SimpleGo - main.c
+ * Application entry point, TLS handshake, and UI poll timer
  *
- * main.c contains:
- * - Config, app_main(), smp_connect()
- * - TLS/Handshake (Steps 1-5)
- * - UI poll timer + progressive history rendering
- * - Post-confirmation orchestration (42d: KEY/HELLO/read reply)
- *
- * Extracted to modules:
- * - smp_wifi.c       (WiFi init)
- * - smp_ack.c        (ACK consolidation)
- * - smp_e2e.c        (Reply Queue E2E decrypt pipeline)
- * - smp_agent.c      (Agent protocol: PrivHeader dispatch, ratchet, Zstd)
- * - smp_tasks.c      (FreeRTOS multi-task: Network, App, receive loop)
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include <string.h>

@@ -1,7 +1,9 @@
 /**
  * SimpleGo - smp_queue.h
- * SMP Queue Management (NEW, SUB, KEY, ACK commands)
- * v0.1.15-alpha
+ * SMP queue management interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SMP_QUEUE_H

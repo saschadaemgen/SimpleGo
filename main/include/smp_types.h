@@ -1,7 +1,9 @@
 /**
- * SimpleGo - Native SimpleX SMP Client for ESP32
- * smp_types.h - Data structures and constants
- * v0.1.14-alpha - Added E2E ratchet key support
+ * SimpleGo - smp_types.h
+ * Shared data structures and constants
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SMP_TYPES_H

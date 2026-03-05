@@ -1,6 +1,9 @@
 /**
  * SimpleGo - smp_utils.h
- * URL encoding, Base64 encoding/decoding utilities
+ * URL and Base64 encoding/decoding utilities interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SMP_UTILS_H

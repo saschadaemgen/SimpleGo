@@ -1,11 +1,9 @@
 /**
  * SimpleGo - smp_ratchet.h
- * Double Ratchet Encryption with CORRECT Wire Format
- * v0.1.22-alpha - Updated 2026-02-03
- * 
- * CRITICAL: rcAD = initiator_pub || responder_pub (ABSOLUTE order!)
- * We are RESPONDER, peer is INITIATOR
- * Therefore: rcAD = peer_key1 || our_key1
+ * Double Ratchet encryption state and operations interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SMP_RATCHET_H

@@ -1,6 +1,9 @@
 /**
  * SimpleGo - smp_network.c
  * TLS/TCP networking for SMP protocol
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_network.h"
