@@ -1,6 +1,9 @@
 /**
- * @file ui_theme.h
- * @brief SimpleGo Cyberpunk Theme
+ * SimpleGo - ui_theme.h
+ * SimpleGo cyberpunk theme, colors, fonts, and widget helpers
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef UI_THEME_H

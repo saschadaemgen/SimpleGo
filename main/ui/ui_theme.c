@@ -1,6 +1,9 @@
 /**
- * @file ui_theme.c
- * @brief Cyberpunk Theme - Touch Optimized
+ * SimpleGo - ui_theme.c
+ * Cyberpunk theme implementation
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "ui_theme.h"

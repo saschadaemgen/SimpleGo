@@ -1,9 +1,8 @@
 /**
- * @file ui_manager.h
- * @brief UI Screen Manager - Controls screen navigation
- * 
- * SimpleGo UI Architecture
- * Copyright (c) 2025-2026 Sascha
+ * SimpleGo - ui_manager.h
+ * UI screen manager interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
  * SPDX-License-Identifier: AGPL-3.0
  */
 

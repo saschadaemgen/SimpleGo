@@ -1,6 +1,9 @@
-﻿/**
- * @file ui_splash.h
- * @brief SimpleGo Splash Screen
+/**
+ * SimpleGo - ui_splash.h
+ * Splash screen interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef UI_SPLASH_H

@@ -1,8 +1,9 @@
 /**
- * @file ui_manager.c
- * @brief Screen Manager - Manual Fade Control
+ * SimpleGo - ui_manager.c
+ * Screen manager with navigation stack
  *
- * First-boot WiFi detection via wifi_manager_needs_setup().
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 #include "ui_manager.h"
 #include "ui_theme.h"
