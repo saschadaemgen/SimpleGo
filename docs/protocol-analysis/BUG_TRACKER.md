@@ -2668,3 +2668,115 @@ Build fix: dead call to deleted simplex_secretbox_open_debug()
 *Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
 *225 lessons learned*  
 *Session 41: Pre-GitHub Cleanup and Stabilization*
+
+---
+
+## Session 42 -- Consolidation and Quality Pass (2026-03-04 to 2026-03-05)
+
+### Pure Structural Session
+
+No new bugs. No functional changes. Every task produced identical object code. Session focused on code hygiene, architectural correctness, and license compliance across all 47 source files.
+
+### Task 1: smp_handshake.c Debug Cleanup
+
+```
+1281 to 1207 lines (74 lines removed):
+  9 printf blocks removed (Layer dumps L0-L6, SKEY hex, A_MSG hex+ASCII)
+  Auth-key-prefix log removed (security: Ed25519 key bytes to serial)
+  Plaintext message log removed (privacy: cleartext to serial)
+  8 verbose LOGIs downgraded to LOGD
+  Session/task comments removed, German to English
+
+Result: Zero printf in production. Verified across entire codebase.
+
+Side fix: smp_storage.c missing #include "mbedtls/platform_util.h" added.
+```
+
+### Task 2: smp_globals.c Dissolved (11 files)
+
+```
+Architectural anomaly eliminated. 7 symbols migrated to owning modules:
+
+  ED25519_SPKI_HEADER[12]  -> smp_contacts.c / smp_contacts.h
+  X25519_SPKI_HEADER[12]   -> smp_contacts.c / smp_contacts.h
+  contacts_db              -> smp_contacts.c / smp_contacts.h
+  base64url_chars[]        -> smp_utils.c / smp_utils.h
+  pending_peer             -> smp_peer.c / smp_peer.h
+  peer_conn                -> smp_peer.c / smp_peer.h
+  wifi_connected           -> wifi_manager.c / wifi_manager.h
+
+smp_types.h: types only, no object declarations.
+smp_globals.c: deleted.
+3 follow-up build errors fixed (missing includes in smp_queue.c,
+reply_queue.c, smp_parser.c).
+```
+
+### Task 3: extern TODO Resolved
+
+```
+All TODO markers already cleaned during Task 2.
+One manual find: extern bool peer_send_hello() in smp_tasks.c.
+Moved to smp_peer.h. Local extern removed.
+```
+
+### Task 4: Re-delivery Log (Verified Correct)
+
+```
+smp_ratchet.c re-delivery log already ESP_LOGW. No changes needed.
+```
+
+### Task 5: smp_app_run() Refactored
+
+```
+530 lines to 118 lines. Five static helpers extracted:
+
+  app_init_run()                  Initialization, subscribe, wildcard ACK
+  app_process_deferred_work()     NVS saves (contacts, RQ, history)
+  app_process_keyboard_queue()    Keyboard send, delivery status, history
+  app_handle_reply_queue_msg()    Reply Queue: E2E, agent, 42d, ACK
+  app_handle_contact_queue_msg()  Contact Queue: SMP, parse, ACK
+
+No new headers. No logic changes. Identical object code.
+```
+
+### Task 6: License Header Audit (47 files)
+
+```
+All 47 source files in main/ now carry standardized header:
+
+  /**
+   * SimpleGo - filename.c
+   * Brief description
+   *
+   * Copyright (c) 2025-2026 Sascha Daemgen, IT and More Systems
+   * SPDX-License-Identifier: AGPL-3.0
+   */
+
+Side effect: 7 files had UTF-8 BOM characters, cleaned during pass.
+Processed in 9 rounds with intermediate build verification.
+```
+
+### Ownership Model Established
+
+```
+smp_types.h:    types only (typedef, enum, #define)
+smp_contacts.c: contacts_db, SPKI headers
+smp_peer.c:     pending_peer, peer_conn
+wifi_manager.c: wifi_connected
+smp_utils.c:    base64url_chars
+```
+
+### New Lessons Learned (Session 42)
+
+226. **Global state containers are architectural debt** - Every global symbol should live in the module that logically owns it, with extern in that module's header. A catch-all file (smp_globals.c) obscures ownership and creates unnecessary coupling. smp_types.h is for types only (Session 42)
+227. **smp_app_run() at 530 lines was unmaintainable** - Five static helpers with clear responsibility boundaries (init, deferred, keyboard, reply queue, contact queue) reduce the main loop to 118 lines. Identical object code. Function names document intent (Session 42)
+228. **UTF-8 BOM in C source files causes subtle ESP-IDF warnings** - Clean during any file-wide pass. Primarily affects files created in Windows editors. BOM is not standard for C source (Session 42)
+229. **License header standardization requires batch processing with intermediate builds** - 47 files in 9 rounds of 5. Never apply all at once without build verification between rounds. One typo in a header can break the entire build (Session 42)
+
+---
+
+*Bug Tracker v37.0*  
+*Last updated: March 5, 2026 - Session 42*  
+*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
+*229 lessons learned*  
+*Session 42: Consolidation and Quality Pass -- Zero printf in production*

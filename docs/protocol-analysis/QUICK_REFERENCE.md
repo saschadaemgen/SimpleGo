@@ -3023,3 +3023,98 @@ File: smp_storage.c (applied in Session 41)
 *Status: Pre-GitHub Cleanup -- Most Stable Build*  
 *17 Milestones Achieved*  
 *Next: Session 42 -- Quality Pass, SPI3 Fix*
+
+---
+
+## Section 40: Session 42 -- Consolidation and Quality Pass
+
+### 40.1 smp_globals.c Ownership Model
+
+```
+BEFORE (architectural anomaly):
+  smp_globals.c contained 7 unrelated global definitions.
+  smp_types.h mixed type definitions with object declarations.
+  Modules included smp_types.h for both types AND globals.
+
+AFTER (clean ownership):
+  smp_types.h: ONLY type definitions (typedef, enum, #define)
+  Each global symbol lives in the module that owns it:
+
+  smp_contacts.c -> contacts_db, ED25519_SPKI_HEADER, X25519_SPKI_HEADER
+  smp_peer.c     -> pending_peer, peer_conn
+  wifi_manager.c -> wifi_connected
+  smp_utils.c    -> base64url_chars
+
+  Consumers include the owning module's header.
+  smp_globals.c DELETED.
+```
+
+### 40.2 smp_app_run() Decomposition
+
+```
+BEFORE: smp_app_run() = 530 lines, monolithic
+
+AFTER: smp_app_run() = 118 lines, dispatches to 5 static helpers:
+
+  app_init_run()
+    Parse buffer alloc, initial subscribe, wildcard ACK
+
+  app_process_deferred_work()
+    Contacts NVS save, Reply Queue NVS save, history load
+
+  app_process_keyboard_queue()
+    Keyboard send with delivery status, history append
+
+  app_handle_reply_queue_msg()
+    Reply Queue MSG: E2E decrypt, agent process, 42d post-confirmation, ACK
+
+  app_handle_contact_queue_msg()
+    Contact Queue MSG: SMP decrypt, parse_agent_message, ACK
+
+All static, placed before smp_app_run(). No new headers.
+Identical object code. goto skip_42d_app remains in reply queue handler.
+```
+
+### 40.3 License Header Format
+
+```
+Standardized across all 47 source files in main/:
+
+  /**
+   * SimpleGo - filename.c
+   * Brief one-line description
+   *
+   * Copyright (c) 2025-2026 Sascha Daemgen, IT and More Systems
+   * SPDX-License-Identifier: AGPL-3.0
+   */
+
+Excluded: lv_conf.h, generated font files (simplego_umlauts_*.c)
+UTF-8 BOM removed from 7 files during pass.
+```
+
+### 40.4 Production Logging Rules (After S41 + S42)
+
+```
+ZERO printf in production code.
+  Only snprintf for NVS key formatting (e.g., "rat_%02x").
+
+LOGD: Verbose pipeline steps, hex dumps, byte counts
+  (disabled in release builds via CONFIG_LOG_DEFAULT_LEVEL)
+
+LOGI: State transitions, milestones, connection events
+
+LOGW: Re-delivery detection, recoverable errors
+
+LOGE: Unrecoverable failures, crypto errors
+
+NEVER log: Private keys, plaintexts, Ed25519 bytes, contact links
+  (5 remaining categories identified for S43 cleanup)
+```
+
+---
+
+*Quick Reference v36.0*  
+*Last updated: March 5, 2026 - Session 42*  
+*Status: Consolidation -- Production Code Quality*  
+*18 Milestones Achieved*  
+*Next: Session 43 -- Security Logging Cleanup, Docusaurus*

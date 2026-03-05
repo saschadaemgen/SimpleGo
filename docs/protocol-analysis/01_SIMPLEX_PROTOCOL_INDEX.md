@@ -4,26 +4,24 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation  
 **Version:** v0.1.18-alpha  
-**Last Updated:** 2026-03-04 (Session 41 -- Pre-GitHub Cleanup and Stabilization)
+**Last Updated:** 2026-03-05 (Session 42 -- Consolidation and Quality Pass)
 
 ---
 
-## LATEST: Pre-GitHub Cleanup (Session 41)
+## LATEST: Consolidation and Quality Pass (Session 42)
 
-Session 41 was the pre-GitHub cleanup and stabilization session. Full code review with systematic bug fixes, 11 commits, most stable build to date:
+Session 42 was a pure consolidation session. No new features. Production-grade code hygiene, architectural correctness, and AGPL-3.0 license compliance across all 47 source files:
 
-- Security cleanup: debug crypto removed, CWE-14 buffer clearing, GitHub CodeQL/Dependabot enabled
-- Hardware AES fix: software fallback for fragmented internal SRAM
-- Screen lifecycle fix: ephemeral screens (create on enter, destroy on leave)
-- Dangling pointer protection: null guards on all background-callable UI functions
-- Live bubble eviction: evict-before-create order fix
-- Comment cleanup: 9 files, session refs removed, German to English
-- README rewrite for technical GitHub audience
+- smp_handshake.c debug cleanup: 74 lines removed, zero printf in production
+- smp_globals.c dissolved: 7 symbols migrated to owning modules, file deleted
+- smp_app_run() refactored: 530 lines to 118 lines via 5 static helpers
+- License headers: all 47 source files standardized (AGPL-3.0, SPDX)
+- extern TODO markers resolved, re-delivery log verified correct
 
-Bugs: 71 total (no new bugs, existing fixes hardened)
-Lessons: 225 total (5 new in S41: #221-#225)
+Bugs: 71 total (no new bugs, structural changes only)
+Lessons: 229 total (4 new in S42: #226-#229)
 
-## PREVIOUS: Sliding Window Chat History (Session 40)
+## PREVIOUS: Pre-GitHub Cleanup (Session 41)
 
 Session 40 implemented a three-stage sliding window architecture for unlimited encrypted chat history at constant memory consumption. Three-stage pipeline: SD Card (unlimited, AES-256-GCM) to PSRAM Cache (30 messages) to LVGL Window (5 bubbles, ~6KB). Crypto-separation from SPI mutex (500ms to < 10ms). Bidirectional scroll with re-entrancy guard.
 
@@ -89,7 +87,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 38 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 39 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -131,6 +129,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 38 
 | **36** | [**38_PART36_SESSION_39.md**](38_PART36_SESSION_39.md) | **~310** | **WiFi Manager: First On-Device WiFi Setup for T-Deck** |
 | **37** | [**39_PART37_SESSION_40.md**](39_PART37_SESSION_40.md) | **~273** | **Sliding Window: Unlimited Encrypted History at Constant Memory** |
 | **38** | [**40_PART38_SESSION_41.md**](40_PART38_SESSION_41.md) | **~145** | **🧹 Pre-GitHub Cleanup and Stabilization** |
+| **39** | [**41_PART39_SESSION_42.md**](41_PART39_SESSION_42.md) | **~130** | **🏗️ Consolidation and Quality Pass** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -187,6 +186,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 38 
 | **39** | **Mar 3, 2026** | **WIFI** | **📡 First On-Device WiFi Manager for T-Deck** |
 | **40** | **Mar 3-4, 2026** | **WINDOW** | **Sliding Window: Unlimited Encrypted History** |
 | **41** | **Mar 4, 2026** | **CLEANUP** | **🧹 Pre-GitHub Cleanup and Stabilization** |
+| **42** | **Mar 4-5, 2026** | **QUALITY** | **🏗️ Consolidation and Quality Pass** |
 
 ---
 
@@ -285,6 +285,12 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 38 
 - **Comment Cleanup (9 files, session refs removed, German to English)** 🧹
 - **README Rewrite for GitHub Audience** 🧹
 - **MILESTONE 17: Pre-GitHub Stabilization** 🧹
+- **smp_handshake.c: 74 lines debug removed, zero printf** 🏗️
+- **smp_globals.c dissolved: 7 symbols to owning modules** 🏗️
+- **smp_app_run(): 530 to 118 lines via 5 static helpers** 🏗️
+- **License headers: 47 files AGPL-3.0 + SPDX standardized** 🏗️
+- **Ownership model: smp_types.h = types only, no objects** 🏗️
+- **MILESTONE 18: Production Code Quality** 🏗️
 
 ### ✅ Session 23: The 7-Step Handshake
 ```
@@ -323,7 +329,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 38 
 | Bidirectional + Receipt bugs | 8 | S25 |
 | Multi-Contact Routing bugs | 11 | S34b |
 
-**Lessons Learned: 225** (documented in BUG_TRACKER.md)
+**Lessons Learned: 229** (documented in BUG_TRACKER.md)
 
 **Session 35: Zero new protocol bugs. Multi-contact routing + UI fixes only.**
 
@@ -549,22 +555,24 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 42)
+## Next Steps (Session 43)
 
-### Phase 1: Quality Pass
+### Phase 1: Security Cleanup
 ```
-P0: smp_handshake.c cleanup (73 printf/LOGW/BUFFER_HEX)
-P1: smp_globals.c dissolution into correct modules
-P2: extern-TODO header migration (4 markers)
-P3: License headers AGPL-3.0 consistency
-P4: smp_app_run() splitting (450 lines)
+P0: 5 logging categories with security-relevant data (contact links, SUB hex, response hex, block headers, parser bytes)
 ```
 
-### Phase 2: Hardware + Features
+### Phase 2: Documentation
 ```
-P5: SD card on SPI3 bus (Bug #60 root cause fix)
-P6: German umlaut fallback fonts (LVGL, task prepared)
-P7: Server DEL command on contact delete
+P1: Docusaurus 3 restructure at wiki.simplego.dev
+P2: README rewrite (positive, professional, no criminal phone references)
+```
+
+### Phase 3: Hardware + Features
+```
+P3: SD card on SPI3 bus (Bug #60 root cause fix)
+P4: German umlaut fallback fonts (LVGL, task prepared)
+P5: Server DEL command on contact delete
 ```
 
 ---
@@ -591,7 +599,8 @@ P7: Server DEL command on contact delete
 | **15** | **📡 On-Device WiFi Manager** | **2026-03-03** | **39** |
 | **16** | **Sliding Window Chat History** | **2026-03-04** | **40** |
 | **17** | **🧹 Pre-GitHub Stabilization** | **2026-03-04** | **41** |
+| **18** | **🏗️ Production Code Quality** | **2026-03-05** | **42** |
 
 ---
 
-*Index updated: 2026-03-04 Session 41 -- Pre-GitHub Cleanup and Stabilization*
+*Index updated: 2026-03-05 Session 42 -- Consolidation and Quality Pass*
