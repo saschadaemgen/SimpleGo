@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-PROTOCOL" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">SimpleGo Protocol Documentation | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/PROTOCOL"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="SimpleGo Protocol Documentation | SimpleGo"><meta data-rh="true" name="description" content="Complete documentation of the SimpleX SMP protocol implementation."><meta data-rh="true" property="og:description" content="Complete documentation of the SimpleX SMP protocol implementation."><link data-rh="true" rel="icon" href="/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/PROTOCOL"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/PROTOCOL" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/PROTOCOL" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"SimpleGo Protocol Documentation","item":"https://wiki.simplego.dev/PROTOCOL"}]}</script><link rel="stylesheet" href="/assets/css/styles.2f9192ec.css">
+<script src="/assets/js/runtime~main.7cc1fac8.js" defer="defer"></script>
+<script src="/assets/js/main.c80c45d5.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav id="sg-navbar" class="navbar_MONK"><div class="navInner_FtnV"><a href="https://simplego.dev" class="navBrand_i1a4"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" class="navLogo_TwqZ"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></a><div class="navLinks_E5eb" id="sg-nav-links"><a href="https://simplego.dev/product.html">Product</a><a href="https://simplego.dev/crypto.html">Crypto</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://simplego.dev/docs.html" class="active_sgyZ">Docs</a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navCta_B0OZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:15px;height:15px;margin-right:5px;position:relative;top:-1px"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>GitHub</a></div><button class="navToggle_Ythg" aria-label="Toggle Menu"><span></span><span></span><span></span></button></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/ARCHITECTURE"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/CRYPTO"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/CRYPTO"><span title="SimpleGo Cryptography Documentation" class="linkLabel_WmDU">SimpleGo Cryptography Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/PROTOCOL"><span title="SimpleGo Protocol Documentation" class="linkLabel_WmDU">SimpleGo Protocol Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/WIRE_FORMAT"><span title="SimpleGo Wire Format Specification" class="linkLabel_WmDU">SimpleGo Wire Format Specification</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/ADDING_NEW_DEVICE"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SECURITY_MODEL"><span title="Security" class="categoryLinkLabel_W154">Security</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/TECHNICAL"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><span class="breadcrumbs__link">SMP in C</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">SimpleGo Protocol Documentation</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>SimpleGo Protocol Documentation</h1></header>
+<p>Complete documentation of the SimpleX SMP protocol implementation.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="overview">Overview<a href="#overview" class="hash-link" aria-label="Direct link to Overview" title="Direct link to Overview" translate="no">​</a></h2>
+<p>SimpleGo implements the SimpleX Messaging Protocol (SMP) for secure, decentralized messaging.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="protocol-stack">Protocol Stack<a href="#protocol-stack" class="hash-link" aria-label="Direct link to Protocol Stack" title="Direct link to Protocol Stack" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Layer</th><th>Protocol</th><th>Description</th></tr></thead><tbody><tr><td>5</td><td>Application</td><td>User messages, contacts</td></tr><tr><td>4</td><td>Agent Protocol</td><td>E2E encryption, connections</td></tr><tr><td>3</td><td>SMP</td><td>Queue-based message delivery</td></tr><tr><td>2</td><td>TLS 1.3</td><td>Transport security</td></tr><tr><td>1</td><td>TCP</td><td>Network transport</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="smp-protocol">SMP Protocol<a href="#smp-protocol" class="hash-link" aria-label="Direct link to SMP Protocol" title="Direct link to SMP Protocol" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-concepts">Key Concepts<a href="#key-concepts" class="hash-link" aria-label="Direct link to Key Concepts" title="Direct link to Key Concepts" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Concept</th><th>Description</th></tr></thead><tbody><tr><td>Queue</td><td>Unidirectional message channel</td></tr><tr><td>Sender</td><td>Party that sends to queue</td></tr><tr><td>Recipient</td><td>Party that receives from queue</td></tr><tr><td>Relay</td><td>Server that hosts queues</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="smp-commands">SMP Commands<a href="#smp-commands" class="hash-link" aria-label="Direct link to SMP Commands" title="Direct link to SMP Commands" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Command</th><th>Direction</th><th>Description</th></tr></thead><tbody><tr><td>NEW</td><td>Client to Server</td><td>Create new queue</td></tr><tr><td>SUB</td><td>Client to Server</td><td>Subscribe to queue</td></tr><tr><td>SEND</td><td>Client to Server</td><td>Send message</td></tr><tr><td>ACK</td><td>Client to Server</td><td>Acknowledge receipt</td></tr><tr><td>OFF</td><td>Client to Server</td><td>Suspend queue</td></tr><tr><td>DEL</td><td>Client to Server</td><td>Delete queue</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="smp-responses">SMP Responses<a href="#smp-responses" class="hash-link" aria-label="Direct link to SMP Responses" title="Direct link to SMP Responses" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Response</th><th>Description</th></tr></thead><tbody><tr><td>OK</td><td>Command succeeded</td></tr><tr><td>ERR</td><td>Command failed</td></tr><tr><td>MSG</td><td>Message delivered</td></tr><tr><td>NMSG</td><td>New message notification</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="agent-protocol">Agent Protocol<a href="#agent-protocol" class="hash-link" aria-label="Direct link to Agent Protocol" title="Direct link to Agent Protocol" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="connection-states">Connection States<a href="#connection-states" class="hash-link" aria-label="Direct link to Connection States" title="Direct link to Connection States" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>State</th><th>Description</th></tr></thead><tbody><tr><td>NEW</td><td>Created, not confirmed</td></tr><tr><td>PENDING</td><td>Waiting for confirmation</td></tr><tr><td>CONFIRMED</td><td>Ready for messaging</td></tr><tr><td>ESTABLISHED</td><td>Fully established</td></tr><tr><td>DELETED</td><td>Connection deleted</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="agent-messages">Agent Messages<a href="#agent-messages" class="hash-link" aria-label="Direct link to Agent Messages" title="Direct link to Agent Messages" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Message</th><th>Description</th></tr></thead><tbody><tr><td>CONF</td><td>Connection confirmation</td></tr><tr><td>INFO</td><td>Connection information</td></tr><tr><td>HELLO</td><td>Initial greeting</td></tr><tr><td>MSG</td><td>User message</td></tr><tr><td>ACK</td><td>Message acknowledgment</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="e2e-encryption-protocol">E2E Encryption Protocol<a href="#e2e-encryption-protocol" class="hash-link" aria-label="Direct link to E2E Encryption Protocol" title="Direct link to E2E Encryption Protocol" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-exchange-x3dh">Key Exchange (X3DH)<a href="#key-exchange-x3dh" class="hash-link" aria-label="Direct link to Key Exchange (X3DH)" title="Direct link to Key Exchange (X3DH)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Step</th><th>Operation</th></tr></thead><tbody><tr><td>1</td><td>Sender generates ephemeral X448 key</td></tr><tr><td>2</td><td>Sender performs 3 DH operations</td></tr><tr><td>3</td><td>Sender derives keys via HKDF</td></tr><tr><td>4</td><td>Sender sends public keys to recipient</td></tr><tr><td>5</td><td>Recipient performs same DH</td></tr><tr><td>6</td><td>Both have same shared secrets</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="double-ratchet">Double Ratchet<a href="#double-ratchet" class="hash-link" aria-label="Direct link to Double Ratchet" title="Direct link to Double Ratchet" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Ratchet</th><th>Trigger</th><th>Derives</th></tr></thead><tbody><tr><td>Root</td><td>DH ratchet step</td><td>Root key, chain key, header key</td></tr><tr><td>Chain</td><td>Each message</td><td>Message key, chain key, IVs</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="message-encryption">Message Encryption<a href="#message-encryption" class="hash-link" aria-label="Direct link to Message Encryption" title="Direct link to Message Encryption" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Layer</th><th>Key</th><th>Content</th></tr></thead><tbody><tr><td>Header</td><td>header_key</td><td>MsgHeader</td></tr><tr><td>Body</td><td>message_key</td><td>Message content</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="connection-establishment">Connection Establishment<a href="#connection-establishment" class="hash-link" aria-label="Direct link to Connection Establishment" title="Direct link to Connection Establishment" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="step-1-create-invitation">Step 1: Create Invitation<a href="#step-1-create-invitation" class="hash-link" aria-label="Direct link to Step 1: Create Invitation" title="Direct link to Step 1: Create Invitation" translate="no">​</a></h3>
+<p>Recipient:</p>
+<ol>
+<li class="">Generate X448 key pairs</li>
+<li class="">Create queue on SMP server</li>
+<li class="">Build invitation with server and keys</li>
+<li class="">Share invitation</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="step-2-accept-invitation">Step 2: Accept Invitation<a href="#step-2-accept-invitation" class="hash-link" aria-label="Direct link to Step 2: Accept Invitation" title="Direct link to Step 2: Accept Invitation" translate="no">​</a></h3>
+<p>Sender:</p>
+<ol>
+<li class="">Parse invitation</li>
+<li class="">Connect to SMP server</li>
+<li class="">Create sender queue</li>
+<li class="">Perform X3DH</li>
+<li class="">Send AgentConfirmation</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="step-3-confirm-connection">Step 3: Confirm Connection<a href="#step-3-confirm-connection" class="hash-link" aria-label="Direct link to Step 3: Confirm Connection" title="Direct link to Step 3: Confirm Connection" translate="no">​</a></h3>
+<p>Recipient:</p>
+<ol>
+<li class="">Receive AgentConfirmation</li>
+<li class="">Decrypt connection info</li>
+<li class="">Perform X3DH</li>
+<li class="">Initialize ratchet</li>
+<li class="">Connection ready</li>
+</ol>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="message-format">Message Format<a href="#message-format" class="hash-link" aria-label="Direct link to Message Format" title="Direct link to Message Format" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="encratchetmessage">EncRatchetMessage<a href="#encratchetmessage" class="hash-link" aria-label="Direct link to EncRatchetMessage" title="Direct link to EncRatchetMessage" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Field</th><th>Size</th><th>Description</th></tr></thead><tbody><tr><td>emHeaderLen</td><td>1 byte</td><td>123</td></tr><tr><td>emHeader</td><td>123 bytes</td><td>Encrypted header</td></tr><tr><td>emAuthTag</td><td>16 bytes</td><td>Body auth tag</td></tr><tr><td>emBody</td><td>Variable</td><td>Encrypted body (Tail)</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="encmessageheader-123-bytes">EncMessageHeader (123 bytes)<a href="#encmessageheader-123-bytes" class="hash-link" aria-label="Direct link to EncMessageHeader (123 bytes)" title="Direct link to EncMessageHeader (123 bytes)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Field</th><th>Size</th><th>Description</th></tr></thead><tbody><tr><td>ehVersion</td><td>2 bytes</td><td>Version (2)</td></tr><tr><td>ehIV</td><td>16 bytes</td><td>Header IV</td></tr><tr><td>ehAuthTag</td><td>16 bytes</td><td>Header auth tag</td></tr><tr><td>ehBodyLen</td><td>1 byte</td><td>88</td></tr><tr><td>ehBody</td><td>88 bytes</td><td>Encrypted MsgHeader</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="msgheader-88-bytes">MsgHeader (88 bytes)<a href="#msgheader-88-bytes" class="hash-link" aria-label="Direct link to MsgHeader (88 bytes)" title="Direct link to MsgHeader (88 bytes)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Field</th><th>Size</th><th>Description</th></tr></thead><tbody><tr><td>msgMaxVersion</td><td>2 bytes</td><td>Version (2)</td></tr><tr><td>dhKeyLen</td><td>1 byte</td><td>68</td></tr><tr><td>msgDHRs</td><td>68 bytes</td><td>X448 SPKI key</td></tr><tr><td>msgPN</td><td>4 bytes</td><td>Previous chain count</td></tr><tr><td>msgNs</td><td>4 bytes</td><td>Message number</td></tr><tr><td>padding</td><td>9 bytes</td><td>Zero padding</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="error-handling">Error Handling<a href="#error-handling" class="hash-link" aria-label="Direct link to Error Handling" title="Direct link to Error Handling" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="smp-errors">SMP Errors<a href="#smp-errors" class="hash-link" aria-label="Direct link to SMP Errors" title="Direct link to SMP Errors" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Error</th><th>Description</th></tr></thead><tbody><tr><td>AUTH</td><td>Authentication failed</td></tr><tr><td>NO_QUEUE</td><td>Queue does not exist</td></tr><tr><td>QUOTA</td><td>Queue quota exceeded</td></tr><tr><td>NO_MSG</td><td>No message available</td></tr><tr><td>LARGE_MSG</td><td>Message too large</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="agent-errors">Agent Errors<a href="#agent-errors" class="hash-link" aria-label="Direct link to Agent Errors" title="Direct link to Agent Errors" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Error</th><th>Description</th></tr></thead><tbody><tr><td>A_DUPLICATE</td><td>Duplicate connection</td></tr><tr><td>A_PROHIBITED</td><td>Operation not allowed</td></tr><tr><td>A_MESSAGE</td><td>Message parsing error</td></tr><tr><td>A_CRYPTO</td><td>Cryptographic error</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="security-properties">Security Properties<a href="#security-properties" class="hash-link" aria-label="Direct link to Security Properties" title="Direct link to Security Properties" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="confidentiality">Confidentiality<a href="#confidentiality" class="hash-link" aria-label="Direct link to Confidentiality" title="Direct link to Confidentiality" translate="no">​</a></h3>
+<ul>
+<li class="">AES-256-GCM encryption</li>
+<li class="">Keys from DH shared secrets</li>
+<li class="">Forward secrecy via Double Ratchet</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="integrity">Integrity<a href="#integrity" class="hash-link" aria-label="Direct link to Integrity" title="Direct link to Integrity" translate="no">​</a></h3>
+<ul>
+<li class="">GCM authentication tags</li>
+<li class="">Message counters prevent replay</li>
+<li class="">Hash chains link messages</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="authentication">Authentication<a href="#authentication" class="hash-link" aria-label="Direct link to Authentication" title="Direct link to Authentication" translate="no">​</a></h3>
+<ul>
+<li class="">X3DH mutual authentication</li>
+<li class="">Ed25519 signatures</li>
+<li class="">TLS server authentication</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="privacy">Privacy<a href="#privacy" class="hash-link" aria-label="Direct link to Privacy" title="Direct link to Privacy" translate="no">​</a></h3>
+<ul>
+<li class="">No user identifiers</li>
+<li class="">Random queue IDs</li>
+<li class="">Servers cannot read content</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="references">References<a href="#references" class="hash-link" aria-label="Direct link to References" title="Direct link to References" translate="no">​</a></h2>
+<ul>
+<li class="">SMP Protocol: <a href="https://github.com/simplex-chat/simplexmq/blob/stable/protocol/simplex-messaging.md" target="_blank" rel="noopener noreferrer" class="">https://github.com/simplex-chat/simplexmq/blob/stable/protocol/simplex-messaging.md</a></li>
+<li class="">Agent Protocol: <a href="https://github.com/simplex-chat/simplexmq/blob/stable/protocol/agent-protocol.md" target="_blank" rel="noopener noreferrer" class="">https://github.com/simplex-chat/simplexmq/blob/stable/protocol/agent-protocol.md</a></li>
+<li class="">Double Ratchet: <a href="https://signal.org/docs/specifications/doubleratchet/" target="_blank" rel="noopener noreferrer" class="">https://signal.org/docs/specifications/doubleratchet/</a></li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="license">License<a href="#license" class="hash-link" aria-label="Direct link to License" title="Direct link to License" translate="no">​</a></h2>
+<p>AGPL-3.0 - See <a class="" href="/LICENSE">LICENSE</a></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/PROTOCOL.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/CRYPTO"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">SimpleGo Cryptography Documentation</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/WIRE_FORMAT"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">SimpleGo Wire Format Specification</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#overview" class="table-of-contents__link toc-highlight">Overview</a></li><li><a href="#protocol-stack" class="table-of-contents__link toc-highlight">Protocol Stack</a></li><li><a href="#smp-protocol" class="table-of-contents__link toc-highlight">SMP Protocol</a><ul><li><a href="#key-concepts" class="table-of-contents__link toc-highlight">Key Concepts</a></li><li><a href="#smp-commands" class="table-of-contents__link toc-highlight">SMP Commands</a></li><li><a href="#smp-responses" class="table-of-contents__link toc-highlight">SMP Responses</a></li></ul></li><li><a href="#agent-protocol" class="table-of-contents__link toc-highlight">Agent Protocol</a><ul><li><a href="#connection-states" class="table-of-contents__link toc-highlight">Connection States</a></li><li><a href="#agent-messages" class="table-of-contents__link toc-highlight">Agent Messages</a></li></ul></li><li><a href="#e2e-encryption-protocol" class="table-of-contents__link toc-highlight">E2E Encryption Protocol</a><ul><li><a href="#key-exchange-x3dh" class="table-of-contents__link toc-highlight">Key Exchange (X3DH)</a></li><li><a href="#double-ratchet" class="table-of-contents__link toc-highlight">Double Ratchet</a></li><li><a href="#message-encryption" class="table-of-contents__link toc-highlight">Message Encryption</a></li></ul></li><li><a href="#connection-establishment" class="table-of-contents__link toc-highlight">Connection Establishment</a><ul><li><a href="#step-1-create-invitation" class="table-of-contents__link toc-highlight">Step 1: Create Invitation</a></li><li><a href="#step-2-accept-invitation" class="table-of-contents__link toc-highlight">Step 2: Accept Invitation</a></li><li><a href="#step-3-confirm-connection" class="table-of-contents__link toc-highlight">Step 3: Confirm Connection</a></li></ul></li><li><a href="#message-format" class="table-of-contents__link toc-highlight">Message Format</a><ul><li><a href="#encratchetmessage" class="table-of-contents__link toc-highlight">EncRatchetMessage</a></li><li><a href="#encmessageheader-123-bytes" class="table-of-contents__link toc-highlight">EncMessageHeader (123 bytes)</a></li><li><a href="#msgheader-88-bytes" class="table-of-contents__link toc-highlight">MsgHeader (88 bytes)</a></li></ul></li><li><a href="#error-handling" class="table-of-contents__link toc-highlight">Error Handling</a><ul><li><a href="#smp-errors" class="table-of-contents__link toc-highlight">SMP Errors</a></li><li><a href="#agent-errors" class="table-of-contents__link toc-highlight">Agent Errors</a></li></ul></li><li><a href="#security-properties" class="table-of-contents__link toc-highlight">Security Properties</a><ul><li><a href="#confidentiality" class="table-of-contents__link toc-highlight">Confidentiality</a></li><li><a href="#integrity" class="table-of-contents__link toc-highlight">Integrity</a></li><li><a href="#authentication" class="table-of-contents__link toc-highlight">Authentication</a></li><li><a href="#privacy" class="table-of-contents__link toc-highlight">Privacy</a></li></ul></li><li><a href="#references" class="table-of-contents__link toc-highlight">References</a></li><li><a href="#license" class="table-of-contents__link toc-highlight">License</a></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos.html">Terms of Service</a><a href="https://simplego.dev/legal/privacy.html">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer.html">Disclaimer</a><a href="https://simplego.dev/imprint.html">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup.html">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement.html">Law Enforcement</a><a href="https://simplego.dev/legal/transparency.html">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact.html">Partnership</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — S.D – IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>

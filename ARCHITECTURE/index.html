@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-ARCHITECTURE" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">SimpleGo Architecture | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/ARCHITECTURE"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="SimpleGo Architecture | SimpleGo"><meta data-rh="true" name="description" content="This document describes the software architecture of SimpleGo, a multi-platform implementation of the SimpleX Messaging Protocol for dedicated secure communication devices."><meta data-rh="true" property="og:description" content="This document describes the software architecture of SimpleGo, a multi-platform implementation of the SimpleX Messaging Protocol for dedicated secure communication devices."><link data-rh="true" rel="icon" href="/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/ARCHITECTURE"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/ARCHITECTURE" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/ARCHITECTURE" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"SimpleGo Architecture","item":"https://wiki.simplego.dev/ARCHITECTURE"}]}</script><link rel="stylesheet" href="/assets/css/styles.2f9192ec.css">
+<script src="/assets/js/runtime~main.7cc1fac8.js" defer="defer"></script>
+<script src="/assets/js/main.c80c45d5.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav id="sg-navbar" class="navbar_MONK"><div class="navInner_FtnV"><a href="https://simplego.dev" class="navBrand_i1a4"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" class="navLogo_TwqZ"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></a><div class="navLinks_E5eb" id="sg-nav-links"><a href="https://simplego.dev/product.html">Product</a><a href="https://simplego.dev/crypto.html">Crypto</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://simplego.dev/docs.html" class="active_sgyZ">Docs</a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navCta_B0OZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:15px;height:15px;margin-right:5px;position:relative;top:-1px"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>GitHub</a></div><button class="navToggle_Ythg" aria-label="Toggle Menu"><span></span><span></span><span></span></button></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/ARCHITECTURE"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/ARCHITECTURE"><span title="SimpleGo Architecture" class="linkLabel_WmDU">SimpleGo Architecture</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/CRYPTO"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/ADDING_NEW_DEVICE"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SECURITY_MODEL"><span title="Security" class="categoryLinkLabel_W154">Security</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/TECHNICAL"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><span class="breadcrumbs__link">Architecture</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">SimpleGo Architecture</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>SimpleGo Architecture</h1></header>
+<p>This document describes the software architecture of SimpleGo, a multi-platform implementation of the SimpleX Messaging Protocol for dedicated secure communication devices.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="table-of-contents">Table of Contents<a href="#table-of-contents" class="hash-link" aria-label="Direct link to Table of Contents" title="Direct link to Table of Contents" translate="no">​</a></h2>
+<ol>
+<li class=""><a href="#design-philosophy" class="">Design Philosophy</a></li>
+<li class=""><a href="#system-overview" class="">System Overview</a></li>
+<li class=""><a href="#layer-architecture" class="">Layer Architecture</a></li>
+<li class=""><a href="#hardware-abstraction-layer" class="">Hardware Abstraction Layer</a></li>
+<li class=""><a href="#protocol-implementation" class="">Protocol Implementation</a></li>
+<li class=""><a href="#cryptographic-architecture" class="">Cryptographic Architecture</a></li>
+<li class=""><a href="#user-interface-layer" class="">User Interface Layer</a></li>
+<li class=""><a href="#device-implementations" class="">Device Implementations</a></li>
+<li class=""><a href="#memory-architecture" class="">Memory Architecture</a></li>
+<li class=""><a href="#build-system" class="">Build System</a></li>
+<li class=""><a href="#security-architecture" class="">Security Architecture</a></li>
+</ol>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="design-philosophy">Design Philosophy<a href="#design-philosophy" class="hash-link" aria-label="Direct link to Design Philosophy" title="Direct link to Design Philosophy" translate="no">​</a></h2>
+<p>SimpleGo is built on three core principles:</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="single-codebase-multiple-devices">Single Codebase, Multiple Devices<a href="#single-codebase-multiple-devices" class="hash-link" aria-label="Direct link to Single Codebase, Multiple Devices" title="Direct link to Single Codebase, Multiple Devices" translate="no">​</a></h3>
+<p>The protocol implementation and user interface are written once and shared across all supported hardware platforms. Only the hardware-specific code differs between devices. This approach ensures:</p>
+<ul>
+<li class="">Protocol bugs are fixed once for all devices</li>
+<li class="">Security updates propagate automatically</li>
+<li class="">New features benefit all platforms simultaneously</li>
+<li class="">Development effort is maximized</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="minimal-trusted-computing-base">Minimal Trusted Computing Base<a href="#minimal-trusted-computing-base" class="hash-link" aria-label="Direct link to Minimal Trusted Computing Base" title="Direct link to Minimal Trusted Computing Base" translate="no">​</a></h3>
+<p>Security increases as code size decreases. SimpleGo targets approximately 50,000 lines of code compared to approximately 50,000,000 in a typical smartphone operating system. Every line of code is a potential vulnerability. By minimizing the codebase, we minimize the attack surface.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-enforced-security">Hardware-Enforced Security<a href="#hardware-enforced-security" class="hash-link" aria-label="Direct link to Hardware-Enforced Security" title="Direct link to Hardware-Enforced Security" translate="no">​</a></h3>
+<p>Software security alone is insufficient against physical attacks. SimpleGo leverages hardware security features including:</p>
+<ul>
+<li class="">Secure Elements for key storage</li>
+<li class="">Hardware cryptographic acceleration</li>
+<li class="">Tamper detection circuits</li>
+<li class="">Secure boot chains</li>
+<li class="">Flash encryption</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="system-overview">System Overview<a href="#system-overview" class="hash-link" aria-label="Direct link to System Overview" title="Direct link to System Overview" translate="no">​</a></h2>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+===========================================================================+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                           SIMPLEGO SYSTEM                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+===========================================================================+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                      APPLICATION LAYER                              |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+  +-------------------+  +-----------------+  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  |   Screen Manager  |  |   Event Handler   |  |  State Manager  |  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+  +-------------------+  +-----------------+  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                    |                                      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                       USER INTERFACE LAYER                          |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------+  +-------------+  +-------------+  +------------+  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  |   Screens   |  |   Widgets   |  |   Themes    |  |   Fonts    |  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------+  +-------------+  +-------------+  +------------+  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                    |                                      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                        PROTOCOL LAYER                               |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------------+  +---------------+  +---------------+            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  |  SMP Client   |  | Agent Protocol|  |    Queues     |            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------------+  +---------------+  +---------------+            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------------+  +---------------+  +---------------+            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Double Ratchet|  |     X3DH      |  |   Contacts    |            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------------+  +---------------+  +---------------+            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                    |                                      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                    CRYPTOGRAPHIC LAYER                              |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +----------+  +----------+  +----------+  +----------+  +-------+  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  |   X448   |  |  X25519  |  | Ed25519  |  | AES-GCM  |  | HKDF  |  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +----------+  +----------+  +----------+  +----------+  +-------+  |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                    |                                      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                HARDWARE ABSTRACTION LAYER (HAL)                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------+ +---------+ +---------+ +---------+ +---------+        |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Display | |  Input  | | Network | | Storage | |  Audio  |        |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------+ +---------+ +---------+ +---------+ +---------+        |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------+ +---------+                                            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  |  System | | Secure  |                                            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  |         | | Element |                                            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +---------+ +---------+                                            |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                    |                                      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +=====================================================================+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                    DEVICE IMPLEMENTATION LAYER                      |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +=====================================================================+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |              |                |                |                    |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-----------+--+  +----------+---+  +---------+----+  +----------+ |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | T-Deck Plus  |  | T-Deck Pro   |  | SimpleGo     |  | Desktop  | |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | ESP32-S3     |  | ESP32-S3     |  | Secure       |  | Linux    | |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | 320x240 LCD  |  | 320x240 LCD  |  | STM32 + SE   |  | SDL2     | |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Keyboard     |  | Keyboard     |  | Dual SE      |  | Testing  | |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +--------------+  +--------------+  +--------------+  +----------+ |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                     |  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------------+  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+===========================================================================+</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="layer-architecture">Layer Architecture<a href="#layer-architecture" class="hash-link" aria-label="Direct link to Layer Architecture" title="Direct link to Layer Architecture" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="layer-independence">Layer Independence<a href="#layer-independence" class="hash-link" aria-label="Direct link to Layer Independence" title="Direct link to Layer Independence" translate="no">​</a></h3>
+<p>Each layer communicates only with adjacent layers through defined interfaces:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Layer</th><th>Depends On</th><th>Provides To</th></tr></thead><tbody><tr><td>Application</td><td>UI, Protocol</td><td>User interaction</td></tr><tr><td>User Interface</td><td>HAL (display, input)</td><td>Application</td></tr><tr><td>Protocol</td><td>Crypto, HAL (network, storage)</td><td>Application</td></tr><tr><td>Cryptographic</td><td>HAL (secure element)</td><td>Protocol</td></tr><tr><td>HAL</td><td>Device Implementation</td><td>All upper layers</td></tr><tr><td>Device Implementation</td><td>Hardware</td><td>HAL</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="code-sharing">Code Sharing<a href="#code-sharing" class="hash-link" aria-label="Direct link to Code Sharing" title="Direct link to Code Sharing" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Layer</th><th>Shared Across Devices</th><th>Device-Specific</th></tr></thead><tbody><tr><td>Application</td><td>100%</td><td>0%</td></tr><tr><td>User Interface</td><td>100%</td><td>0%</td></tr><tr><td>Protocol</td><td>100%</td><td>0%</td></tr><tr><td>Cryptographic</td><td>100%</td><td>0%</td></tr><tr><td>HAL Interfaces</td><td>100% (headers)</td><td>0%</td></tr><tr><td>HAL Implementation</td><td>0%</td><td>100%</td></tr></tbody></table>
+<p>This separation ensures that adding a new device requires only implementing the HAL layer without modifying any other code.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-abstraction-layer">Hardware Abstraction Layer<a href="#hardware-abstraction-layer" class="hash-link" aria-label="Direct link to Hardware Abstraction Layer" title="Direct link to Hardware Abstraction Layer" translate="no">​</a></h2>
+<p>The HAL defines seven interfaces that abstract hardware functionality:</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hal_commonh">hal_common.h<a href="#hal_commonh" class="hash-link" aria-label="Direct link to hal_common.h" title="Direct link to hal_common.h" translate="no">​</a></h3>
+<p>Common types, error codes, and utilities used across all HAL interfaces.</p>
+<div class="language-c codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-c codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)">// Error codes</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token keyword" style="color:hsl(286, 60%, 67%)">typedef</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">enum</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_OK </span><span class="token operator" style="color:hsl(207, 82%, 66%)">=</span><span class="token plain"> </span><span class="token number" style="color:hsl(29, 54%, 61%)">0</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_INVALID_ARG</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_NO_MEM</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_NOT_FOUND</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_TIMEOUT</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_NOT_SUPPORTED</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_IO</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_BUSY</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    HAL_ERR_INVALID_STATE</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">hal_err_t</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Common geometric types</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token keyword" style="color:hsl(286, 60%, 67%)">typedef</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">struct</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">int16_t</span><span class="token plain"> x</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">int16_t</span><span class="token plain"> y</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">hal_point_t</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token keyword" style="color:hsl(286, 60%, 67%)">typedef</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">struct</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint16_t</span><span class="token plain"> width</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint16_t</span><span class="token plain"> height</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">hal_size_t</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token keyword" style="color:hsl(286, 60%, 67%)">typedef</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">struct</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">int16_t</span><span class="token plain"> x</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">int16_t</span><span class="token plain"> y</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint16_t</span><span class="token plain"> w</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint16_t</span><span class="token plain"> h</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">hal_rect_t</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hal_displayh">hal_display.h<a href="#hal_displayh" class="hash-link" aria-label="Direct link to hal_display.h" title="Direct link to hal_display.h" translate="no">​</a></h3>
+<p>Display initialization, configuration, and rendering.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Function</th><th>Purpose</th></tr></thead><tbody><tr><td><code>hal_display_init()</code></td><td>Initialize display hardware</td></tr><tr><td><code>hal_display_get_info()</code></td><td>Query display capabilities</td></tr><tr><td><code>hal_display_set_orientation()</code></td><td>Set rotation (0, 90, 180, 270)</td></tr><tr><td><code>hal_display_set_backlight()</code></td><td>Adjust brightness (0-100)</td></tr><tr><td><code>hal_display_flush()</code></td><td>Send pixel data to display</td></tr><tr><td><code>hal_display_flush_wait()</code></td><td>Wait for DMA transfer completion</td></tr></tbody></table>
+<p>Capability flags indicate available features:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Flag</th><th>Description</th></tr></thead><tbody><tr><td><code>HAL_DISPLAY_CAP_TOUCH</code></td><td>Touch overlay available</td></tr><tr><td><code>HAL_DISPLAY_CAP_BACKLIGHT</code></td><td>Adjustable backlight</td></tr><tr><td><code>HAL_DISPLAY_CAP_ROTATION</code></td><td>Hardware rotation support</td></tr><tr><td><code>HAL_DISPLAY_CAP_DMA</code></td><td>DMA transfers supported</td></tr><tr><td><code>HAL_DISPLAY_CAP_DOUBLE_BUF</code></td><td>Double buffering available</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hal_inputh">hal_input.h<a href="#hal_inputh" class="hash-link" aria-label="Direct link to hal_input.h" title="Direct link to hal_input.h" translate="no">​</a></h3>
+<p>Unified input handling for keyboards, touch, encoders, and buttons.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Function</th><th>Purpose</th></tr></thead><tbody><tr><td><code>hal_input_init()</code></td><td>Initialize input subsystem</td></tr><tr><td><code>hal_input_get_capabilities()</code></td><td>Query available input methods</td></tr><tr><td><code>hal_input_register_key_cb()</code></td><td>Register keyboard callback</td></tr><tr><td><code>hal_input_register_pointer_cb()</code></td><td>Register touch/trackball callback</td></tr><tr><td><code>hal_input_register_encoder_cb()</code></td><td>Register rotary encoder callback</td></tr></tbody></table>
+<p>Input capabilities by device:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Device</th><th>Keyboard</th><th>Touch</th><th>Trackball</th><th>Encoder</th><th>Buttons</th></tr></thead><tbody><tr><td>T-Deck Plus</td><td>Physical QWERTY</td><td>Capacitive</td><td>Yes</td><td>No</td><td>No</td></tr><tr><td>T-Deck Pro</td><td>Physical QWERTY</td><td>Capacitive</td><td>Yes</td><td>No</td><td>No</td></tr><tr><td>T-Lora Pager</td><td>None</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr><tr><td>SimpleGo Secure</td><td>Physical</td><td>Capacitive</td><td>Optional</td><td>No</td><td>No</td></tr><tr><td>Desktop</td><td>USB</td><td>No</td><td>No</td><td>No</td><td>No</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hal_storageh">hal_storage.h<a href="#hal_storageh" class="hash-link" aria-label="Direct link to hal_storage.h" title="Direct link to hal_storage.h" translate="no">​</a></h3>
+<p>Persistent storage for settings, keys, and messages.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Function</th><th>Purpose</th></tr></thead><tbody><tr><td><code>hal_nvs_open()</code></td><td>Open NVS namespace</td></tr><tr><td><code>hal_nvs_set_*()</code></td><td>Store values (int, string, blob)</td></tr><tr><td><code>hal_nvs_get_*()</code></td><td>Retrieve values</td></tr><tr><td><code>hal_nvs_erase_key()</code></td><td>Delete single key</td></tr><tr><td><code>hal_nvs_erase_all()</code></td><td>Factory reset</td></tr><tr><td><code>hal_file_open()</code></td><td>Open file on filesystem</td></tr><tr><td><code>hal_file_read()</code></td><td>Read from file</td></tr><tr><td><code>hal_file_write()</code></td><td>Write to file</td></tr><tr><td><code>hal_sd_mount()</code></td><td>Mount SD card</td></tr></tbody></table>
+<p>Storage is divided into namespaces:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Namespace</th><th>Purpose</th><th>Encryption</th></tr></thead><tbody><tr><td><code>settings</code></td><td>User preferences</td><td>Optional</td></tr><tr><td><code>network</code></td><td>WiFi credentials</td><td>Yes</td></tr><tr><td><code>identity</code></td><td>Device identity keys</td><td>Yes</td></tr><tr><td><code>contacts</code></td><td>Contact list</td><td>Yes</td></tr><tr><td><code>messages</code></td><td>Message history</td><td>Yes</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hal_networkh">hal_network.h<a href="#hal_networkh" class="hash-link" aria-label="Direct link to hal_network.h" title="Direct link to hal_network.h" translate="no">​</a></h3>
+<p>Network connectivity including WiFi and Ethernet.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Function</th><th>Purpose</th></tr></thead><tbody><tr><td><code>hal_net_init()</code></td><td>Initialize network stack</td></tr><tr><td><code>hal_net_wifi_connect()</code></td><td>Connect to WiFi network</td></tr><tr><td><code>hal_net_wifi_disconnect()</code></td><td>Disconnect from WiFi</td></tr><tr><td><code>hal_net_wifi_scan()</code></td><td>Scan for available networks</td></tr><tr><td><code>hal_net_get_ip()</code></td><td>Get current IP address</td></tr><tr><td><code>hal_net_is_connected()</code></td><td>Check connection status</td></tr></tbody></table>
+<p>Network events are delivered through callbacks:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Event</th><th>Description</th></tr></thead><tbody><tr><td><code>HAL_NET_EVENT_CONNECTED</code></td><td>Network connection established</td></tr><tr><td><code>HAL_NET_EVENT_DISCONNECTED</code></td><td>Network connection lost</td></tr><tr><td><code>HAL_NET_EVENT_GOT_IP</code></td><td>IP address obtained</td></tr><tr><td><code>HAL_NET_EVENT_LOST_IP</code></td><td>IP address lost</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hal_audioh">hal_audio.h<a href="#hal_audioh" class="hash-link" aria-label="Direct link to hal_audio.h" title="Direct link to hal_audio.h" translate="no">​</a></h3>
+<p>Audio output for notifications and feedback.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Function</th><th>Purpose</th></tr></thead><tbody><tr><td><code>hal_audio_init()</code></td><td>Initialize audio subsystem</td></tr><tr><td><code>hal_audio_play_tone()</code></td><td>Play single frequency tone</td></tr><tr><td><code>hal_audio_play_sequence()</code></td><td>Play tone sequence</td></tr><tr><td><code>hal_audio_play_sound()</code></td><td>Play predefined sound</td></tr><tr><td><code>hal_audio_set_volume()</code></td><td>Set output volume</td></tr><tr><td><code>hal_audio_stop()</code></td><td>Stop current playback</td></tr></tbody></table>
+<p>Predefined sounds:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Sound</th><th>Use Case</th></tr></thead><tbody><tr><td><code>HAL_SOUND_MESSAGE</code></td><td>New message received</td></tr><tr><td><code>HAL_SOUND_CONNECT</code></td><td>Connection established</td></tr><tr><td><code>HAL_SOUND_DISCONNECT</code></td><td>Connection lost</td></tr><tr><td><code>HAL_SOUND_ERROR</code></td><td>Error occurred</td></tr><tr><td><code>HAL_SOUND_KEYPRESS</code></td><td>Key pressed (optional)</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hal_systemh">hal_system.h<a href="#hal_systemh" class="hash-link" aria-label="Direct link to hal_system.h" title="Direct link to hal_system.h" translate="no">​</a></h3>
+<p>System-level functions including power management.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Function</th><th>Purpose</th></tr></thead><tbody><tr><td><code>hal_system_get_info()</code></td><td>Get system information</td></tr><tr><td><code>hal_system_restart()</code></td><td>Reboot device</td></tr><tr><td><code>hal_system_get_reset_reason()</code></td><td>Query last reset cause</td></tr><tr><td><code>hal_power_get_battery_level()</code></td><td>Get battery percentage</td></tr><tr><td><code>hal_power_is_charging()</code></td><td>Check charging status</td></tr><tr><td><code>hal_power_enter_light_sleep()</code></td><td>Enter low-power mode</td></tr><tr><td><code>hal_power_enter_deep_sleep()</code></td><td>Enter minimal-power mode</td></tr><tr><td><code>hal_watchdog_init()</code></td><td>Initialize watchdog timer</td></tr><tr><td><code>hal_watchdog_feed()</code></td><td>Reset watchdog timer</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="protocol-implementation">Protocol Implementation<a href="#protocol-implementation" class="hash-link" aria-label="Direct link to Protocol Implementation" title="Direct link to Protocol Implementation" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="simplex-messaging-protocol-smp">SimpleX Messaging Protocol (SMP)<a href="#simplex-messaging-protocol-smp" class="hash-link" aria-label="Direct link to SimpleX Messaging Protocol (SMP)" title="Direct link to SimpleX Messaging Protocol (SMP)" translate="no">​</a></h3>
+<p>SimpleGo implements the complete SMP client protocol:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                        SMP PROTOCOL STACK                             |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------+    +-----------------------------+     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |      Agent Protocol       |    |      Connection Manager     |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                           |    |                             |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Message routing        |    |  - Server connections       |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Delivery confirmation  |    |  - Reconnection logic       |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Error handling         |    |  - Multi-server support     |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------+    +-----------------------------+     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                |                              |                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------+    +-----------------------------+     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |      Queue Manager        |    |      Message Encoder        |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                           |    |                             |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Queue creation         |    |  - Wire format encoding     |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Subscription           |    |  - Length prefixes          |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Message retrieval      |    |  - Padding                  |     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------+    +-----------------------------+     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                |                              |                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                     SMP Commands                               |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                 |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  NEW    - Create new queue                                     |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  KEY    - Provide sender key                                   |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  SUB    - Subscribe to queue                                   |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  SEND   - Send message to queue                                |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  ACK    - Acknowledge message receipt                          |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  OFF    - Suspend queue                                        |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  DEL    - Delete queue                                         |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                |                              |                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                     TLS 1.3 Transport                          |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                                                                 |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - ALPN: &quot;smp/1&quot;                                               |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Server certificate verification                             |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  - Session resumption                                          |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +---------------------------------------------------------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="message-flow">Message Flow<a href="#message-flow" class="hash-link" aria-label="Direct link to Message Flow" title="Direct link to Message Flow" translate="no">​</a></h3>
+<p>Sending a message:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">1. Application creates message</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">2. Double Ratchet encrypts message body</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">3. Message header encrypted with header key</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">4. Agent protocol wraps encrypted message</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">5. SMP SEND command with encrypted payload</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">6. TLS 1.3 encrypts entire transmission</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">7. TCP to SMP server</span><br></span></code></pre></div></div>
+<p>Receiving a message:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">1. TCP from SMP server</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">2. TLS 1.3 decrypts transmission</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">3. SMP response parsed</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">4. Agent protocol unwraps message</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">5. Message header decrypted</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">6. Double Ratchet decrypts message body</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">           v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">7. Application receives plaintext</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="cryptographic-architecture">Cryptographic Architecture<a href="#cryptographic-architecture" class="hash-link" aria-label="Direct link to Cryptographic Architecture" title="Direct link to Cryptographic Architecture" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="algorithm-selection">Algorithm Selection<a href="#algorithm-selection" class="hash-link" aria-label="Direct link to Algorithm Selection" title="Direct link to Algorithm Selection" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Purpose</th><th>Algorithm</th><th>Key Size</th><th>Library</th></tr></thead><tbody><tr><td>Ratchet Key Agreement</td><td>X448</td><td>448 bits</td><td>wolfSSL</td></tr><tr><td>Initial Key Agreement</td><td>X25519</td><td>256 bits</td><td>libsodium</td></tr><tr><td>Signing</td><td>Ed25519</td><td>256 bits</td><td>libsodium</td></tr><tr><td>Symmetric Encryption</td><td>AES-256-GCM</td><td>256 bits</td><td>mbedTLS</td></tr><tr><td>Key Derivation</td><td>HKDF-SHA512</td><td>512 bits</td><td>mbedTLS</td></tr><tr><td>Hashing</td><td>SHA-512</td><td>512 bits</td><td>mbedTLS</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-hierarchy">Key Hierarchy<a href="#key-hierarchy" class="hash-link" aria-label="Direct link to Key Hierarchy" title="Direct link to Key Hierarchy" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                         KEY HIERARCHY                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  IDENTITY LAYER (Long-term, stored in Secure Element)                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------------------------------------------------------------+|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+    +-------------------+                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Identity Key      |    | Identity Key      |                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | (Ed25519)         |    | (Ed25519)         |                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Signing           |    | Verification      |                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+    +-------------------+                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------------------------------------------------------------+|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                              |                                        |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  X3DH KEY AGREEMENT                                                   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------------------------------------------------------------+|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+    +-------------------+                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Signed Pre-Key    |    | One-Time Pre-Key  |                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | (X25519)          |    | (X25519)          |                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+    +-------------------+                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                              |                                    ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                              v                                    ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-----------------------------------------------------------+   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  |              Shared Secret (from X3DH)                     |   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-----------------------------------------------------------+   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------------------------------------------------------------+|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                              |                                        |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  DOUBLE RATCHET (Per-message keys, ephemeral)                         |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------------------------------------------------------------+|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                              v                                    ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+    +-------------------+                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Root Key          |---&gt;| Chain Key         |                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | (256 bits)        |    | (256 bits)        |                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------------+    +-------------------+                   ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |                              |                                    ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |         +--------------------+--------------------+               ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |         |                    |                    |               ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |         v                    v                    v               ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------+      +-------------+      +-------------+        ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | Message Key |      | Message Key |      | Message Key |        ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  | (Msg 1)     |      | (Msg 2)     |      | (Msg N)     |        ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  +-------------+      +-------------+      +-------------+        ||</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------------------------------------------------------------+|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="forward-secrecy">Forward Secrecy<a href="#forward-secrecy" class="hash-link" aria-label="Direct link to Forward Secrecy" title="Direct link to Forward Secrecy" translate="no">​</a></h3>
+<p>The Double Ratchet protocol provides forward secrecy through two mechanisms:</p>
+<ol>
+<li class="">
+<p><strong>Diffie-Hellman Ratchet</strong>: New X448 key pair generated periodically. Compromise of current keys does not reveal past session keys.</p>
+</li>
+<li class="">
+<p><strong>Symmetric Ratchet</strong>: Chain key advanced with each message using HKDF. Previous message keys cannot be derived from current state.</p>
+</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="post-compromise-security">Post-Compromise Security<a href="#post-compromise-security" class="hash-link" aria-label="Direct link to Post-Compromise Security" title="Direct link to Post-Compromise Security" translate="no">​</a></h3>
+<p>If an attacker compromises the current session state, security is restored after the next Diffie-Hellman ratchet step. The attacker cannot decrypt future messages once new key material is exchanged.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="user-interface-layer">User Interface Layer<a href="#user-interface-layer" class="hash-link" aria-label="Direct link to User Interface Layer" title="Direct link to User Interface Layer" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="lvgl-integration">LVGL Integration<a href="#lvgl-integration" class="hash-link" aria-label="Direct link to LVGL Integration" title="Direct link to LVGL Integration" translate="no">​</a></h3>
+<p>SimpleGo uses LVGL (Light and Versatile Graphics Library) for the user interface:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Component</th><th>Purpose</th></tr></thead><tbody><tr><td>Screens</td><td>Full-screen views (chat, contacts, settings)</td></tr><tr><td>Widgets</td><td>Reusable UI components (message bubbles, status bar)</td></tr><tr><td>Themes</td><td>Visual styling (colors, fonts, spacing)</td></tr><tr><td>Input Drivers</td><td>HAL integration for touch, keyboard, encoder</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="screen-architecture">Screen Architecture<a href="#screen-architecture" class="hash-link" aria-label="Direct link to Screen Architecture" title="Direct link to Screen Architecture" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                         SCREEN MANAGER                                |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------+  +-------------+  +-------------+  +-------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |   Splash    |  |    Main     |  |    Chat     |  |  Contacts   |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |   Screen    |  |   Screen    |  |   Screen    |  |   Screen    |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------+  +-------------+  +-------------+  +-------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------+  +-------------+  +-------------+  +-------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |  Settings   |  |   Connect   |  |   QR Code   |  |   About     |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  |   Screen    |  |   Screen    |  |   Screen    |  |   Screen    |   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +-------------+  +-------------+  +-------------+  +-------------+   |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="adaptive-layout">Adaptive Layout<a href="#adaptive-layout" class="hash-link" aria-label="Direct link to Adaptive Layout" title="Direct link to Adaptive Layout" translate="no">​</a></h3>
+<p>The UI adapts to device capabilities:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Capability</th><th>Adaptation</th></tr></thead><tbody><tr><td>Small display (&lt; 200px width)</td><td>Compact layout, smaller fonts</td></tr><tr><td>No touch</td><td>Keyboard/encoder navigation highlighted</td></tr><tr><td>No keyboard</td><td>On-screen keyboard activated</td></tr><tr><td>Low memory</td><td>Reduced animation, simpler themes</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="device-implementations">Device Implementations<a href="#device-implementations" class="hash-link" aria-label="Direct link to Device Implementations" title="Direct link to Device Implementations" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="directory-structure">Directory Structure<a href="#directory-structure" class="hash-link" aria-label="Direct link to Directory Structure" title="Direct link to Directory Structure" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">devices/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- t_deck_plus/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- config/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   |   +-- device_config.h       # Hardware constants and pin mappings</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- hal_impl/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_display.c         # ST7789V display driver</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_input.c           # Keyboard, trackball, touch</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_audio.c           # MAX98357A I2S audio</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_storage.c         # NVS and SD card</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_network.c         # ESP32 WiFi</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_system.c          # AXP2101 power management</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- t_deck_pro/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- config/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   |   +-- device_config.h</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- hal_impl/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_display.c         # ST7789V display driver</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_input.c           # Keyboard, trackball, touch</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_audio.c           # I2S audio</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_storage.c         # NVS and SD card</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_network.c         # ESP32 WiFi</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_system.c          # Power management</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- t_lora_pager/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- config/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   |   +-- device_config.h</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- hal_impl/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_display.c         # OLED display driver</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_input.c           # Encoder and buttons</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_audio.c           # Buzzer</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_storage.c         # NVS</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_network.c         # ESP32 WiFi + LoRa</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_system.c          # Battery management</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- simplego_secure/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- config/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   |   +-- device_config.h</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- hal_impl/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_secure_element.c  # ATECC608B + OPTIGA integration</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_display.c         # Display driver</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_input.c           # Input handling</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- hal_network.c         # WiFi + LTE</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|       +-- ...</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- template/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    +-- config/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    |   +-- device_config.h.template</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    +-- hal_impl/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        +-- hal_template.c        # Implementation template</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="device-comparison">Device Comparison<a href="#device-comparison" class="hash-link" aria-label="Direct link to Device Comparison" title="Direct link to Device Comparison" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Feature</th><th>T-Deck Plus</th><th>T-Deck Pro</th><th>T-Lora Pager</th><th>SimpleGo Secure</th></tr></thead><tbody><tr><td>MCU</td><td>ESP32-S3</td><td>ESP32-S3</td><td>ESP32-S3</td><td>STM32U585</td></tr><tr><td>Display</td><td>320x240 IPS</td><td>320x240 IPS</td><td>128x64 OLED</td><td>320x240 IPS</td></tr><tr><td>Input</td><td>KB + Trackball + Touch</td><td>KB + Trackball + Touch</td><td>Encoder + Buttons</td><td>KB + Touch</td></tr><tr><td>Audio</td><td>I2S Speaker</td><td>I2S Speaker</td><td>Buzzer</td><td>I2S Speaker</td></tr><tr><td>Secure Element</td><td>None</td><td>None</td><td>None</td><td>Dual (ATECC + OPTIGA)</td></tr><tr><td>Radio</td><td>WiFi + LoRa (opt)</td><td>WiFi + LoRa (opt)</td><td>WiFi + LoRa</td><td>WiFi + LTE + LoRa</td></tr><tr><td>Power</td><td>AXP2101 PMU</td><td>AXP2101 PMU</td><td>Battery ADC</td><td>Full PMU</td></tr><tr><td>Target</td><td>Tier 1 Dev</td><td>Tier 1 Dev</td><td>Tier 1 Compact</td><td>Tier 2 Production</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="memory-architecture">Memory Architecture<a href="#memory-architecture" class="hash-link" aria-label="Direct link to Memory Architecture" title="Direct link to Memory Architecture" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="esp32-s3-memory-map">ESP32-S3 Memory Map<a href="#esp32-s3-memory-map" class="hash-link" aria-label="Direct link to ESP32-S3 Memory Map" title="Direct link to ESP32-S3 Memory Map" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                      FLASH MEMORY (16 MB)                             |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Offset      | Size    | Partition      | Contents                     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-------------|---------|----------------|------------------------------|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| 0x000000    | 64 KB   | Bootloader     | Second-stage bootloader      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| 0x010000    | 8 KB    | Partition Table| Partition definitions        |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| 0x012000    | 24 KB   | NVS            | Settings, credentials        |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| 0x018000    | 8 KB    | PHY Init       | WiFi calibration data        |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| 0x01A000    | 4 MB    | Application    | Firmware                     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| 0x41A000    | 4 MB    | OTA            | Update partition             |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| 0x81A000    | ~7.5 MB | Storage        | Messages, contacts           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                      INTERNAL SRAM (512 KB)                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Region      | Size    | Usage                                         |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-------------|---------|-----------------------------------------------|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| IRAM        | 128 KB  | Instruction cache, interrupt handlers         |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| DRAM        | 320 KB  | Heap, stack, static data                      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| RTC SRAM    | 16 KB   | Deep sleep persistence                        |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                      PSRAM (8 MB)                                     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Usage                           | Typical Allocation                  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|---------------------------------|-------------------------------------|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| LVGL Display Buffers            | 150 KB (320x240x2 double buffer)    |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| LVGL Object Pool                | 256 KB                              |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Message Cache                   | 512 KB                              |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Cryptographic Buffers           | 64 KB                               |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Network Buffers                 | 128 KB                              |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Application Heap                | Remaining                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="memory-allocation-strategy">Memory Allocation Strategy<a href="#memory-allocation-strategy" class="hash-link" aria-label="Direct link to Memory Allocation Strategy" title="Direct link to Memory Allocation Strategy" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Type</th><th>Allocation</th><th>Reason</th></tr></thead><tbody><tr><td>Display buffers</td><td>PSRAM</td><td>Large, performance not critical</td></tr><tr><td>Crypto operations</td><td>Internal SRAM</td><td>Security, speed</td></tr><tr><td>Network buffers</td><td>PSRAM</td><td>Large, DMA capable</td></tr><tr><td>UI objects</td><td>PSRAM</td><td>Numerous small allocations</td></tr><tr><td>Stack</td><td>Internal SRAM</td><td>Speed, reliability</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="memory-safety">Memory Safety<a href="#memory-safety" class="hash-link" aria-label="Direct link to Memory Safety" title="Direct link to Memory Safety" translate="no">​</a></h3>
+<div class="language-c codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-c codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)">// All sensitive memory is cleared after use</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token keyword" style="color:hsl(286, 60%, 67%)">void</span><span class="token plain"> </span><span class="token function" style="color:hsl(207, 82%, 66%)">secure_clear</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token keyword" style="color:hsl(286, 60%, 67%)">void</span><span class="token plain"> </span><span class="token operator" style="color:hsl(207, 82%, 66%)">*</span><span class="token plain">ptr</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">size_t</span><span class="token plain"> len</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">volatile</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint8_t</span><span class="token plain"> </span><span class="token operator" style="color:hsl(207, 82%, 66%)">*</span><span class="token plain">p </span><span class="token operator" style="color:hsl(207, 82%, 66%)">=</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token keyword" style="color:hsl(286, 60%, 67%)">volatile</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint8_t</span><span class="token plain"> </span><span class="token operator" style="color:hsl(207, 82%, 66%)">*</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain">ptr</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">while</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">len</span><span class="token operator" style="color:hsl(207, 82%, 66%)">--</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        </span><span class="token operator" style="color:hsl(207, 82%, 66%)">*</span><span class="token plain">p</span><span class="token operator" style="color:hsl(207, 82%, 66%)">++</span><span class="token plain"> </span><span class="token operator" style="color:hsl(207, 82%, 66%)">=</span><span class="token plain"> </span><span class="token number" style="color:hsl(29, 54%, 61%)">0</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Buffer operations always bounds-checked</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token class-name" style="color:hsl(29, 54%, 61%)">hal_err_t</span><span class="token plain"> </span><span class="token function" style="color:hsl(207, 82%, 66%)">safe_copy</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token keyword" style="color:hsl(286, 60%, 67%)">void</span><span class="token plain"> </span><span class="token operator" style="color:hsl(207, 82%, 66%)">*</span><span class="token plain">dst</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">size_t</span><span class="token plain"> dst_size</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">                    </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">const</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">void</span><span class="token plain"> </span><span class="token operator" style="color:hsl(207, 82%, 66%)">*</span><span class="token plain">src</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">size_t</span><span class="token plain"> src_size</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">if</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">src_size </span><span class="token operator" style="color:hsl(207, 82%, 66%)">&gt;</span><span class="token plain"> dst_size</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">return</span><span class="token plain"> HAL_ERR_INVALID_ARG</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token function" style="color:hsl(207, 82%, 66%)">memcpy</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">dst</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> src</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> src_size</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">return</span><span class="token plain"> HAL_OK</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="build-system">Build System<a href="#build-system" class="hash-link" aria-label="Direct link to Build System" title="Direct link to Build System" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="esp-idf-integration">ESP-IDF Integration<a href="#esp-idf-integration" class="hash-link" aria-label="Direct link to ESP-IDF Integration" title="Direct link to ESP-IDF Integration" translate="no">​</a></h3>
+<p>SimpleGo uses the standard ESP-IDF build system:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">simplex_client/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- CMakeLists.txt              # Project definition (minimal)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- Kconfig                     # Configuration options</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- sdkconfig.defaults          # Default configuration</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- main/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- CMakeLists.txt          # Component registration</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- Kconfig                 # Component-specific options</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- core/                   # Protocol implementation</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- hal/                    # HAL interface headers</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- ui/                     # User interface</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- include/                # Public headers</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- devices/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- t_deck_plus/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|   +-- t_embed_cc1101/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- components/                 # External libraries</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    +-- wolfssl/</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    +-- lvgl/</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="device-selection">Device Selection<a href="#device-selection" class="hash-link" aria-label="Direct link to Device Selection" title="Direct link to Device Selection" translate="no">​</a></h3>
+<p>Device selection is managed through Kconfig:</p>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)"># Interactive configuration</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">idf.py menuconfig</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Navigate to: SimpleGo Configuration -&gt; Target Device</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Or via sdkconfig</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token builtin class-name" style="color:hsl(29, 54%, 61%)">echo</span><span class="token plain"> </span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;CONFIG_SIMPLEGO_DEVICE_T_DECK_PLUS=y&quot;</span><span class="token plain"> </span><span class="token operator" style="color:hsl(207, 82%, 66%)">&gt;&gt;</span><span class="token plain"> sdkconfig</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="build-process">Build Process<a href="#build-process" class="hash-link" aria-label="Direct link to Build Process" title="Direct link to Build Process" translate="no">​</a></h3>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)"># Full build</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">idf.py build</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Build and flash</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">idf.py flash </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> /dev/ttyUSB0</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Build, flash, and monitor</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">idf.py flash monitor </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> /dev/ttyUSB0</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Clean build</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">idf.py fullclean</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">idf.py build</span><br></span></code></pre></div></div>
+<p>For detailed build system documentation, see <a class="" href="/BUILD_SYSTEM.md">BUILD_SYSTEM.md</a>.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="security-architecture">Security Architecture<a href="#security-architecture" class="hash-link" aria-label="Direct link to Security Architecture" title="Direct link to Security Architecture" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="secure-boot">Secure Boot<a href="#secure-boot" class="hash-link" aria-label="Direct link to Secure Boot" title="Direct link to Secure Boot" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                       SECURE BOOT CHAIN                               |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +------------------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | ROM Bootloader   |  Immutable, in silicon                         |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | (First Stage)    |                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +--------+---------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           |                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           | Verify signature (RSA-3072 / ECDSA)                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           v                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +------------------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | Second Stage     |  Public key hash in eFuse                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | Bootloader       |                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +--------+---------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           |                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           | Verify signature                                          |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           v                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +------------------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | Application      |  Signed firmware image                          |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | Firmware         |                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +--------+---------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           |                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           | Runtime integrity checks                                  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|           v                                                           |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +------------------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | Secure Element   |  Verify device identity (Tier 2+)               |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  | Verification     |                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|  +------------------+                                                 |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|                                                                       |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-----------------------------------------------------------------------+</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="flash-encryption">Flash Encryption<a href="#flash-encryption" class="hash-link" aria-label="Direct link to Flash Encryption" title="Direct link to Flash Encryption" translate="no">​</a></h3>
+<p>All flash contents are encrypted with AES-256-XTS:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Region</th><th>Encryption</th><th>Key Storage</th></tr></thead><tbody><tr><td>Bootloader</td><td>Yes</td><td>eFuse (read-protected)</td></tr><tr><td>Application</td><td>Yes</td><td>eFuse (read-protected)</td></tr><tr><td>NVS</td><td>Yes</td><td>eFuse (read-protected)</td></tr><tr><td>OTA Partition</td><td>Yes</td><td>eFuse (read-protected)</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-storage">Key Storage<a href="#key-storage" class="hash-link" aria-label="Direct link to Key Storage" title="Direct link to Key Storage" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Key Type</th><th>Storage Location</th><th>Protection</th></tr></thead><tbody><tr><td>Device Identity</td><td>Secure Element</td><td>Hardware isolation</td></tr><tr><td>TLS Client Key</td><td>Secure Element</td><td>Hardware isolation</td></tr><tr><td>Ratchet Keys</td><td>Encrypted NVS</td><td>Flash encryption</td></tr><tr><td>Session Keys</td><td>RAM only</td><td>Cleared after use</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="tamper-response-tier-2">Tamper Response (Tier 2+)<a href="#tamper-response-tier-2" class="hash-link" aria-label="Direct link to Tamper Response (Tier 2+)" title="Direct link to Tamper Response (Tier 2+)" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Tamper Event Detected</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">         |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">         v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Zeroization      |  &lt; 1 microsecond</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| - Clear SRAM     |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| - Clear SE keys  |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| - Clear NVS      |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">         |</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">         v</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+------------------+</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">| Device Brick     |  Optional, configurable</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+------------------+</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="references">References<a href="#references" class="hash-link" aria-label="Direct link to References" title="Direct link to References" translate="no">​</a></h2>
+<ul>
+<li class=""><a href="https://github.com/simplex-chat/simplexmq" target="_blank" rel="noopener noreferrer" class="">SimpleX Messaging Protocol</a></li>
+<li class=""><a href="https://signal.org/docs/specifications/doubleratchet/" target="_blank" rel="noopener noreferrer" class="">Double Ratchet Algorithm</a></li>
+<li class=""><a href="https://signal.org/docs/specifications/x3dh/" target="_blank" rel="noopener noreferrer" class="">X3DH Key Agreement</a></li>
+<li class=""><a href="https://docs.espressif.com/projects/esp-idf/en/latest/" target="_blank" rel="noopener noreferrer" class="">ESP-IDF Programming Guide</a></li>
+<li class=""><a href="https://docs.lvgl.io/" target="_blank" rel="noopener noreferrer" class="">LVGL Documentation</a></li>
+<li class=""><a href="https://www.wolfssl.com/documentation/manuals/wolfssl/" target="_blank" rel="noopener noreferrer" class="">wolfSSL Manual</a></li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="document-history">Document History<a href="#document-history" class="hash-link" aria-label="Direct link to Document History" title="Direct link to Document History" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Version</th><th>Date</th><th>Changes</th></tr></thead><tbody><tr><td>0.1.16</td><td>January 2026</td><td>Complete rewrite for HAL architecture</td></tr><tr><td>0.1.0</td><td>December 2025</td><td>Initial protocol-focused documentation</td></tr></tbody></table></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/ARCHITECTURE.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--next" href="/CRYPTO"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">SimpleGo Cryptography Documentation</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#table-of-contents" class="table-of-contents__link toc-highlight">Table of Contents</a></li><li><a href="#design-philosophy" class="table-of-contents__link toc-highlight">Design Philosophy</a><ul><li><a href="#single-codebase-multiple-devices" class="table-of-contents__link toc-highlight">Single Codebase, Multiple Devices</a></li><li><a href="#minimal-trusted-computing-base" class="table-of-contents__link toc-highlight">Minimal Trusted Computing Base</a></li><li><a href="#hardware-enforced-security" class="table-of-contents__link toc-highlight">Hardware-Enforced Security</a></li></ul></li><li><a href="#system-overview" class="table-of-contents__link toc-highlight">System Overview</a></li><li><a href="#layer-architecture" class="table-of-contents__link toc-highlight">Layer Architecture</a><ul><li><a href="#layer-independence" class="table-of-contents__link toc-highlight">Layer Independence</a></li><li><a href="#code-sharing" class="table-of-contents__link toc-highlight">Code Sharing</a></li></ul></li><li><a href="#hardware-abstraction-layer" class="table-of-contents__link toc-highlight">Hardware Abstraction Layer</a><ul><li><a href="#hal_commonh" class="table-of-contents__link toc-highlight">hal_common.h</a></li><li><a href="#hal_displayh" class="table-of-contents__link toc-highlight">hal_display.h</a></li><li><a href="#hal_inputh" class="table-of-contents__link toc-highlight">hal_input.h</a></li><li><a href="#hal_storageh" class="table-of-contents__link toc-highlight">hal_storage.h</a></li><li><a href="#hal_networkh" class="table-of-contents__link toc-highlight">hal_network.h</a></li><li><a href="#hal_audioh" class="table-of-contents__link toc-highlight">hal_audio.h</a></li><li><a href="#hal_systemh" class="table-of-contents__link toc-highlight">hal_system.h</a></li></ul></li><li><a href="#protocol-implementation" class="table-of-contents__link toc-highlight">Protocol Implementation</a><ul><li><a href="#simplex-messaging-protocol-smp" class="table-of-contents__link toc-highlight">SimpleX Messaging Protocol (SMP)</a></li><li><a href="#message-flow" class="table-of-contents__link toc-highlight">Message Flow</a></li></ul></li><li><a href="#cryptographic-architecture" class="table-of-contents__link toc-highlight">Cryptographic Architecture</a><ul><li><a href="#algorithm-selection" class="table-of-contents__link toc-highlight">Algorithm Selection</a></li><li><a href="#key-hierarchy" class="table-of-contents__link toc-highlight">Key Hierarchy</a></li><li><a href="#forward-secrecy" class="table-of-contents__link toc-highlight">Forward Secrecy</a></li><li><a href="#post-compromise-security" class="table-of-contents__link toc-highlight">Post-Compromise Security</a></li></ul></li><li><a href="#user-interface-layer" class="table-of-contents__link toc-highlight">User Interface Layer</a><ul><li><a href="#lvgl-integration" class="table-of-contents__link toc-highlight">LVGL Integration</a></li><li><a href="#screen-architecture" class="table-of-contents__link toc-highlight">Screen Architecture</a></li><li><a href="#adaptive-layout" class="table-of-contents__link toc-highlight">Adaptive Layout</a></li></ul></li><li><a href="#device-implementations" class="table-of-contents__link toc-highlight">Device Implementations</a><ul><li><a href="#directory-structure" class="table-of-contents__link toc-highlight">Directory Structure</a></li><li><a href="#device-comparison" class="table-of-contents__link toc-highlight">Device Comparison</a></li></ul></li><li><a href="#memory-architecture" class="table-of-contents__link toc-highlight">Memory Architecture</a><ul><li><a href="#esp32-s3-memory-map" class="table-of-contents__link toc-highlight">ESP32-S3 Memory Map</a></li><li><a href="#memory-allocation-strategy" class="table-of-contents__link toc-highlight">Memory Allocation Strategy</a></li><li><a href="#memory-safety" class="table-of-contents__link toc-highlight">Memory Safety</a></li></ul></li><li><a href="#build-system" class="table-of-contents__link toc-highlight">Build System</a><ul><li><a href="#esp-idf-integration" class="table-of-contents__link toc-highlight">ESP-IDF Integration</a></li><li><a href="#device-selection" class="table-of-contents__link toc-highlight">Device Selection</a></li><li><a href="#build-process" class="table-of-contents__link toc-highlight">Build Process</a></li></ul></li><li><a href="#security-architecture" class="table-of-contents__link toc-highlight">Security Architecture</a><ul><li><a href="#secure-boot" class="table-of-contents__link toc-highlight">Secure Boot</a></li><li><a href="#flash-encryption" class="table-of-contents__link toc-highlight">Flash Encryption</a></li><li><a href="#key-storage" class="table-of-contents__link toc-highlight">Key Storage</a></li><li><a href="#tamper-response-tier-2" class="table-of-contents__link toc-highlight">Tamper Response (Tier 2+)</a></li></ul></li><li><a href="#references" class="table-of-contents__link toc-highlight">References</a></li><li><a href="#document-history" class="table-of-contents__link toc-highlight">Document History</a></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos.html">Terms of Service</a><a href="https://simplego.dev/legal/privacy.html">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer.html">Disclaimer</a><a href="https://simplego.dev/imprint.html">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup.html">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement.html">Law Enforcement</a><a href="https://simplego.dev/legal/transparency.html">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact.html">Partnership</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — S.D – IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>
