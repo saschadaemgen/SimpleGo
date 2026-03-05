@@ -31,8 +31,6 @@ components/zstd/
 # Git submodules
 .gitmodules
 
-# GitHub workflows (not yet needed)
-.github/workflows/
 
 # LVGL (install via ESP-IDF component manager)
 components/lvgl/
