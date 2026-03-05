@@ -34,11 +34,9 @@
 #include "smp_contacts.h"
 #include "smp_storage.h"
 #include "smp_history.h"
-#include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
 
-static const char *TAG = "UI_CONTACTS";
 
 /* ============== Layout (same as ui_chat.c) ============== */
 
