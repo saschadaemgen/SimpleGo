@@ -1,11 +1,9 @@
 /**
  * SimpleGo - reply_queue.c
- * Per-Contact Reply Queue Management
- * Session 34, Phase 6 - Commit 1
+ * Per-contact reply queue creation, lookup, and NVS persistence
  *
- * Implements per-contact reply queues in PSRAM.
- * Each contact gets its own SMP queue so KEY command
- * binds only that contact's peer, not blocking others.
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "reply_queue.h"

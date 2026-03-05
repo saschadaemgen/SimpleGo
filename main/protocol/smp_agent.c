@@ -1,13 +1,9 @@
 /**
- * SimpleGo - Agent Protocol Layer
- * Extracted from main.c (Auftrag 46d)
+ * SimpleGo - smp_agent.c
+ * SimpleX agent protocol layer implementation
  *
- * Consolidates all agent-level message processing:
- * - PHConfirmation ('K'): auth key + ratchet + ConnInfo/Zstd
- * - PHEmpty ('_'): A_HELLO + A_MSG ratchet decrypt + chat text
- *
- * Shared ratchet helpers eliminate code duplication between
- * the 'K' and '_' (A_MSG) paths.
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_agent.h"

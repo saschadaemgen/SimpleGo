@@ -1,15 +1,9 @@
 /**
  * SimpleGo - smp_handshake.c
- * Connection Handshake Implementation
- * Based on official agent-protocol.md specification
- * v0.1.15-alpha
- * 
- * Flow (from agent-protocol.md):
- * 1. We send AgentConfirmation (with 'D' + Reply Queue)
- * 2. We send SKEY to secure peer's queue
- * 3. We send HELLO message
- * 4. App sends HELLO back
- * 5. CONNECTED!
+ * SMP connection handshake protocol implementation
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_handshake.h"

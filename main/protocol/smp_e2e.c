@@ -1,11 +1,9 @@
 /**
- * SimpleGo - Reply Queue E2E Decryption
+ * SimpleGo - smp_e2e.c
+ * Reply queue end-to-end decryption pipeline
  *
- * Consolidates the Reply Queue decrypt pipeline.
- * Now supports both global keys (legacy) and explicit per-contact keys.
- *
- * The _ex() function is the real implementation.
- * The original function is a thin wrapper passing global keys.
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_e2e.h"

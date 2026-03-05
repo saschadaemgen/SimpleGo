@@ -1,6 +1,9 @@
 /**
- * SimpleGo - SMP ACK Command
- * Consolidated ACK sending for all queue types
+ * SimpleGo - smp_ack.c
+ * SMP ACK command implementation for all queue types
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_ack.h"
