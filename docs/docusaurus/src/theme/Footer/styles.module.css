@@ -1,0 +1,89 @@
+.footer {
+  background: #050A12;
+  border-top: 1px solid rgba(69,189,209,0.12);
+  padding-top: 4rem;
+  font-family: 'Source Sans 3', sans-serif;
+}
+.container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+.footerInner {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1fr 1fr 1fr;
+  gap: 2.5rem;
+  padding-bottom: 3rem;
+  align-items: start;
+}
+.footerBrand { margin-bottom: 1rem; }
+.footerTagline {
+  font-size: 0.85rem;
+  color: rgba(203,213,225,0.5);
+  margin-bottom: 0.6rem;
+  font-style: italic;
+}
+.footerNote {
+  font-size: 0.72rem;
+  color: rgba(203,213,225,0.3);
+  line-height: 1.7;
+}
+.footerCol h4 {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #CBD5E1;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(69,189,209,0.12);
+}
+.footerCol a {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(203,213,225,0.5);
+  margin-bottom: 0.65rem;
+  text-decoration: none;
+  transition: color 0.35s, padding-left 0.35s;
+}
+.footerCol a:hover {
+  color: #45BDD1;
+  padding-left: 4px;
+}
+.comingSoon {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: #45BDD1;
+  background: rgba(69,189,209,0.08);
+  border: 1px solid rgba(69,189,209,0.15);
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  letter-spacing: 0.06em;
+}
+.footerBottom {
+  border-top: 1px solid rgba(69,189,209,0.12);
+  padding: 1.2rem 0;
+}
+.footerBottomInner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: rgba(203,213,225,0.3);
+}
+.footerBottomInner a {
+  color: rgba(69,189,209,0.4);
+  text-decoration: none;
+}
+.footerBottomInner a:hover { color: #45BDD1; }
+
+@media (max-width: 1024px) {
+  .footerInner { grid-template-columns: 1fr 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .footerInner { grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .footerBottomInner { flex-direction: column; gap: 0.5rem; text-align: center; }
+}
