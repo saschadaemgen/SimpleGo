@@ -1,7 +1,9 @@
 /**
  * SimpleGo - smp_events.h
- * Event types for inter-task communication
- * Extended: Session 34 Phase 6 - NET_CMD_SEND_KEY for per-contact reply queues
+ * Event types and inter-task command protocol
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 #ifndef SMP_EVENTS_H
 #define SMP_EVENTS_H

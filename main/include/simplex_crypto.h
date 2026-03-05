@@ -1,27 +1,9 @@
 /**
- * SimpleX Custom XSalsa20-Poly1305 Decryption
- * ============================================
- * 
- * Header file for SimpleX E2E message decryption.
- * 
- * Usage in main.c for Reply Queue E2E decryption:
- * 
- *   #include "simplex_crypto.h"
- *   
- *   // After server-level decryption...
- *   uint8_t dh_secret[32];
- *   crypto_scalarmult(dh_secret, our_queue.e2e_private, sender_pub);
- *   
- *   const uint8_t *cm_nonce = &server_plain[60];
- *   const uint8_t *e2e_encrypted = &server_plain[84];
- *   size_t e2e_len = plain_len - 84;
- *   
- *   uint8_t *e2e_plain = malloc(e2e_len - 16);
- *   int ret = simplex_secretbox_open(e2e_plain, e2e_encrypted, e2e_len,
- *                                     cm_nonce, dh_secret);
- *   if (ret == 0) {
- *       // Success! Parse ClientMessage...
- *   }
+ * SimpleGo - simplex_crypto.h
+ * SimpleX non-standard XSalsa20-Poly1305 interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SIMPLEX_CRYPTO_H

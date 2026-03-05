@@ -1,14 +1,9 @@
 /**
- * SimpleGo - Reply Queue E2E Decryption
- * Extracted from main.c (Auftrag 46c)
- * Extended: Session 34 Phase 6 - per-contact reply queue support
+ * SimpleGo - smp_e2e.h
+ * Reply queue end-to-end decryption pipeline
  *
- * Handles the full Reply Queue message decrypt pipeline:
- * Server-level decrypt -> Envelope parse -> E2E decrypt
- *
- * Two variants:
- * - smp_e2e_decrypt_reply_message()     = original, uses global our_queue keys
- * - smp_e2e_decrypt_reply_message_ex()  = new, takes explicit per-contact keys
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #pragma once

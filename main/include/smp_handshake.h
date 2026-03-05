@@ -1,8 +1,9 @@
 /**
  * SimpleGo - smp_handshake.h
- * Connection Handshake Implementation
- * Based on official agent-protocol.md specification
- * v0.1.18-alpha - Added Ed25519 signing for SEND commands
+ * SMP connection handshake protocol interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef SMP_HANDSHAKE_H

@@ -1,6 +1,9 @@
 /**
  * SimpleGo - smp_frame_pool.h
- * Static frame pool for zero-copy inter-task communication
+ * Static frame pool for zero-copy inter-task communication interface
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 #ifndef SMP_FRAME_POOL_H
 #define SMP_FRAME_POOL_H
