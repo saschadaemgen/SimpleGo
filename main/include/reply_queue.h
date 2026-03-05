@@ -1,17 +1,9 @@
 /**
  * SimpleGo - reply_queue.h
- * Per-Contact Reply Queue Management
- * Session 34, Phase 6 - Commit 1
+ * Per-contact reply queue management
  *
- * Each contact gets its own reply queue on the SMP server.
- * SMP rule: One queue = one sender. KEY binds queue to one peer.
- * Without per-contact queues, Contact 1+ handshakes are blocked
- * after Contact 0 secures the shared queue via KEY.
- *
- * All queues live on the SAME server as our_queue (host/port/key_hash
- * read from global our_queue at encode time, not stored per-slot).
- *
- * Memory: ~384 bytes/slot x 128 = ~49KB PSRAM (1.9% of 8MB)
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #ifndef REPLY_QUEUE_H

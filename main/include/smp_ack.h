@@ -1,11 +1,9 @@
 /**
- * SimpleGo - SMP ACK Command
- * Consolidated ACK sending for all queue types
+ * SimpleGo - smp_ack.h
+ * SMP ACK command for all queue types
  *
- * Replaces 3 near-identical ACK implementations:
- * - Contact Queue ACK (main receive loop)
- * - Reply Queue ACK (42d handler)
- * - Main Loop ACK (45n PHEmpty handler)
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #pragma once

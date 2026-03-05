@@ -1,13 +1,9 @@
 /**
- * SimpleGo - Agent Protocol Layer
- * Extracted from main.c (Auftrag 46d)
+ * SimpleGo - smp_agent.h
+ * SimpleX agent protocol layer interface
  *
- * Handles the SimpleX Agent Protocol layer:
- * - PrivHeader dispatch ('K' = PHConfirmation, '_' = PHEmpty)
- * - AgentConfirmation: auth key extraction + ratchet decrypt pipeline
- * - AgentMsgEnvelope: A_HELLO, A_MSG with ratchet chat text extraction
- * - ConnInfo parsing with Zstd decompression
- * - Double Ratchet header + body decrypt orchestration
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #pragma once
