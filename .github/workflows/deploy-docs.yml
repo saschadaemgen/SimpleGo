@@ -1,11 +1,10 @@
-name: Deploy docs.simplego.dev
-
+name: Deploy wiki.simplego.dev
 on:
   push:
     branches: [main]
     paths:
-      - 'docs/docusaurus/**'
-
+      - 'wiki/**'
+      - 'docs/**'
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -14,25 +13,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: docs/docusaurus/package-lock.json
-
+          cache-dependency-path: wiki/package-lock.json
       - name: Install dependencies
-        working-directory: docs/docusaurus
+        working-directory: wiki
         run: npm ci
-
       - name: Build
-        working-directory: docs/docusaurus
+        working-directory: wiki
         run: npm run build
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/docusaurus/build
-          cname: docs.simplego.dev
+          publish_dir: wiki/build
+          cname: wiki.simplego.dev
