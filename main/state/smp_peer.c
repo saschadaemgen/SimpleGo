@@ -1,7 +1,9 @@
 /**
  * SimpleGo - smp_peer.c
- * Peer server connection for AgentConfirmation
- * v0.1.14-alpha - Corrected AgentConfirmation format
+ * Peer server connection and AgentConfirmation implementation
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_peer.h"

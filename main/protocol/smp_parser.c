@@ -1,7 +1,9 @@
 /**
  * SimpleGo - smp_parser.c
- * Message parsing for Agent Protocol
- * v0.1.18-alpha - FIXED: Don't set reply_queue_e2e_peer_public from SMP DH key!
+ * Agent protocol message parser implementation
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_parser.h"

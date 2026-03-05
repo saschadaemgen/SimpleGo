@@ -1,16 +1,9 @@
 /**
  * SimpleGo - smp_ratchet.c
- * Double Ratchet Encryption - Version 3 Wire Format (non-PQ)
- * v0.1.23-alpha - Updated 2026-02-07
- * 
- * SESSION 22 FIXES:
- * - Fix 1: X3DH nhk → next_header_key_recv (NOT header_key_recv!)
- * - Fix 2: ratchet_init_sender saves NHKs to next_header_key_send
- * - Fix 3: ratchet_decrypt_body does proper HK←NHK promotion per Signal spec
- * 
- * Signal Double Ratchet with Header Encryption spec:
- *   DHRatchetHE(): state.HKs = state.NHKs; state.HKr = state.NHKr;
- *   Then NHKs/NHKr ← KDF output
+ * Double Ratchet encryption implementation
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_ratchet.h"

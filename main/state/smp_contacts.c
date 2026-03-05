@@ -1,6 +1,9 @@
-﻿/**
+/**
  * SimpleGo - smp_contacts.c
  * Contact management and NVS persistence
+ *
+ * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
  */
 
 #include "smp_contacts.h"
