@@ -8,7 +8,31 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: Sliding Window Chat History (2026-03-04 Session 40)
+## LATEST: Consolidation and Quality Pass (2026-03-05 Session 42)
+
+```
+Pure consolidation. No new features. Production-grade code quality.
+smp_handshake.c: 74 lines debug removed, zero printf in production
+smp_globals.c dissolved: 7 symbols to owning modules, file deleted
+smp_app_run(): 530 to 118 lines via 5 static helpers
+License headers: 47 files AGPL-3.0 + SPDX standardized
+Ownership model: smp_types.h = types only, no object declarations
+```
+
+## Session 41: Pre-GitHub Cleanup (2026-03-04)
+
+```
+Pre-release code review and stabilization. 8 sub-packets, 11 commits.
+Security cleanup: debug crypto removed, CWE-14 buffer clearing
+Hardware AES fix: software fallback for DMA SRAM fragmentation
+Screen lifecycle: ephemeral screens, ~14KB pool recovered
+Dangling pointer protection: null guards on background UI calls
+Comment cleanup: 9 files, session refs removed, German to English
+GitHub security: CodeQL, Dependabot, secret push protection
+5 lessons (#221-#225), MILESTONE 17
+```
+
+## Session 40: Sliding Window Chat History (2026-03-04)
 
 ```
 Three-stage pipeline: SD (AES-256-GCM) > PSRAM Cache (30) > LVGL (5 bubbles)
@@ -472,6 +496,38 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **38** | **Feb 28 - Mar 1** | **🔍 The SPI2 Bus Hunt: Eight Hypotheses, One Root Cause** | **2 bugs, 5 lessons** |
 | **39** | **Mar 3** | **📡 WiFi Manager: First On-Device WiFi for T-Deck** | **9 bugs, 4 lessons** |
 | **40** | **Mar 3-4** | **Sliding Window: Unlimited Encrypted History** | **1 bug, 7 lessons** |
+| **41** | **Mar 4** | **🧹 Pre-GitHub Cleanup and Stabilization** | **5 lessons** |
+| **42** | **Mar 4-5** | **🏗️ Consolidation and Quality Pass** | **4 lessons** |
+
+---
+
+## Session 42 Key Achievements -- Consolidation and Quality Pass
+
+```
+smp_handshake.c: 74 lines debug removed (9 printf blocks, auth-key leak, plaintext leak)
+smp_globals.c dissolved: 7 symbols migrated to owning modules, file deleted
+smp_app_run(): 530 lines to 118 via 5 static helpers (identical object code)
+License headers: 47 files standardized (AGPL-3.0 + SPDX)
+Ownership model: smp_types.h = types only, no object declarations
+UTF-8 BOM cleanup (7 files), extern TODO resolved, re-delivery log verified
+Zero printf in production. Build green. Device stable.
+```
+
+---
+
+## Session 41 Key Achievements -- Pre-GitHub Cleanup
+
+```
+Security: simplex_secretbox_open_debug() deleted, brute-force loop replaced
+Hardware AES: CONFIG_MBEDTLS_HARDWARE_AES=n (DMA needs contiguous internal SRAM)
+Screen lifecycle: ephemeral pattern recovers ~34KB LVGL pool
+Dangling pointers: ui_chat_cleanup() + if(!screen) return guards
+Bubble eviction: evict-before-create order fix
+LVGL pool: 960-1368 bytes/bubble (avg ~1150), no leak on contact switch
+Comment cleanup: 9 files, session refs removed, German to English
+CWE-14: mbedtls_platform_zeroize() for sensitive buffers
+GitHub: CodeQL, Dependabot, secret push protection, SECURITY.md
+```
 
 ---
 
@@ -1283,6 +1339,128 @@ TLS 1.3 → SMP Transport → Server Decrypt → E2E Decrypt → unPad
 
 ---
 
+## Session 17 Key Achievements
+
+### Key Consistency Debug
+- Systematic verification of all Double Ratchet key derivation paths
+- Chain key, message key, and header key consistency confirmed
+
+---
+
+## Session 16 Key Achievements
+
+### Custom XSalsa20 + Double Ratchet Init
+- Discovered SimpleX uses NON-STANDARD XSalsa20: HSalsa20(key, zeros[16]) not HSalsa20(key, nonce[0:16])
+- Self-decrypt failure is BY DESIGN (asymmetric header keys)
+- Double Ratchet initialization implemented
+
+---
+
+## Session 15 Key Achievements
+
+### Root Cause Theory (Later Disproven in S18)
+- Extensive analysis of Reply Queue E2E decryption failure
+- Theory formulated but ultimately wrong (correct fix found in Session 18)
+
+---
+
+## Session 14 Key Achievements
+
+### DH SECRET VERIFIED!
+- X25519 Diffie-Hellman shared secret byte-identical to Haskell reference
+- Verification via Python cross-check confirmed cryptographic correctness
+
+---
+
+## Sessions 12-13 Key Achievements
+
+### E2E Crypto Deep Analysis
+- Complete analysis of the E2E encryption pipeline
+- Reply Queue decrypt path traced through all layers
+- Foundation for the Bug #18 fix in Session 18
+
+---
+
+## Session 11 Key Achievements
+
+### Regression and Recovery
+- Code regression identified and fixed after experimental changes
+- Stable baseline restored for continued E2E debugging
+
+---
+
+## Session 10C Key Achievements
+
+### cmNonce Fix (Bug #17)
+- Discovery: cmNonce is constructed from msgId, not a separate field
+- App "connecting" status reached for the first time
+
+---
+
+## Session 9 Key Achievements
+
+### Reply Queue HSalsa20 Fix (Bugs #15-16)
+- HSalsa20 key derivation for Reply Queue corrected
+- A_CRYPTO header AAD construction fixed
+
+---
+
+## Session 8 Key Achievements
+
+### BREAKTHROUGH: AgentConfirmation Works! (Bugs #13-14)
+- Payload AAD length prefix removed (Bug #13)
+- chainKdf IV assignment order fixed (Bug #14)
+- First successful AgentConfirmation decrypted on ESP32
+- Confirmed: first native SMP implementation outside Haskell
+
+---
+
+## Session 7 Key Achievements
+
+### Research and Verification
+- AES-GCM verification against Haskell reference
+- Tail encoding pattern documented
+- Confirmed SimpleGo as the first third-party SMP implementation
+
+---
+
+## Session 6 Key Achievements
+
+### SMPQueueInfo Encoding (Bugs #10-12)
+- Port encoding fixed for SMP server addresses
+- smpQueues count field corrected
+- queueMode Nothing encoding discovered
+
+---
+
+## Session 5 Key Achievements
+
+### X448 Byte-Order Breakthrough (Bug #9)
+- wolfSSL X448 key exchange byte order reversed
+- First successful X448 DH computation on ESP32
+
+---
+
+## Sessions 3-4 Key Achievements
+
+### Wire Format Foundation (Bugs #1-8)
+- 8 wire format bugs found and fixed in a single session
+- E2E key length prefix, prevMsgHash, MsgHeader DH, ehBody, emHeader size
+- Root KDF output order, Chain KDF IV order corrected
+- Foundation established for all subsequent crypto work
+
+---
+
+## Sessions 1-2 Key Achievements
+
+### Project Foundation
+- TLS 1.3 connection to SMP relay server established
+- ESP-IDF 5.x + mbedTLS integration on ESP32-S3
+- Basic SMP protocol frame parsing implemented
+- T-Deck Plus hardware (320x240, QWERTY keyboard) configured
+
+---
+
 ## Quick Navigation
 
 ### By Bug Number
@@ -1295,10 +1473,17 @@ TLS 1.3 → SMP Transport → Server Decrypt → E2E Decrypt → unPad
 | #13-14 | AAD prefix, IV order | [Part 5](07_PART5_SESSION_8_BREAKTHROUGH.md) |
 | #15-16 | HSalsa20, A_CRYPTO | [Part 6](08_PART6_SESSION_9.md) |
 | #17 | cmNonce instead of msgId | [Part 7](09_PART7_SESSION_10.md) |
-| #18 | Reply Queue E2E — SOLVED! | [Part 15](17_PART15_SESSION_18.md) |
-| #19 | header_key_recv — SOLVED! | [Part 16](18_PART16_SESSION_19.md) + [Part 17](19_PART17_SESSION_20.md) |
+| #18 | Reply Queue E2E -- SOLVED! | [Part 15](17_PART15_SESSION_18.md) |
+| #19 | header_key_recv -- SOLVED! | [Part 16](18_PART16_SESSION_19.md) + [Part 17](19_PART17_SESSION_20.md) |
 | #20-#26 | HELLO format + v3 | [Part 18](20_PART18_SESSION_21.md) |
-| **#27-#31** | **E2E v3, KEM, NHK, Try-Order** | [**Part 19**](21_PART19_SESSION_22.md) |
+| #27-#31 | E2E v3, KEM, NHK, Try-Order | [Part 19](21_PART19_SESSION_22.md) |
+| #32-#39 | Bidirectional + Receipts | [Part 22](24_PART22_SESSION_25.md) |
+| #40-#50 | Multi-Contact Routing | [Part 31](33_PART31_SESSION_34_BREAKTHROUGH.md) |
+| #51-#57 | Contact Lifecycle | [Part 33](35_PART33_SESSION_36.md) |
+| #58-#59 | SPI Bus + Chat History | [Part 34](36_PART34_SESSION_37.md) |
+| #60-#61 | SPI2 Root Cause + LVGL Pool | [Part 35](37_PART35_SESSION_38.md) |
+| #62-#70 | WiFi Manager | [Part 36](38_PART36_SESSION_39.md) |
+| #71 | Scroll Re-Entrancy | [Part 37](39_PART37_SESSION_40.md) |
 
 ### By Topic
 
@@ -1313,7 +1498,15 @@ TLS 1.3 → SMP Transport → Server Decrypt → E2E Decrypt → unPad
 | Double Ratchet Body | [Part 17](19_PART17_SESSION_20.md) |
 | ConnInfo + Zstd | [Part 17](19_PART17_SESSION_20.md) |
 | HELLO + v3 Format | [Part 18](20_PART18_SESSION_21.md) |
-| Reply Queue Flow | [**Part 19**](21_PART19_SESSION_22.md) |
+| Reply Queue Flow | [Part 19](21_PART19_SESSION_22.md) |
+| FreeRTOS Multi-Task | [Part 24](26_PART24_SESSION_27.md) - [Part 26](28_PART26_SESSION_29.md) |
+| Multi-Contact Architecture | [Part 30](32_PART30_SESSION_33.md) - [Part 32](34_PART32_SESSION_35.md) |
+| Encrypted Chat History | [Part 34](36_PART34_SESSION_37.md) |
+| SPI2 Bus Investigation | [Part 35](37_PART35_SESSION_38.md) |
+| WiFi Manager | [Part 36](38_PART36_SESSION_39.md) |
+| Sliding Window | [Part 37](39_PART37_SESSION_40.md) |
+| Pre-GitHub Cleanup | [Part 38](40_PART38_SESSION_41.md) |
+| Quality Pass | [Part 39](41_PART39_SESSION_42.md) |
 | All Bugs | [BUG_TRACKER](BUG_TRACKER.md) |
 | Quick Reference | [QUICK_REFERENCE](QUICK_REFERENCE.md) |
 
