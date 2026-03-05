@@ -1,7 +1,5 @@
 # Security through reduction: SimpleGo versus GrapheneOS
 
-![SimpleDB](gfx/GRAPHENEOS_VS_SIMPLEGO.png)
-
 ## Executive Summary
 
 SimpleGo complements GrapheneOS by minimizing attack surfaces for secure messaging on ESP32/STM32 hardware, reducing the trusted computing base from 10-20 million to 50,000 lines of code. While GrapheneOS excels in full smartphone hardening against forensics - locked devices running recent patches resist commercial extraction tools like Cellebrite - SimpleGo eliminates baseband risks through UART isolation and multi-vendor secure elements, supporting LoRa and satellite connectivity for off-grid operations. Targeting niches like intelligence operatives and high-risk activists, tiers range from €100 DIY builds to €15,000 vault-level devices with post-quantum cryptography and sub-100ns tamper response. The competitive landscape shows consistent failure in overambitious secure phones but success in focused single-purpose devices like the Coldcard hardware wallet. Investors should note: low-volume production yields high margins in this market, but independent security audits are essential for credibility. Combined, GrapheneOS and SimpleGo offer concentric security rings, addressing unmet needs in metadata-free, auditable secure communications.

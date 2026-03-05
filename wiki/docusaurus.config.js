@@ -12,6 +12,9 @@ const config = {
   projectName: 'SimpleGo',
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    format: 'detect',
+  },
 
   i18n: {
     defaultLocale: 'en',
@@ -21,12 +24,27 @@ const config = {
   presets: [
     [
       'classic',
-      /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
+          path: '../docs',
           routeBasePath: '/',
           sidebarPath: './sidebars.js',
-          editUrl: 'https://github.com/saschadaemgen/SimpleGo/edit/main/docs/docusaurus/',
+          editUrl: 'https://github.com/saschadaemgen/SimpleGo/edit/main/docs/',
+          exclude: [
+            'protocol-analysis/**',
+            'release-info/**',
+            'hardware/**',
+            'legal/**',
+            'security/**',
+            'BUGS.md',
+            'BUILD_SYSTEM.md',
+            'DEVELOPMENT.md',
+            'DEVNOTES.md',
+            'DISCLAIMER.md',
+            'LEGAL.md',
+            'SPONSORS.md',
+            'TRADEMARK.md',
+          ],
         },
         blog: false,
         theme: {
@@ -37,7 +55,6 @@ const config = {
   ],
 
   themeConfig:
-    /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       colorMode: {
         defaultMode: 'dark',
@@ -61,31 +78,11 @@ const config = {
           {to: '/hardware', label: 'Hardware', position: 'left'},
           {to: '/security', label: 'Security', position: 'left'},
           {to: '/reference/constants', label: 'Reference', position: 'left'},
-          {
-            href: 'https://simplego.dev/product.html',
-            label: 'Product',
-            position: 'right',
-          },
-          {
-            href: 'https://simplego.dev/crypto.html',
-            label: 'Crypto',
-            position: 'right',
-          },
-          {
-            href: 'https://simplego.dev/flash.html',
-            label: 'Flash Tool',
-            position: 'right',
-          },
-          {
-            href: 'https://simplego.dev/network.html',
-            label: 'Network',
-            position: 'right',
-          },
-          {
-            href: 'https://github.com/saschadaemgen/SimpleGo',
-            label: 'GitHub',
-            position: 'right',
-          },
+          {href: 'https://simplego.dev/product.html', label: 'Product', position: 'right'},
+          {href: 'https://simplego.dev/crypto.html', label: 'Crypto', position: 'right'},
+          {href: 'https://simplego.dev/flash.html', label: 'Flash Tool', position: 'right'},
+          {href: 'https://simplego.dev/network.html', label: 'Network', position: 'right'},
+          {href: 'https://github.com/saschadaemgen/SimpleGo', label: 'GitHub', position: 'right'},
         ],
       },
       footer: {
