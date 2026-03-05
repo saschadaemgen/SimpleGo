@@ -4,11 +4,18 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation  
 **Version:** v0.1.18-alpha  
-**Last Updated:** 2026-03-05 (Session 42 -- Consolidation and Quality Pass)
+**Last Updated:** 2026-03-05 (Session 43 -- Documentation Site and SMP-in-C Guide)
 
 ---
 
-## LATEST: Consolidation and Quality Pass (Session 42)
+## LATEST: Documentation Site and SMP-in-C Guide (Session 43)
+
+Session 43 was a documentation-only session. No firmware changes. Docusaurus 3 live at docs.simplego.dev. 17 documents migrated from existing markdown files. 10 new smp-in-c/ pages created -- world-first guide for implementing SMP in C outside the official Haskell codebase. SimpleGo cited in the official SimpleX Network Technical Architecture document by Evgeny Poberezkin.
+
+Bugs: 71 total (unchanged)
+Lessons: 232 total (3 new in S43: #230-#232)
+
+## PREVIOUS: Consolidation and Quality Pass (Session 42)
 
 Session 42 was a pure consolidation session. No new features. Production-grade code hygiene, architectural correctness, and AGPL-3.0 license compliance across all 47 source files:
 
@@ -87,7 +94,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 39 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -130,6 +137,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 39 
 | **37** | [**39_PART37_SESSION_40.md**](39_PART37_SESSION_40.md) | **~273** | **Sliding Window: Unlimited Encrypted History at Constant Memory** |
 | **38** | [**40_PART38_SESSION_41.md**](40_PART38_SESSION_41.md) | **~145** | **🧹 Pre-GitHub Cleanup and Stabilization** |
 | **39** | [**41_PART39_SESSION_42.md**](41_PART39_SESSION_42.md) | **~130** | **🏗️ Consolidation and Quality Pass** |
+| **40** | [**42_PART40_SESSION_43.md**](42_PART40_SESSION_43.md) | **~180** | **📚 Documentation Site and SMP-in-C Guide** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -139,8 +147,8 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 39 
 | Document | Lines | Description |
 |----------|-------|-------------|
 | [README.md](README.md) | ~1,370 | Project overview and navigation |
-| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,600 | All 71 bugs documented, 220 lessons |
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~2,950 | Constants, wire formats, verified values |
+| [BUG_TRACKER.md](BUG_TRACKER.md) | ~2,800 | All 71 bugs documented, 232 lessons |
+| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | ~3,000 | Constants, wire formats, verified values |
 
 ---
 
@@ -187,6 +195,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 39 
 | **40** | **Mar 3-4, 2026** | **WINDOW** | **Sliding Window: Unlimited Encrypted History** |
 | **41** | **Mar 4, 2026** | **CLEANUP** | **🧹 Pre-GitHub Cleanup and Stabilization** |
 | **42** | **Mar 4-5, 2026** | **QUALITY** | **🏗️ Consolidation and Quality Pass** |
+| **43** | **Mar 5, 2026** | **DOCS** | **📚 Documentation Site + SMP-in-C Guide** |
 
 ---
 
@@ -291,6 +300,11 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 39 
 - **License headers: 47 files AGPL-3.0 + SPDX standardized** 🏗️
 - **Ownership model: smp_types.h = types only, no objects** 🏗️
 - **MILESTONE 18: Production Code Quality** 🏗️
+- **Docusaurus 3 Documentation Site at docs.simplego.dev** 📚
+- **17 Documents Migrated from Legacy markdown** 📚
+- **smp-in-c/ Guide: 10 Pages, World-First SMP-in-C Documentation** 📚
+- **SimpleGo Cited in Official SimpleX Network Architecture Doc** 📚
+- **MILESTONE 19: Professional Documentation Site** 📚
 
 ### ✅ Session 23: The 7-Step Handshake
 ```
@@ -329,9 +343,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 39 
 | Bidirectional + Receipt bugs | 8 | S25 |
 | Multi-Contact Routing bugs | 11 | S34b |
 
-**Lessons Learned: 229** (documented in BUG_TRACKER.md)
-
-**Session 35: Zero new protocol bugs. Multi-contact routing + UI fixes only.**
+**Lessons Learned: 232** (documented in BUG_TRACKER.md)
 
 ---
 
@@ -464,13 +476,6 @@ SMP Flow Control:
   4. ACK response: OK (empty) or MSG (next message)
 ```
 
-### Session 24: Session 23 Correction
-```
-Session 23: "HELLO on Q_B" → FALSE POSITIVE!
-Reality: Random 0x48 in Ratchet ciphertext
-Actual Q_B content: Tag 'I' ConnInfo (with full Ratchet decrypt)
-```
-
 ### Session 23: 7-Step Handshake (VERIFIED WORKING!)
 ```
 Complete Connection Flow:
@@ -481,57 +486,6 @@ Complete Connection Flow:
   5. App sends KEY + SKEY + Tag 'I'
   6. ESP32: Reconnect + SUB + KEY + HELLO
   7. Both: CON — CONNECTED!
-```
-
-### Session 23: Role Clarification
-```
-ESP32 = Accepting Party (Bob):
-  - Creates Reply Queue (Q_B)
-  - Sends Tag 'D' (AgentConnInfoReply with Q_B)
-  - Sends HELLO on Contact Queue (Q_A)
-
-App = Initiating Party (Alice):
-  - Creates Contact Queue (Q_A) via Invitation
-  - Sends Tag 'I' (AgentConnInfo, profile only)
-  - Sends HELLO on Reply Queue (Q_B)
-```
-
-### Session 23: KEY Command Discovery
-```
-KEY = Recipient Command:
-  - Signed with rcv_private_auth_key (OUR key)
-  - Sent on OUR queue (where we're recipient)
-  - Authorizes the SENDER (App) to send messages
-  - Body: "KEY " + 0x2C + 44B peer_sender_auth_key SPKI
-```
-
-### Session 22: Modern Protocol Flow (CORRECTED in S23!)
-```
-Session 22 Theory (WRONG for Legacy Path):
-  - Modern SimpleX (v2 + senderCanSecure) needs NO HELLO
-  - App sends Reply Queue in Tag 'D'
-
-Session 23 Correction:
-  - PHConfirmation 'K' = Legacy Path = KEY + HELLO required!
-  - App sends Tag 'I' (not 'D'), WE send Tag 'D'
-  - PHEmpty '_' = Modern Path (would skip HELLO, but we don't use it)
-```
-
-### Session 22: Post-Quantum KEM
-```
-SimpleX uses SNTRUP761 (not Kyber1024):
-  - Public Key: 1158 bytes
-  - Ciphertext: 1039 bytes
-  - Shared Secret: 32 bytes
-  - PQ-Graceful-Degradation: KEM Nothing → pure DH
-```
-
-### Session 21: v3 EncRatchetMessage
-```
-v3 changes from v2:
-  - encodeLarge switches at v≥3: 1-byte → 2-byte prefix
-  - MsgHeader includes KEM Nothing ('0')
-  - 4 Header Keys: HKs/NHKs/HKr/NHKr with promotion
 ```
 
 ### Session 16: Custom XSalsa20
@@ -551,28 +505,33 @@ SimpleX uses NON-STANDARD XSalsa20:
 
 > *"concurrency is hard."* - Evgeny (Session 31, on the txCount bug)
 
+> SimpleGo *"demonstrates the energy efficiency of resource-based addressing: the device receives packets without continuous polling."* - Evgeny Poberezkin, SimpleX Network Technical Architecture (2026)
+
 SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outside the official Haskell codebase.
 
 ---
 
-## Next Steps (Session 43)
+## Next Steps (Session 44)
 
-### Phase 1: Security Cleanup
+### Phase 1: Firmware
 ```
-P0: 5 logging categories with security-relevant data (contact links, SUB hex, response hex, block headers, parser bytes)
-```
-
-### Phase 2: Documentation
-```
-P1: Docusaurus 3 restructure at wiki.simplego.dev
-P2: README rewrite (positive, professional, no criminal phone references)
+P0: Keep-Alive (PING/PONG) implementation on main SSL connection
+P1: 5 logging categories with security-relevant data cleanup
+     (contact links, SUB hex, response hex, block headers, parser bytes)
 ```
 
-### Phase 3: Hardware + Features
+### Phase 2: Hardware + Features
 ```
-P3: SD card on SPI3 bus (Bug #60 root cause fix)
-P4: German umlaut fallback fonts (LVGL, task prepared)
-P5: Server DEL command on contact delete
+P2: SD card on SPI3 bus (Bug #60 root cause fix)
+P3: German umlaut fallback fonts (LVGL, task prepared)
+P4: Server DEL command on contact delete
+```
+
+### Phase 3: Kickstarter Preparation
+```
+P5: eFuse + nvs_flash_secure_init combined with CRYSTALS-Kyber
+P6: CE marking preparation
+P7: Battery runtime measurement (verify 20-day estimate)
 ```
 
 ---
@@ -600,7 +559,43 @@ P5: Server DEL command on contact delete
 | **16** | **Sliding Window Chat History** | **2026-03-04** | **40** |
 | **17** | **🧹 Pre-GitHub Stabilization** | **2026-03-04** | **41** |
 | **18** | **🏗️ Production Code Quality** | **2026-03-05** | **42** |
+| **19** | **📚 Professional Documentation Site** | **2026-03-05** | **43** |
 
 ---
 
-*Index updated: 2026-03-05 Session 42 -- Consolidation and Quality Pass*
+## Current Project Status
+
+**Version:** v0.1.18-alpha | **Last updated:** 2026-03-05 Session 43
+
+### Firmware (unchanged from Session 42)
+
+- SMP implementation: production-ready alpha
+- 128 simultaneous contacts with per-contact Double Ratchet state
+- AES-256-GCM encrypted chat history on SD card
+- WiFi Manager with multi-network support and WPA3
+- Delivery receipts (double checkmark)
+- Zero printf in production code
+- 47 source files with AGPL-3.0 headers
+
+### Documentation
+
+- Docusaurus 3 live at docs.simplego.dev (DNS CNAME pending from mein Prinz)
+- GitHub Actions deployment workflow active
+- smp-in-c/ guide: 10 pages, world-first documentation for C implementation of SMP
+- hardware/, security/, architecture/, contributing/, reference/, why-simplego/ all migrated
+- README rewritten without criminal network references
+- security/audit-log.md: 6 resolved security issues documented
+
+### Open Items
+
+- DNS CNAME: docs -> saschadaemgen.github.io (mein Prinz to set at DNS provider)
+- getting-started/ pages: quick-start, flashing, building, faq still stubs
+- Keep-Alive (PING/PONG): firmware, scheduled Session 44
+- 5 logging categories with security-relevant data: pre-Kickstarter
+- eFuse + NVS Flash Encryption: Kickstarter phase
+- Private Message Routing: post-MVP
+- Battery runtime measurement: verify 20-day estimate from Evgeny architecture doc
+
+---
+
+*Index updated: 2026-03-05 Session 43 -- Documentation Site and SMP-in-C Guide*
