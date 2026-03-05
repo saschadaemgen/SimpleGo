@@ -58,22 +58,22 @@ This document provides detailed documentation of all bugs discovered during Simp
 
 ## Bug #1: E2E Key Length Prefix
 
-**Session:** 4  
-**Component:** E2ERatchetParams encoding  
+**Session:** 4
+**Component:** E2ERatchetParams encoding
 **Impact:** Critical - causes parsing failure
 
 ### Incorrect Code
 ```c
 // Word16 BE length prefix (WRONG!)
 buf[p++] = 0x00;
-buf[p++] = 0x44;  // 68 as Word16
+buf[p++] = 0x44; // 68 as Word16
 memcpy(&buf[p], spki_key, 68);
 ```
 
 ### Correct Code
 ```c
 // 1-byte length prefix (CORRECT!)
-buf[p++] = 0x44;  // 68 as single byte
+buf[p++] = 0x44; // 68 as single byte
 memcpy(&buf[p], spki_key, 68);
 ```
 
@@ -85,21 +85,21 @@ E2ERatchetParams keys are encoded as ByteString (1-byte prefix), not Large (Word
 
 ## Bug #2: prevMsgHash Length Prefix
 
-**Session:** 4  
-**Component:** AgentMessage encoding  
+**Session:** 4
+**Component:** AgentMessage encoding
 **Impact:** Critical - causes parsing failure
 
 ### Incorrect Code
 ```c
 // 1-byte length prefix (WRONG!)
-buf[p++] = 0x00;  // Empty hash
+buf[p++] = 0x00; // Empty hash
 ```
 
 ### Correct Code
 ```c
 // Word16 BE length prefix (CORRECT!)
 buf[p++] = 0x00;
-buf[p++] = 0x00;  // Empty hash as Word16
+buf[p++] = 0x00; // Empty hash as Word16
 ```
 
 ### Root Cause
@@ -110,8 +110,8 @@ AgentMessage uses Large wrapper for prevMsgHash, requiring Word16 prefix.
 
 ## Bug #3: MsgHeader DH Key Length
 
-**Session:** 4  
-**Component:** MsgHeader encoding  
+**Session:** 4
+**Component:** MsgHeader encoding
 **Impact:** Critical - causes parsing failure
 
 ### Incorrect Code
@@ -137,21 +137,21 @@ MsgHeader msgDHRs is PublicKey, encoded as ByteString with 1-byte prefix.
 
 ## Bug #4: ehBody Length Prefix
 
-**Session:** 4  
-**Component:** EncMessageHeader encoding  
+**Session:** 4
+**Component:** EncMessageHeader encoding
 **Impact:** Critical - cascades to bugs #5 and #6
 
 ### Incorrect Code
 ```c
 // Word16 BE length prefix (WRONG!)
 em_header[hp++] = 0x00;
-em_header[hp++] = 0x58;  // 88 as Word16
+em_header[hp++] = 0x58; // 88 as Word16
 ```
 
 ### Correct Code
 ```c
 // 1-byte length prefix (CORRECT!)
-em_header[hp++] = 0x58;  // 88 as single byte
+em_header[hp++] = 0x58; // 88 as single byte
 ```
 
 ### Root Cause
@@ -162,8 +162,8 @@ ehBody is ByteString, not Large.
 
 ## Bug #5: emHeader Size
 
-**Session:** 4  
-**Component:** EncMessageHeader structure  
+**Session:** 4
+**Component:** EncMessageHeader structure
 **Impact:** Critical - cascades to bug #6
 
 ### Incorrect Code
@@ -186,19 +186,19 @@ Cascaded from Bug #4 - with 1-byte prefix, size is 123 not 124.
 
 ## Bug #6: Payload AAD Size
 
-**Session:** 4  
-**Component:** AES-GCM AAD  
+**Session:** 4
+**Component:** AES-GCM AAD
 **Impact:** Critical - auth tag mismatch
 
 ### Incorrect Code
 ```c
-uint8_t payload_aad[236];  // WRONG!
+uint8_t payload_aad[236]; // WRONG!
 aes_gcm_encrypt(..., payload_aad, 236, ...);
 ```
 
 ### Correct Code
 ```c
-uint8_t payload_aad[235];  // CORRECT!
+uint8_t payload_aad[235]; // CORRECT!
 aes_gcm_encrypt(..., payload_aad, 235, ...);
 ```
 
@@ -210,8 +210,8 @@ Cascaded from Bug #5 - AAD = 112 + 123 = 235, not 236.
 
 ## Bug #7: Root KDF Output Order
 
-**Session:** 4  
-**Component:** Root KDF implementation  
+**Session:** 4
+**Component:** Root KDF implementation
 **Impact:** Critical - all keys wrong
 
 ### Incorrect Code
@@ -237,8 +237,8 @@ Misread Haskell source - output order is root, chain, header.
 
 ## Bug #8: Chain KDF IV Order
 
-**Session:** 4  
-**Component:** Chain KDF implementation  
+**Session:** 4
+**Component:** Chain KDF implementation
 **Impact:** Critical - encryption uses wrong IVs
 
 ### Incorrect Code
@@ -251,8 +251,8 @@ memcpy(header_iv, kdf_output + 80, 16);
 ### Correct Code
 ```c
 // Correct order!
-memcpy(header_iv, kdf_output + 64, 16);  // iv1 = header
-memcpy(msg_iv, kdf_output + 80, 16);     // iv2 = message
+memcpy(header_iv, kdf_output + 64, 16); // iv1 = header
+memcpy(msg_iv, kdf_output + 80, 16); // iv2 = message
 ```
 
 ### Root Cause
@@ -263,8 +263,8 @@ iv1 (bytes 64-79) is header IV, iv2 (bytes 80-95) is message IV.
 
 ## Bug #9: wolfSSL X448 Byte Order
 
-**Session:** 5  
-**Component:** X448 cryptography  
+**Session:** 5
+**Component:** X448 cryptography
 **Impact:** Critical - all DH computations wrong
 
 ### The Problem
@@ -274,9 +274,9 @@ wolfSSL X448 uses little-endian, SimpleX expects big-endian.
 ### The Fix
 ```c
 static void reverse_bytes(const uint8_t *src, uint8_t *dst, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        dst[i] = src[len - 1 - i];
-    }
+ for (size_t i = 0; i < len; i++) {
+ dst[i] = src[len - 1 - i];
+ }
 }
 
 // After key generation:
@@ -299,8 +299,8 @@ wolfSSL defines EC448_LITTLE_ENDIAN internally.
 
 ## Bug #10: Port Encoding
 
-**Session:** 6  
-**Component:** SMPQueueInfo encoding  
+**Session:** 6
+**Component:** SMPQueueInfo encoding
 **Impact:** Critical - parser fails
 
 ### Incorrect Code
@@ -313,7 +313,7 @@ memcpy(&buf[p], port_str, strlen(port_str));
 ### Correct Code
 ```c
 // Space separator (CORRECT!)
-buf[p++] = ' ';  // 0x20
+buf[p++] = ' '; // 0x20
 memcpy(&buf[p], port_str, strlen(port_str));
 ```
 
@@ -325,8 +325,8 @@ SMPServer encoding uses space separator, not length prefix.
 
 ## Bug #11: smpQueues Count
 
-**Session:** 6  
-**Component:** NonEmpty list encoding  
+**Session:** 6
+**Component:** NonEmpty list encoding
 **Impact:** Critical - parser fails
 
 ### Incorrect Code
@@ -350,14 +350,14 @@ NonEmpty list uses Word16 for count.
 
 ## Bug #12: queueMode Nothing
 
-**Session:** 6  
-**Component:** SMPQueueInfo encoding  
+**Session:** 6
+**Component:** SMPQueueInfo encoding
 **Impact:** Medium - parser might fail
 
 ### Incorrect Code
 ```c
 // Send '0' byte (WRONG!)
-buf[p++] = '0';  // 0x30
+buf[p++] = '0'; // 0x30
 ```
 
 ### Correct Code
@@ -374,8 +374,8 @@ queueMode uses "maybe empty" not standard Maybe encoding.
 
 ## Bug #13: Payload AAD Length Prefix (SESSION 8 BREAKTHROUGH!)
 
-**Session:** 8  
-**Component:** Payload AAD construction  
+**Session:** 8
+**Component:** Payload AAD construction
 **Impact:** Critical - AgentConfirmation rejected
 
 ### The Discovery
@@ -389,8 +389,8 @@ largeP p = smpP >>= \len -> A.take (fromIntegral (len :: Word16)) >>= parseAll p
 ### Incorrect Code
 ```c
 // AAD with length prefix (WRONG!)
-uint8_t payload_aad[237];  // 2 + 112 + 123
-payload_aad[0] = (total_len >> 8) & 0xFF;  // Length prefix
+uint8_t payload_aad[237]; // 2 + 112 + 123
+payload_aad[0] = (total_len >> 8) & 0xFF; // Length prefix
 payload_aad[1] = total_len & 0xFF;
 memcpy(&payload_aad[2], header_aad, 112);
 memcpy(&payload_aad[114], em_header, 123);
@@ -399,7 +399,7 @@ memcpy(&payload_aad[114], em_header, 123);
 ### Correct Code
 ```c
 // AAD WITHOUT length prefix (CORRECT!)
-uint8_t payload_aad[235];  // 112 + 123
+uint8_t payload_aad[235]; // 112 + 123
 memcpy(&payload_aad[0], header_aad, 112);
 memcpy(&payload_aad[112], em_header, 123);
 ```
@@ -412,8 +412,8 @@ The length prefix is consumed by the parser, not included in AAD.
 
 ## Bug #14: chainKdf IV Assignment (SESSION 8)
 
-**Session:** 8  
-**Component:** Chain KDF IV handling  
+**Session:** 8
+**Component:** Chain KDF IV handling
 **Impact:** Critical - wrong IVs used for encryption
 
 ### The Discovery
@@ -423,33 +423,33 @@ Session 4 found the order but assignment was still swapped later.
 ### Incorrect Code
 ```c
 // Assignments swapped (WRONG!)
-uint8_t *header_iv = &chain_kdf_output[80];  // iv2
-uint8_t *msg_iv = &chain_kdf_output[64];     // iv1
+uint8_t *header_iv = &chain_kdf_output[80]; // iv2
+uint8_t *msg_iv = &chain_kdf_output[64]; // iv1
 ```
 
 ### Correct Code
 ```c
 // Correct assignments!
-uint8_t *header_iv = &chain_kdf_output[64];  // iv1 = header
-uint8_t *msg_iv = &chain_kdf_output[80];     // iv2 = message
+uint8_t *header_iv = &chain_kdf_output[64]; // iv1 = header
+uint8_t *msg_iv = &chain_kdf_output[80]; // iv2 = message
 ```
 
 ### Root Cause
 
 Chain KDF output layout:
 ```
-[0:32]   next_chain_key
-[32:64]  message_key
-[64:80]  iv1 = HEADER_IV
-[80:96]  iv2 = MESSAGE_IV
+[0:32] next_chain_key
+[32:64] message_key
+[64:80] iv1 = HEADER_IV
+[80:96] iv2 = MESSAGE_IV
 ```
 
 ---
 
 ## Bug #15: Reply Queue HSalsa20 (SESSION 9)
 
-**Session:** 9  
-**Component:** Reply Queue E2E decryption  
+**Session:** 9
+**Component:** Reply Queue E2E decryption
 **Impact:** Critical - Reply Queue decrypt fails
 
 ### The Discovery
@@ -478,8 +478,8 @@ Must use same crypto primitive chain as sender.
 
 ## Bug #16: A_CRYPTO Header AAD (SESSION 9)
 
-**Session:** 9  
-**Component:** Header encryption AAD  
+**Session:** 9
+**Component:** Header encryption AAD
 **Impact:** Critical - A_CRYPTO error in app
 
 ### The Problem
@@ -494,8 +494,8 @@ Incorrect AAD construction for header encryption causing authentication failure.
 
 ## Bug #17: cmNonce instead of msgId (SESSION 10C)
 
-**Session:** 10C  
-**Component:** Per-Queue E2E Decryption  
+**Session:** 10C
+**Component:** Per-Queue E2E Decryption
 **Impact:** Critical - All Contact Queue messages fail decryption
 
 ### The Discovery
@@ -505,54 +505,54 @@ Used `msgId` as nonce for per-queue E2E decryption, but the correct nonce is `cm
 ### Incorrect Code
 ```c
 // WRONG - used msgId as nonce
-memcpy(nonce, msg_id, msgIdLen);  // msgId from MSG header
+memcpy(nonce, msg_id, msgIdLen); // msgId from MSG header
 ```
 
 ### Correct Code
 ```c
 // CORRECT - extract cmNonce from ClientMsgEnvelope
-int cm_nonce_offset = spki_offset + 44;  // [60-83]
+int cm_nonce_offset = spki_offset + 44; // [60-83]
 memcpy(cm_nonce, &server_plain[cm_nonce_offset], 24);
 
 // Then decrypt with cmNonce
-crypto_box_open_easy_afternm(plain, &data[cm_enc_body_offset], 
-                              enc_len, cm_nonce, dh_shared);
+crypto_box_open_easy_afternm(plain, &data[cm_enc_body_offset],
+ enc_len, cm_nonce, dh_shared);
 ```
 
 ---
 
-## Bug #18: Reply Queue E2E Decryption — ✅ SOLVED!
+## Bug #18: Reply Queue E2E Decryption -- SOLVED!
 
-**Sessions:** 12, 13, 14, 15, 16, 17, 18  
-**Component:** Reply Queue Per-Queue E2E Layer 2 → envelope_len calculation  
-**Impact:** Cannot decrypt Reply Queue messages  
-**Status:** ✅ **SOLVED in Session 18!**
+**Sessions:** 12, 13, 14, 15, 16, 17, 18
+**Component:** Reply Queue Per-Queue E2E Layer 2 → envelope_len calculation
+**Impact:** Cannot decrypt Reply Queue messages
+**Status:** **SOLVED in Session 18!**
 
 ### Root Cause & Fix
 
 ```
 ROOT CAUSE:
-  envelope_len = plain_len - 2 = 16104       ← WRONG! Includes 102B SMP padding
-  envelope_len = raw_len_prefix = 16002      ← CORRECT! Exact content length
+ envelope_len = plain_len - 2 = 16104 ← WRONG! Includes 102B SMP padding
+ envelope_len = raw_len_prefix = 16002 ← CORRECT! Exact content length
 
-FIX — ONE LINE:
-  envelope_len = raw_len_prefix;
+FIX -- ONE LINE:
+ envelope_len = raw_len_prefix;
 
 RESULT:
-  Method 0 (decrypt_client_msg): SUCCESS!
-  Decrypted: 15904 bytes AgentConfirmation + EncRatchetMessage
+ Method 0 (decrypt_client_msg): SUCCESS!
+ Decrypted: 15904 bytes AgentConfirmation + EncRatchetMessage
 ```
 
 See Session 18 documentation for full 7-session debugging history.
 
 ---
 
-## Bug #19: header_key_recv Gets Overwritten — ✅ SOLVED!
+## Bug #19: header_key_recv Gets Overwritten -- SOLVED!
 
-**Sessions:** 19, 20  
-**Component:** Double Ratchet key management → debug self-decrypt test  
-**Impact:** Medium - header decrypt fails without workaround  
-**Status:** ✅ **SOLVED in Session 20!**
+**Sessions:** 19, 20
+**Component:** Double Ratchet key management → debug self-decrypt test
+**Impact:** Medium - header decrypt fails without workaround
+**Status:** **SOLVED in Session 20!**
 
 ### 19.1 Symptom
 
@@ -561,9 +561,9 @@ header_key_recv after X3DH = 1c08e86e... (saved_nhk, correct)
 header_key_recv at receipt = cf0c74d2... (wrong, overwritten)
 ```
 
-### 19.2 Root Cause — FOUND (Session 20)
+### 19.2 Root Cause -- FOUND (Session 20)
 
-**`smp_peer.c:347`** — Debug self-decrypt test calling `ratchet_decrypt()`.
+**`smp_peer.c:347`** -- Debug self-decrypt test calling `ratchet_decrypt()`.
 
 After encrypting the AgentConfirmation, a debug self-test called `ratchet_decrypt()`
 on our own encrypted message. `ratchet_decrypt()` has **side effects**: it performs
@@ -580,20 +580,20 @@ Branch: `claude/fix-header-key-recv-bug-DNYeF` → merged to main.
 
 ## Bug #20: PrivHeader for HELLO (SESSION 21)
 
-**Session:** 21  
-**Component:** ClientMessage encoding for HELLO  
+**Session:** 21
+**Component:** ClientMessage encoding for HELLO
 **Impact:** Critical - wrong message type indicator
 
 ### Incorrect Code
 ```c
 // Used PHEmpty tag (WRONG!)
-buf[p++] = '_';  // 0x5F = PHEmpty (Confirmation without key)
+buf[p++] = '_'; // 0x5F = PHEmpty (Confirmation without key)
 ```
 
 ### Correct Code
 ```c
 // No PrivHeader for regular messages (CORRECT!)
-buf[p++] = 0x00;  // No PrivHeader
+buf[p++] = 0x00; // No PrivHeader
 ```
 
 ### Root Cause
@@ -609,22 +609,22 @@ HELLO is a regular AgentMessage, not a Confirmation.
 
 ## Bug #21: AgentVersion for AgentMessage (SESSION 21)
 
-**Session:** 21  
-**Component:** AgentMsgEnvelope encoding  
+**Session:** 21
+**Component:** AgentMsgEnvelope encoding
 **Impact:** Critical - parser version mismatch
 
 ### Incorrect Code
 ```c
 // Used Agent protocol version (WRONG!)
 buf[p++] = 0x00;
-buf[p++] = 0x02;  // agentVersion = 2
+buf[p++] = 0x02; // agentVersion = 2
 ```
 
 ### Correct Code
 ```c
 // AgentMessage uses version 1 (CORRECT!)
 buf[p++] = 0x00;
-buf[p++] = 0x01;  // agentVersion = 1
+buf[p++] = 0x01; // agentVersion = 1
 ```
 
 ### Root Cause
@@ -636,8 +636,8 @@ uses agentVersion=1 (message format version). Different fields, different values
 
 ## Bug #22: prevMsgHash Encoding (SESSION 21)
 
-**Session:** 21  
-**Component:** AgentMessage encoding  
+**Session:** 21
+**Component:** AgentMessage encoding
 **Impact:** Critical - parser fails on hash field
 
 ### Incorrect Code
@@ -649,7 +649,7 @@ uses agentVersion=1 (message format version). Different fields, different values
 ```c
 // smpEncode(ByteString) with Word16 prefix (CORRECT!)
 buf[p++] = 0x00;
-buf[p++] = 0x00;  // Word16 BE length = 0 (empty hash)
+buf[p++] = 0x00; // Word16 BE length = 0 (empty hash)
 ```
 
 ### Root Cause
@@ -661,8 +661,8 @@ Related to Bug #2 (same encoding pattern).
 
 ## Bug #23: cbEncrypt Padding (SESSION 21)
 
-**Session:** 21  
-**Component:** Server-level encryption (cbEncrypt)  
+**Session:** 21
+**Component:** Server-level encryption (cbEncrypt)
 **Impact:** Critical - server rejects or app can't decrypt
 
 ### Incorrect Code
@@ -687,8 +687,8 @@ Receiver does: decrypt → unPad. Sender must: pad → encrypt.
 
 ## Bug #24: DH Key for HELLO (SESSION 21)
 
-**Session:** 21  
-**Component:** Per-queue E2E encryption key selection  
+**Session:** 21
+**Component:** Per-queue E2E encryption key selection
 **Impact:** Critical - E2E layer fails
 
 ### Incorrect Code
@@ -712,8 +712,8 @@ For HELLO: use `snd_dh` (sender's DH key for the reply queue).
 
 ## Bug #25: PubHeader Nothing Encoding (SESSION 21)
 
-**Session:** 21  
-**Component:** ClientMsgEnvelope PubHeader field  
+**Session:** 21
+**Component:** ClientMsgEnvelope PubHeader field
 **Impact:** Medium - parser may fail
 
 ### Incorrect Code
@@ -724,7 +724,7 @@ For HELLO: use `snd_dh` (sender's DH key for the reply queue).
 ### Correct Code
 ```c
 // Maybe Nothing = '0' (CORRECT!)
-buf[p++] = '0';  // 0x30 = Nothing
+buf[p++] = '0'; // 0x30 = Nothing
 ```
 
 ### Root Cause
@@ -736,8 +736,8 @@ as `'0'` (0x30), not omitted.
 
 ## Bug #26: v2/v3 EncRatchetMessage Format (SESSION 21)
 
-**Session:** 21  
-**Component:** EncRatchetMessage encoding  
+**Session:** 21
+**Component:** EncRatchetMessage encoding
 **Impact:** Critical - App can't decrypt HELLO (RSYNC error)
 
 ### The Discovery
@@ -748,8 +748,8 @@ EncRatchetMessage was encoded in v2 format.
 ### Incorrect Code (v2)
 ```c
 #define RATCHET_VERSION 2
-em_header[hp++] = 0x7B;         // emHeader len = 123 (1 byte)
-em_header[hp++] = 0x58;         // ehBody len = 88 (1 byte)
+em_header[hp++] = 0x7B; // emHeader len = 123 (1 byte)
+em_header[hp++] = 0x58; // ehBody len = 88 (1 byte)
 #define EM_HEADER_SIZE 123
 // No KEM field in MsgHeader
 ```
@@ -758,9 +758,9 @@ em_header[hp++] = 0x58;         // ehBody len = 88 (1 byte)
 ```c
 #define RATCHET_VERSION 3
 em_header[hp++] = 0x00;
-em_header[hp++] = 0x7C;         // emHeader len = 124 (2 bytes Word16 BE)
+em_header[hp++] = 0x7C; // emHeader len = 124 (2 bytes Word16 BE)
 em_header[hp++] = 0x00;
-em_header[hp++] = 0x58;         // ehBody len = 88 (2 bytes Word16 BE)
+em_header[hp++] = 0x58; // ehBody len = 88 (2 bytes Word16 BE)
 #define EM_HEADER_SIZE 124
 // KEM Nothing: msg_header[p++] = '0';
 ```
@@ -774,8 +774,8 @@ Also MsgHeader must include KEM Nothing field in v3.
 
 ## Bug #27: E2E Version Mismatch (SESSION 22)
 
-**Session:** 22  
-**Component:** `smp_x448.c` E2ERatchetParams encoding  
+**Session:** 22
+**Component:** `smp_x448.c` E2ERatchetParams encoding
 **Impact:** Critical - App breaks silence after fix!
 
 ### The Discovery
@@ -788,7 +788,7 @@ format but receive v3.
 ```c
 // In e2e_encode_params():
 buf[p++] = 0x00;
-buf[p++] = 0x02;  // version_min = 2
+buf[p++] = 0x02; // version_min = 2
 // No KEM Nothing-Byte after key2
 ```
 
@@ -796,9 +796,9 @@ buf[p++] = 0x02;  // version_min = 2
 ```c
 // In e2e_encode_params():
 buf[p++] = 0x00;
-buf[p++] = 0x03;  // version_min = 3
+buf[p++] = 0x03; // version_min = 3
 // After key2:
-buf[p++] = 0x30;  // KEM Nothing ('0' = 0x30)
+buf[p++] = 0x30; // KEM Nothing ('0' = 0x30)
 ```
 
 ### Root Cause
@@ -810,8 +810,8 @@ The `version_min` in E2ERatchetParams must match `RATCHET_VERSION` used for encr
 
 ## Bug #28: KEM Parser Crash (SESSION 22)
 
-**Session:** 22  
-**Component:** `smp_ratchet.c` MsgHeader parser  
+**Session:** 22
+**Component:** `smp_ratchet.c` MsgHeader parser
 **Impact:** Critical - Parser crash on PQ responses
 
 ### The Discovery
@@ -822,8 +822,8 @@ Parser had fixed offsets → read garbage → crash.
 ### Incorrect Code
 ```c
 // Fixed offset calculation
-int dh_key_offset = 4;  // contentLen(2) + msgMaxVersion(2)
-int pn_offset = dh_key_offset + 1 + dh_key_len;  // No KEM handling
+int dh_key_offset = 4; // contentLen(2) + msgMaxVersion(2)
+int pn_offset = dh_key_offset + 1 + dh_key_len; // No KEM handling
 ```
 
 ### Correct Code
@@ -831,16 +831,16 @@ int pn_offset = dh_key_offset + 1 + dh_key_len;  // No KEM handling
 // Dynamic KEM handling
 int kem_offset = dh_key_offset + 1 + dh_key_len;
 uint8_t kem_tag = decrypted_header[kem_offset];
-if (kem_tag == '0') {  // Nothing
-    pn_offset = kem_offset + 1;
-} else if (kem_tag == '1') {  // Just
-    uint8_t state_tag = decrypted_header[kem_offset + 1];
-    if (state_tag == 'P' || state_tag == 'A') {
-        // Read length prefix, skip KEM data
-        uint16_t kem_len = (decrypted_header[kem_offset + 2] << 8) | 
-                            decrypted_header[kem_offset + 3];
-        pn_offset = kem_offset + 4 + kem_len;
-    }
+if (kem_tag == '0') { // Nothing
+ pn_offset = kem_offset + 1;
+} else if (kem_tag == '1') { // Just
+ uint8_t state_tag = decrypted_header[kem_offset + 1];
+ if (state_tag == 'P' || state_tag == 'A') {
+ // Read length prefix, skip KEM data
+ uint16_t kem_len = (decrypted_header[kem_offset + 2] << 8) |
+ decrypted_header[kem_offset + 3];
+ pn_offset = kem_offset + 4 + kem_len;
+ }
 }
 ```
 
@@ -853,8 +853,8 @@ MsgHeader parser expected 88-byte header without KEM field. v3+PQ headers can be
 
 ## Bug #29: Body Decrypt Pointer-Arithmetik (SESSION 22)
 
-**Session:** 22  
-**Component:** `main.c` body decrypt offset calculation  
+**Session:** 22
+**Component:** `main.c` body decrypt offset calculation
 **Impact:** Critical - 2GB malloc fail on body decrypt
 
 ### The Discovery
@@ -864,7 +864,7 @@ calculation for emAuthTag/emBody was hardcoded → garbage offsets → 2GB mallo
 
 ### Incorrect Code
 ```c
-#define EM_HEADER_SIZE 124  // Hardcoded
+#define EM_HEADER_SIZE 124 // Hardcoded
 uint8_t *emAuthTag = &encrypted[EM_HEADER_SIZE];
 uint8_t *emBody = &encrypted[EM_HEADER_SIZE + 16];
 ```
@@ -875,12 +875,12 @@ uint8_t *emBody = &encrypted[EM_HEADER_SIZE + 16];
 uint16_t ehVersion = (encrypted[0] << 8) | encrypted[1];
 size_t emHeader_size;
 if (ehVersion >= 3) {
-    // v3: 2-byte length prefix
-    emHeader_size = (encrypted[2] << 8) | encrypted[3];
-    emHeader_size += 4;  // Include prefix itself
+ // v3: 2-byte length prefix
+ emHeader_size = (encrypted[2] << 8) | encrypted[3];
+ emHeader_size += 4; // Include prefix itself
 } else {
-    // v2: 1-byte length prefix
-    emHeader_size = encrypted[2] + 3;
+ // v2: 1-byte length prefix
+ emHeader_size = encrypted[2] + 3;
 }
 uint8_t *emAuthTag = &encrypted[emHeader_size];
 uint8_t *emBody = &encrypted[emHeader_size + 16];
@@ -899,8 +899,8 @@ All offset calculations must be dynamic based on actual header content.
 
 ## Bug #30: HKs/NHKs Init + Promotion (SESSION 22)
 
-**Session:** 22  
-**Component:** `smp_ratchet.c` header key management  
+**Session:** 22
+**Component:** `smp_ratchet.c` header key management
 **Impact:** Critical - Header key chain broken from init to promotion
 
 ### The Discovery
@@ -918,26 +918,26 @@ of proper NHKs→HKs promotion.
 ### Incorrect Code
 ```c
 // In ratchet_init_sender():
-uint8_t next_header_key_send[32];  // Local variable, never saved!
+uint8_t next_header_key_send[32]; // Local variable, never saved!
 // ...
 // In ratchet_x3dh_sender():
-memcpy(ratchet_state.header_key_recv, nhk, 32);  // WRONG! nhk is NHKr
+memcpy(ratchet_state.header_key_recv, nhk, 32); // WRONG! nhk is NHKr
 // ...
 // After DH Ratchet Step:
-memcpy(ratchet_state.header_key_send, kdf_output + 64, 32);  // Direct, no promotion
+memcpy(ratchet_state.header_key_send, kdf_output + 64, 32); // Direct, no promotion
 ```
 
 ### Correct Code
 ```c
 // In ratchet_init_sender():
-memcpy(ratchet_state.next_header_key_send, hkdf_output + 64, 32);  // SAVE to state!
+memcpy(ratchet_state.next_header_key_send, hkdf_output + 64, 32); // SAVE to state!
 // ...
 // In ratchet_x3dh_sender():
-memcpy(ratchet_state.next_header_key_recv, nhk, 32);  // NHKr, will promote to HKr
+memcpy(ratchet_state.next_header_key_recv, nhk, 32); // NHKr, will promote to HKr
 // ...
 // After DH Ratchet Step - PROMOTION:
-memcpy(ratchet_state.header_key_send, ratchet_state.next_header_key_send, 32);  // NHKs→HKs
-memcpy(ratchet_state.next_header_key_send, kdf_output + 64, 32);  // New NHKs from KDF
+memcpy(ratchet_state.header_key_send, ratchet_state.next_header_key_send, 32); // NHKs→HKs
+memcpy(ratchet_state.next_header_key_send, kdf_output + 64, 32); // New NHKs from KDF
 ```
 
 ### Root Cause
@@ -953,8 +953,8 @@ Initial: `nhk` from X3DH is NHKr, promotes to HKr on first AdvanceRatchet.
 
 ## Bug #31: Phase 2a Try-Order (SESSION 22)
 
-**Session:** 22  
-**Component:** `main.c` header decrypt try sequence  
+**Session:** 22
+**Component:** `main.c` header decrypt try sequence
 **Impact:** Critical - AdvanceRatchet never triggered
 
 ### The Discovery
@@ -966,12 +966,12 @@ not as a regular try → AdvanceRatchet was never triggered → ratchet state st
 ```c
 // Only tried HKr
 if (try_header_decrypt(header_key_recv, ...)) {
-    // SameRatchet
+ // SameRatchet
 } else {
-    // Debug fallback using saved_nhk (not proper flow)
-    if (try_header_decrypt(saved_nhk, ...)) {
-        // This worked but didn't trigger AdvanceRatchet!
-    }
+ // Debug fallback using saved_nhk (not proper flow)
+ if (try_header_decrypt(saved_nhk, ...)) {
+ // This worked but didn't trigger AdvanceRatchet!
+ }
 }
 ```
 
@@ -979,22 +979,22 @@ if (try_header_decrypt(header_key_recv, ...)) {
 ```c
 // Try HKr first (SameRatchet)
 if (try_header_decrypt(header_key_recv, ...)) {
-    decrypt_mode = SAME_RATCHET;
+ decrypt_mode = SAME_RATCHET;
 }
 // Try NHKr second (AdvanceRatchet)
 else if (try_header_decrypt(next_header_key_recv, ...)) {
-    decrypt_mode = ADVANCE_RATCHET;
-    // Promote: HKr ← NHKr
-    memcpy(ratchet_state.header_key_recv, ratchet_state.next_header_key_recv, 32);
-    // Trigger full DH ratchet step...
+ decrypt_mode = ADVANCE_RATCHET;
+ // Promote: HKr ← NHKr
+ memcpy(ratchet_state.header_key_recv, ratchet_state.next_header_key_recv, 32);
+ // Trigger full DH ratchet step...
 }
 ```
 
 ### Root Cause
 
 Double Ratchet requires trying keys in order:
-1. HKr (SameRatchet) — same DH key, just chain forward
-2. NHKr (AdvanceRatchet) — new DH key, full ratchet step
+1. HKr (SameRatchet) -- same DH key, just chain forward
+2. NHKr (AdvanceRatchet) -- new DH key, full ratchet step
 
 If NHKr succeeds, it triggers AdvanceRatchet and promotes NHKr→HKr.
 
@@ -1016,13 +1016,13 @@ If NHKr succeeds, it triggers AdvanceRatchet and promotes NHKr→HKr.
 | Feb 1 | S15 | #18 Root Cause (later disproven) |
 | Feb 1-3 | S16 | #18 Custom XSalsa20! |
 | Feb 4 | S17 | #18 Key Consistency Debug |
-| Feb 5 | S18 | #18 ✅ SOLVED! One-line fix! |
+| Feb 5 | S18 | #18 SOLVED! One-line fix! |
 | Feb 5 | S19 | #19 header_key_recv overwritten (workaround) |
-| Feb 6 | S20 | #19 ✅ SOLVED! Root cause: debug self-decrypt |
+| Feb 6 | S20 | #19 SOLVED! Root cause: debug self-decrypt |
 | Feb 6-7 | S21 | #20-#26 HELLO format + v3 format (7 bugs!) |
 | **Feb 7** | **S22** | **#27-#31 E2E version, KEM parser, NHK promotion (5 bugs!)** |
-| **Feb 7-8** | **S23** | **🎉 ZERO new bugs — CONNECTED!** |
-| **Feb 11-13** | **S24** | **🏆 ZERO new bugs — First Chat Message!** |
+| **Feb 7-8** | **S23** | ** ZERO new bugs -- CONNECTED!** |
+| **Feb 11-13** | **S24** | ** ZERO new bugs -- First Chat Message!** |
 
 ---
 
@@ -1054,7 +1054,7 @@ If NHKr succeeds, it triggers AdvanceRatchet and promotes NHKr→HKr.
 - 1x Key storage/promotion issue (#30 - HKs/NHKs init and promotion chain)
 - 1x Try-order issue (#31 - header decrypt sequence for AdvanceRatchet)
 
-🎉 Session 23: CONNECTED with ZERO new bugs! The crypto was already correct!
+ Session 23: CONNECTED with ZERO new bugs! The crypto was already correct!
 ```
 
 ---
@@ -1092,7 +1092,7 @@ If NHKr succeeds, it triggers AdvanceRatchet and promotes NHKr→HKr.
 29. **Key race conditions** - Multiple writes to same variable = bugs! (Session 16)
 30. **Self-decrypt failure is BY DESIGN** - Asymmetric header keys (Session 16)
 31. **Problem can shift between layers** - L4 fixed, L5 broke (Session 16)
-32. **Verify all layers before moving on** - Wire-format ✅, AAD ✅, Keys ✅ (Session 16)
+32. **Verify all layers before moving on** - Wire-format , AAD , Keys (Session 16)
 33. **ALWAYS search past Evgeny conversations first!** - He already answered Jan 28 (Session 17)
 34. **Length prefix differs per queue** - Reply Queue has 2-byte prefix, Contact Queue doesn't (Session 17)
 35. **cmNonce is RANDOM** - Directly in message, not calculated (Session 17)
@@ -1189,16 +1189,16 @@ If NHKr succeeds, it triggers AdvanceRatchet and promotes NHKr→HKr.
 126. **Bigger TCP buffer ≠ better** - Larger buffers enable async that breaks request-response (Session 27)
 127. **mbedtls_ssl_write + WANT_READ is normal for TLS 1.3** - Don't hack with non-blocking (Session 27)
 128. **Socket timeouts affect mbedTLS unpredictably** - SO_SNDTIMEO/SO_RCVTIMEO interact badly (Session 27)
-129. **Session Tickets — leave default (enabled)** - Haskell uses noSessionManager (Session 27)
+129. **Session Tickets -- leave default (enabled)** - Haskell uses noSessionManager (Session 27)
 130. **Check RAM budget after every architecture change** - esp_get_free_heap_size() at key points (Session 27)
 131. **Allocate memory pools on demand, not at boot** - Frame pools when needed, not init (Session 27)
 132. **Init stays sequential, tasks take over running operation** - Proven since Session 7 (Session 27)
 133. **Diff after EVERY task, no rushing ahead** - Prevents cumulative errors (Session 27)
-134. **Claude Code — "analyze only, NO code changes"** - Explicitly state to prevent unwanted PRs (Session 27)
+134. **Claude Code -- "analyze only, NO code changes"** - Explicitly state to prevent unwanted PRs (Session 27)
 135. **Multi-agent debugging works** - Different AI instances catch each other's errors (Session 27)
 136. **Cleanup commands before git add, not after** - Avoid committing build artifacts (Session 27)
 137. **Two days in a circle teaches you to measure the circle** - But measure first next time (Session 27)
-138. **erase-flash after branch switch — ALWAYS** - NVS crypto state doesn't match after code changes (Session 28)
+138. **erase-flash after branch switch -- ALWAYS** - NVS crypto state doesn't match after code changes (Session 28)
 139. **Read handoff protocol COMPLETELY** - Lesson 138 was in S27 handoff and was overlooked (Session 28)
 140. **ESP32-S3: Everything non-DMA → PSRAM** - Internal SRAM limited to ~40KB after WiFi+TLS (Session 28)
 141. **Mutual control catches hallucinations** - Mausi ↔ Hasi cross-review is a reliability mechanism (Session 28)
@@ -1216,29 +1216,29 @@ If NHKr succeeds, it triggers AdvanceRatchet and promotes NHKr→HKr.
 
 ---
 
-## Session 23: CONNECTED with ZERO New Bugs! 🎉
+## Session 23: CONNECTED with ZERO New Bugs!
 
-Session 23 achieved the historic milestone of **CONNECTED** status without introducing 
-any new bugs. All 31 existing bugs were already fixed, and the complete 7-step 
+Session 23 achieved the historic milestone of **CONNECTED** status without introducing
+any new bugs. All 31 existing bugs were already fixed, and the complete 7-step
 handshake was successfully implemented.
 
 ### The Complete 7-Step Handshake (Verified Working)
 
 ```
-Step   Queue   Direction      Content                           
-──────────────────────────────────────────────────────────────
-1.     —       App            NEW → Q_A, creates Invitation      
-2a.    Q_A     ESP32→App      SKEY (Register Sender Auth)        
-2b.    Q_A     ESP32→App      CONF Tag 'D' (Q_B + Profile)       
-3.     —       App            processConf → CONF Event           
-4.     —       App            LET/Accept Confirmation            
-5a.    Q_A     App            KEY on Q_A (senderKey)             
-5b.    Q_B     App→ESP32      SKEY on Q_B                        
-5c.    Q_B     App→ESP32      Tag 'I' (App Profile)              
-6a.    Q_B     ESP32          Reconnect + SUB + KEY              
-6b.    Q_A     ESP32→App      HELLO                              
-6c.    Q_B     App→ESP32      HELLO                              
-7.     —       Both           CON — "CONNECTED" 🎉               
+Step Queue Direction Content
+
+1. -- App NEW → Q_A, creates Invitation
+2a. Q_A ESP32→App SKEY (Register Sender Auth)
+2b. Q_A ESP32→App CONF Tag 'D' (Q_B + Profile)
+3. -- App processConf → CONF Event
+4. -- App LET/Accept Confirmation
+5a. Q_A App KEY on Q_A (senderKey)
+5b. Q_B App→ESP32 SKEY on Q_B
+5c. Q_B App→ESP32 Tag 'I' (App Profile)
+6a. Q_B ESP32 Reconnect + SUB + KEY
+6b. Q_A ESP32→App HELLO
+6c. Q_B App→ESP32 HELLO
+7. -- Both CON -- "CONNECTED"
 ```
 
 ### Key Corrections from Session 22
@@ -1248,7 +1248,7 @@ Step   Queue   Direction      Content
 
 ---
 
-## Session 24: First Chat Message — MILESTONE #2! 🏆
+## Session 24: First Chat Message -- MILESTONE #2!
 
 Session 24 achieved the second historic milestone: **First chat message from a microcontroller!**
 
@@ -1268,23 +1268,23 @@ Session 24 achieved the second historic milestone: **First chat message from a m
 Initially believed: Format error in our messages causes silent discard.
 
 Late discovery at session end:
-  subscribe_all_contacts() subscribes Reply Queue on main ssl connection.
-  Listen-Loop reads from queue_conn.ssl (separate connection).
-  Messages delivered to wrong socket!
+ subscribe_all_contacts() subscribes Reply Queue on main ssl connection.
+ Listen-Loop reads from queue_conn.ssl (separate connection).
+ Messages delivered to wrong socket!
 
 Fix for Session 25:
-  A) Process Q_B messages in Main Receive Loop
-  B) Don't SUB Q_B in subscribe_all_contacts()
+ A) Process Q_B messages in Main Receive Loop
+ B) Don't SUB Q_B in subscribe_all_contacts()
 ```
 
 ---
 
-## Session 25: Bidirectional Chat + Receipts — MILESTONES 3, 4, 5! 🎯
+## Session 25: Bidirectional Chat + Receipts -- MILESTONES 3, 4, 5!
 
 Session 25 achieved **THREE milestones** in the Valentine's Day session:
 - Milestone 3: First App message decrypted on ESP32
 - Milestone 4: Bidirectional encrypted chat
-- Milestone 5: Delivery receipts (✓✓)
+- Milestone 5: Delivery receipts ()
 
 ### Bugs Fixed (8 total)
 
@@ -1309,34 +1309,34 @@ Regular Q_B messages: [12B header][nonce@13][ciphertext]
 Parser was reading at wrong offset (14 instead of 13).
 
 Brute-force scan found the truth:
-  ✅✅✅ DECRYPT OK at nonce_offset=13!
+ DECRYPT OK at nonce_offset=13!
 ```
 
 ### Key Discovery: Ratchet State Persistence
 
 ```
-// WRONG — works on copy, changes lost:
+// WRONG -- works on copy, changes lost:
 ratchet_state_t rs = *ratchet_get_state();
 
-// CORRECT — works on pointer, changes persist:
+// CORRECT -- works on pointer, changes persist:
 ratchet_state_t *rs = ratchet_get_state();
 ```
 
 ### Key Discovery: Receipt Wire Format
 
 ```
-Our receipt:  90 bytes (WRONG)
-App receipt:  87 bytes (CORRECT)
-Difference:   3 bytes
+Our receipt: 90 bytes (WRONG)
+App receipt: 87 bytes (CORRECT)
+Difference: 3 bytes
 
 Errors:
-  - count: Word16 → Word8 (−1 byte)
-  - rcptInfo: Word32 → Word16 (−2 bytes)
+ - count: Word16 → Word8 (−1 byte)
+ - rcptInfo: Word32 → Word16 (−2 bytes)
 ```
 
 ---
 
-## Session 26: Persistence & Storage — MILESTONE 6! 🗄️
+## Session 26: Persistence & Storage -- MILESTONE 6!
 
 Session 26 achieved **Milestone 6** (Ratchet State Persistence) in the Valentine's Day Part 2 session:
 - ESP32 survives reboot without losing cryptographic state
@@ -1351,25 +1351,25 @@ Session 26 was a feature session (persistence), not protocol debugging. No new p
 
 ```
 Before Session 26: Reboot = complete amnesia
-After Session 26:  ESP32 remembers ratchet state, queue credentials, peer info
+After Session 26: ESP32 remembers ratchet state, queue credentials, peer info
 
 Test result:
-  - Rebooted ESP32
-  - App sent message "Test Two"
-  - ESP32 decrypted message without new handshake
-  - Delivery receipt (✓✓) worked!
+ - Rebooted ESP32
+ - App sent message "Test Two"
+ - ESP32 decrypted message without new handshake
+ - Delivery receipt () worked!
 ```
 
 ### Storage Architecture
 
 ```
-NVS (Internal Flash) — 128KB partition
-├── rat_XX     Ratchet State (520 bytes per contact)
-├── queue_our  Queue credentials
-├── cont_XX    Contact credentials
-├── peer_XX    Peer connection state
+NVS (Internal Flash) -- 128KB partition
+ rat_XX Ratchet State (520 bytes per contact)
+ queue_our Queue credentials
+ cont_XX Contact credentials
+ peer_XX Peer connection state
 
-SD Card (External) — Optional, for message history
+SD Card (External) -- Optional, for message history
 ```
 
 ### Key Metrics
@@ -1382,7 +1382,7 @@ SD Card (External) — Optional, for message history
 
 ---
 
-## Session 27: FreeRTOS Architecture Investigation ⚠️
+## Session 27: FreeRTOS Architecture Investigation
 
 Session 27 attempted the FreeRTOS multi-task architecture transformation. While the architecture design is correct, the implementation reserved ~90KB RAM at boot and broke TLS/WiFi.
 
@@ -1394,13 +1394,13 @@ Session 27 was an architecture session. No new protocol bugs, but 17 lessons lea
 
 ```
 Phase 2 commit reserved ~90KB RAM at boot:
-  Network Task Stack: 16KB
-  App Task Stack:     32KB
-  UI Task Stack:      10KB
-  Frame Pool:         32KB
-  Ring Buffers:       12KB
-  ─────────────────────────
-  Total:              ~90KB
+ Network Task Stack: 16KB
+ App Task Stack: 32KB
+ UI Task Stack: 10KB
+ Frame Pool: 32KB
+ Ring Buffers: 12KB
+
+ Total: ~90KB
 
 This starved smp_connect() of memory for TLS/WiFi.
 Solution: Start tasks AFTER connection, not at boot.
@@ -1422,7 +1422,7 @@ CONFIG_LWIP_TCP_SND_BUF_DEFAULT=32768
 
 ---
 
-## Session 28: FreeRTOS Task Architecture — Phase 2b Success! ✅
+## Session 28: FreeRTOS Task Architecture -- Phase 2b Success!
 
 Session 28 successfully implemented the FreeRTOS multi-task architecture after learning from Session 27's failure. The key was moving all non-DMA resources to PSRAM.
 
@@ -1434,16 +1434,16 @@ Session 28 was an architecture session. No new protocol bugs, but 6 critical les
 
 ```
 Task Architecture (Phase 2b):
-├── Network Task (Core 0, 12KB stack, Priority 7)
-├── App Task (Core 1, 16KB stack, Priority 6)
-└── UI Task (Core 1, 8KB stack, Priority 5)
+ Network Task (Core 0, 12KB stack, Priority 7)
+ App Task (Core 1, 16KB stack, Priority 6)
+ UI Task (Core 1, 8KB stack, Priority 5)
 
 PSRAM Allocation:
-├── Frame Pool: 16KB → PSRAM (heap_caps_calloc)
-├── Ring Buffers: 3KB → PSRAM (xRingbufferCreateWithCaps)
-└── Task Stacks: 36KB → PSRAM (already was)
+ Frame Pool: 16KB → PSRAM (heap_caps_calloc)
+ Ring Buffers: 3KB → PSRAM (xRingbufferCreateWithCaps)
+ Task Stacks: 36KB → PSRAM (already was)
 
-Result: Internal Heap ~40KB preserved for mbedTLS/WiFi ✅
+Result: Internal Heap ~40KB preserved for mbedTLS/WiFi
 ```
 
 ### Critical Lesson: erase-flash
@@ -1459,7 +1459,7 @@ NVS stores crypto state (ratchet, queues, contacts) that doesn't match after cod
 
 ---
 
-## Session 29: Multi-Task Architecture — BREAKTHROUGH! 🏆
+## Session 29: Multi-Task Architecture -- BREAKTHROUGH!
 
 Session 29 successfully implemented the multi-task architecture for SimpleGo. The complete encrypted messaging pipeline now runs over FreeRTOS Tasks with cross-core Ring Buffer IPC.
 
@@ -1473,34 +1473,34 @@ Session 29 was an architecture session. No new protocol bugs, but 5 critical les
 ESP32-S3: Tasks with PSRAM stack must NEVER write to NVS!
 
 Root Cause:
-  - SPI Flash write disables cache
-  - PSRAM is cache-based (SPI bus, mapped in cache)
-  - Task loses access to its own stack during Flash write
-  - Immediate crash!
+ - SPI Flash write disables cache
+ - PSRAM is cache-based (SPI bus, mapped in cache)
+ - Task loses access to its own stack during Flash write
+ - Immediate crash!
 
 Solution:
-  - App logic runs in Main Task (64KB Internal SRAM)
-  - Network Task (PSRAM) only does SSL reads (no NVS)
-  - UI Task (PSRAM) empty for now (no NVS)
+ - App logic runs in Main Task (64KB Internal SRAM)
+ - Network Task (PSRAM) only does SSL reads (no NVS)
+ - UI Task (PSRAM) empty for now (no NVS)
 ```
 
 ### Architecture After Session 29
 
 ```
 Network Task (Core 0, 12KB PSRAM):
-  → SSL read loop → Ring Buffer → Main Task
+ → SSL read loop → Ring Buffer → Main Task
 
 Main Task (64KB Internal SRAM):
-  → Parse → Decrypt → NVS → 42d handshake
+ → Parse → Decrypt → NVS → 42d handshake
 
 Ring Buffer IPC:
-  → net_to_app: 37KB (frames)
-  → app_to_net: 1KB (commands)
+ → net_to_app: 37KB (frames)
+ → app_to_net: 1KB (commands)
 ```
 
 ---
 
-## Session 30: Intensive Debug Session — 10 Hypotheses, 14 Fixes 🔍
+## Session 30: Intensive Debug Session -- 10 Hypotheses, 14 Fixes
 
 Session 30 was the most intensive debug session of the project. T5 (Keyboard-Send) was successfully completed. T6 (Bidirectional baseline test) revealed a deep receive problem that could not be solved despite 10 systematic fix attempts.
 
@@ -1508,15 +1508,15 @@ Session 30 was the most intensive debug session of the project. T5 (Keyboard-Sen
 
 Session 30 was a debug session. The App→ESP32 receive problem remains unresolved, but 10 hypotheses were systematically excluded and an expert question was sent to Evgeny Poberezkin.
 
-### T5: Keyboard-Send Integration ✅ PASSED
+### T5: Keyboard-Send Integration PASSED
 
 ```c
 // smp_tasks.c - Non-blocking keyboard poll
 if (kbd_queue != NULL) {
-    kbd_msg_t kbd_msg;
-    if (xQueueReceive(kbd_queue, &kbd_msg, 0) == pdTRUE) {
-        peer_send_chat_message(kbd_msg.text);
-    }
+ kbd_msg_t kbd_msg;
+ if (xQueueReceive(kbd_queue, &kbd_msg, 0) == pdTRUE) {
+ peer_send_chat_message(kbd_msg.text);
+ }
 }
 ```
 
@@ -1548,19 +1548,19 @@ v7 SUB Transmission: 118 bytes (33 bytes saved - SessionId removed from wire)
 
 ---
 
-## Session 31 — Root Cause Found! (2026-02-18)
+## Session 31 -- Root Cause Found! (2026-02-18)
 
-### 🎉 T6 RESOLVED: txCount==1 Filter in Drain-Loop
+### T6 RESOLVED: txCount==1 Filter in Drain-Loop
 
 **Root Cause:** The Drain-Loop in `subscribe_all_contacts()` had `if (rq_resp[rrp] == 1)` which discarded all batched server responses with txCount > 1. The server batched SUB OK + pending MSG with txCount=2, and the MSG in TX2 was silently dropped.
 
 **The Fix:**
 ```c
 // BEFORE (broken):
-if (rq_resp[rrp] == 1) {    // Only accept txCount == 1
+if (rq_resp[rrp] == 1) { // Only accept txCount == 1
 
 // AFTER (fixed):
-if (rq_resp[rrp] >= 1) {    // Accept txCount >= 1
+if (rq_resp[rrp] >= 1) { // Accept txCount >= 1
 ```
 
 **One character change: `==` → `>=`**
@@ -1578,20 +1578,20 @@ if (rq_resp[rrp] >= 1) {    // Accept txCount >= 1
 
 ### Evgeny's Response (Key Insights)
 
-> "Subscription can only exist in one socket though."  
-> "if you subscribe from another socket, the first would receive END"  
+> "Subscription can only exist in one socket though."
+> "if you subscribe from another socket, the first would receive END"
 > "concurrency is hard."
 
 ### SMP Batch Format (Definitive Reference)
 
 ```
-[2B content_length]     ← Big Endian
-[1B txCount]            ← Number of transmissions (can be > 1!)
-[2B tx1_length]         ← Large-encoded length of TX1
-[tx1_data]              ← First transmission
-[2B tx2_length]         ← Large-encoded length of TX2 (if txCount > 1)
-[tx2_data]              ← Second transmission
-[padding '#' to 16384]  ← Pad to SMP_BLOCK_SIZE
+[2B content_length] ← Big Endian
+[1B txCount] ← Number of transmissions (can be > 1!)
+[2B tx1_length] ← Large-encoded length of TX1
+[tx1_data] ← First transmission
+[2B tx2_length] ← Large-encoded length of TX2 (if txCount > 1)
+[tx2_data] ← Second transmission
+[padding '#' to 16384] ← Pad to SMP_BLOCK_SIZE
 ```
 
 `batch = True` is hardcoded in Transport.hs since v4. Third-party clients MUST handle txCount > 1.
@@ -1610,17 +1610,17 @@ if (rq_resp[rrp] >= 1) {    // Accept txCount >= 1
 
 ---
 
-*Bug Tracker v26.0*  
-*Last updated: February 18, 2026 - Session 31*  
-*Total bugs documented: 39 (all FIXED)*  
-*161 lessons learned!*  
-*🎉 Session 31: Bidirectional Chat Restored! Milestone 7!*
+*Bug Tracker v26.0*
+*Last updated: February 18, 2026 - Session 31*
+*Total bugs documented: 39 (all FIXED)*
+*161 lessons learned!*
+* Session 31: Bidirectional Chat Restored! Milestone 7!*
 
 ---
 
-## Session 32 — "The Demonstration" (2026-02-19/20)
+## Session 32 -- "The Demonstration" (2026-02-19/20)
 
-### 🖥️ From Protocol to Messenger — Full UI Integration
+### From Protocol to Messenger -- Full UI Integration
 
 **No new protocol bugs.** Session 32 was pure UI/architecture work: Keyboard-to-Chat integration (7 steps), delivery status system, LVGL display fix, multi-contact analysis, navigation stack fix, 128-contact planning.
 
@@ -1636,25 +1636,25 @@ if (rq_resp[rrp] >= 1) {    // Accept txCount >= 1
 
 ---
 
-*Bug Tracker v27.0*  
-*Last updated: February 20, 2026 - Session 32*  
-*Total bugs documented: 39 (all FIXED)*  
-*168 lessons learned!*  
-*🖥️ Session 32: "The Demonstration" — From Protocol to Messenger*
+*Bug Tracker v27.0*
+*Last updated: February 20, 2026 - Session 32*
+*Total bugs documented: 39 (all FIXED)*
+*168 lessons learned!*
+* Session 32: "The Demonstration" -- From Protocol to Messenger*
 
 ---
 
-## Session 34 — Multi-Contact Architecture (2026-02-23)
+## Session 34 -- Multi-Contact Architecture (2026-02-23)
 
-### 🏗️ From Singleton to Per-Contact Reply Queue
+### From Singleton to Per-Contact Reply Queue
 
 **8 commits in one session.** Production cleanup (-200+ lines), runtime add-contact, per-contact 42d tracking (bitmap), UI contact list, per-contact reply queue (128 PSRAM slots), SMP v7 signing fix. KEY command bug open, handed to Claude Code.
 
 ### SMP v7 Signing Fix
 
 ```
-WRONG:  [2B corrLen][corrId][2B entLen][entityId][command]
-RIGHT:  [1B corrLen][corrId][1B entLen][entityId][command]
+WRONG: [2B corrLen][corrId][2B entLen][entityId][command]
+RIGHT: [1B corrLen][corrId][1B entLen][entityId][command]
 
 2-byte Large-encoded prefix in signing buffer causes signature
 verification failure. Affected SUB, KEY, NEW simultaneously.
@@ -1664,12 +1664,12 @@ Fixed: all three use 1-byte prefix now.
 ### PSRAM Architecture (128 contacts)
 
 ```
-Ratchet States:    66,560 B (128 slots)
-Handshake States:   7,296 B (128 slots)
-Contacts DB:       35,200 B (128 slots)
+Ratchet States: 66,560 B (128 slots)
+Handshake States: 7,296 B (128 slots)
+Contacts DB: 35,200 B (128 slots)
 Reply Queue Array: 49,152 B (128 slots)
-─────────────────────────────
-Total:            ~158 KB / 8 MB (1.9%)
+
+Total: ~158 KB / 8 MB (1.9%)
 ```
 
 ### New Lessons Learned (Session 34)
@@ -1684,17 +1684,17 @@ Total:            ~158 KB / 8 MB (1.9%)
 
 ---
 
-*Bug Tracker v28.0*  
-*Last updated: February 23, 2026 - Session 34*  
-*Total bugs documented: 39 (all FIXED)*  
-*175 lessons learned!*  
-*🏗️ Session 34: Multi-Contact Architecture — KEY Command open*
+*Bug Tracker v28.0*
+*Last updated: February 23, 2026 - Session 34*
+*Total bugs documented: 39 (all FIXED)*
+*175 lessons learned!*
+* Session 34: Multi-Contact Architecture -- KEY Command open*
 
 ---
 
-## Session 34 Day 2 — Multi-Contact Bidirectional BREAKTHROUGH (2026-02-24)
+## Session 34 Day 2 -- Multi-Contact Bidirectional BREAKTHROUGH (2026-02-24)
 
-### 🏆 HISTORIC MILESTONE: Two Contacts Bidirectional Encrypted on ESP32
+### HISTORIC MILESTONE: Two Contacts Bidirectional Encrypted on ESP32
 
 **11 bugs found and fixed across 6 phases.** All bugs followed ONE pattern: global/hardcoded state instead of per-contact routing. KEY Command fixed, Ghost Write eliminated, global state removed, encoder corrected, index routing fixed, crypto corrected. Result: Contact 0 + Contact 1 both bidirectional encrypted.
 
@@ -1721,11 +1721,11 @@ RIGHT: "KEY " + [0x2C] + [44 bytes SPKI]
 
 ```
 reply_queue_create() bypassed smp_write_command_block():
-  1. Missing txCount(1B), txLen(2B), sigLen(1B) - server reads garbage
-  2. Zero-padding instead of '#'-padding
-  3. Direct mbedtls_ssl_read without loop (partial read = stream desync)
-  4. 16KB stack buffer uint8_t padded[SMP_BLOCK_SIZE] (stack overflow)
-  5. Missing SPKI length prefixes before auth/DH keys
+ 1. Missing txCount(1B), txLen(2B), sigLen(1B) - server reads garbage
+ 2. Zero-padding instead of '#'-padding
+ 3. Direct mbedtls_ssl_read without loop (partial read = stream desync)
+ 4. 16KB stack buffer uint8_t padded[SMP_BLOCK_SIZE] (stack overflow)
+ 5. Missing SPKI length prefixes before auth/DH keys
 
 Result: ERR BLOCK on entire connection (sock 54).
 Fix: Complete rewrite using smp_write_command_block() + smp_read_block().
@@ -1770,9 +1770,9 @@ Fix: 4x DISCARD -> FORWARD via Ring Buffer to App Task.
 
 ```
 reply_queue_encode_info() output: 132 bytes (expected 134)
-  1. Version: 1B instead of 2B Big-Endian (04 vs 00 04)
-  2. Host Count: missing 0x01 byte before host_len
-  3. DH Key Prefix: missing 0x2C (44) before SPKI
+ 1. Version: 1B instead of 2B Big-Endian (04 vs 00 04)
+ 2. Host Count: missing 0x01 byte before host_len
+ 3. DH Key Prefix: missing 0x2C (44) before SPKI
 Phone could not parse SMPQueueInfo, never responded.
 Fix: Encoder byte-identical to queue_encode_info().
 ```
@@ -1796,11 +1796,11 @@ Fix: Dynamic peer_%02x format with correct index.
 ### Bug #50: crypto_scalarmult vs crypto_box_beforenm
 
 ```
-WRONG:  crypto_scalarmult(shared_secret, our_private, server_public)
-        = raw X25519 DH output (32 bytes)
+WRONG: crypto_scalarmult(shared_secret, our_private, server_public)
+ = raw X25519 DH output (32 bytes)
 
-RIGHT:  crypto_box_beforenm(shared_secret, server_public, our_private)
-        = scalarmult + HSalsa20 key derivation
+RIGHT: crypto_box_beforenm(shared_secret, server_public, our_private)
+ = scalarmult + HSalsa20 key derivation
 
 crypto_box_open_easy_afternm() expects beforenm output.
 Using scalarmult = decrypt failure (ret=-2).
@@ -1811,8 +1811,8 @@ One line. Critical difference.
 
 ```
 All 11 bugs followed one pattern:
-  WRONG:  global/hardcoded state (slot 0, our_queue, pending_peer, peer_00)
-  RIGHT:  per-contact state (contacts[idx], RQ[idx], peer_%02x)
+ WRONG: global/hardcoded state (slot 0, our_queue, pending_peer, peer_00)
+ RIGHT: per-contact state (contacts[idx], RQ[idx], peer_%02x)
 
 No new algorithms. No protocol changes. Only consistent index routing.
 Pattern established for contacts 2-127.
@@ -1834,17 +1834,17 @@ Pattern established for contacts 2-127.
 
 ---
 
-*Bug Tracker v29.0*  
-*Last updated: February 24, 2026 - Session 34 Day 2*  
-*Total bugs documented: 50 (all FIXED)*  
-*186 lessons learned!*  
-*🏆 Session 34 Day 2: Multi-Contact Bidirectional Encrypted Messaging — HISTORIC MILESTONE*
+*Bug Tracker v29.0*
+*Last updated: February 24, 2026 - Session 34 Day 2*
+*Total bugs documented: 50 (all FIXED)*
+*186 lessons learned!*
+* Session 34 Day 2: Multi-Contact Bidirectional Encrypted Messaging -- HISTORIC MILESTONE*
 
 ---
 
-## Session 35 — Multi-Contact Victory (2026-02-24)
+## Session 35 -- Multi-Contact Victory (2026-02-24)
 
-### 🏁 All Planned Bugs Fixed — Chat Filter Working
+### All Planned Bugs Fixed -- Chat Filter Working
 
 **6 fixes (35a-35h) across 10 files, 1 commit.** Ratchet slot ordering, KEY target queue, per-contact chat filter, PSRAM guard, NVS fallback for Contact >0. Verified with erase-flash and 20+ messages across 2 contacts.
 
@@ -1852,35 +1852,35 @@ Pattern established for contacts 2-127.
 
 ```
 Every fix in Session 35 followed the Session 34 pattern:
-  - Decrypt with wrong ratchet slot = crypto failure
-  - KEY on wrong queue = connection failure
-  - NVS load overwrites active PSRAM = data corruption
+ - Decrypt with wrong ratchet slot = crypto failure
+ - KEY on wrong queue = connection failure
+ - NVS load overwrites active PSRAM = data corruption
 
 Rule: EVERY operation touching ratchet/handshake state
-      MUST call set_active(contact_idx) FIRST.
+ MUST call set_active(contact_idx) FIRST.
 ```
 
 ### Fix Details
 
 ```
 35a: ratchet_set_active() + handshake_set_active() BEFORE smp_agent_process_message()
-     (was called AFTER, causing Contact 1 decrypt with Slot 0 keys)
+ (was called AFTER, causing Contact 1 decrypt with Slot 0 keys)
 
 35c: KEY entityId = reply_queue_get(idx)->rcv_id (Reply Queue)
-     (was contacts[idx].recipient_id = Contact Queue, phone stuck on "connecting")
+ (was contacts[idx].recipient_id = Contact Queue, phone stuck on "connecting")
 
 35e: Per-contact chat filter via lv_obj_set_user_data(bubble, contact_idx)
-     + LV_OBJ_FLAG_HIDDEN for non-matching contacts on switch
+ + LV_OBJ_FLAG_HIDDEN for non-matching contacts on switch
 
 35f: PSRAM guard in reply_queue: check if slot already valid before NVS load
-     + deferred NVS save to prevent overwrite of active session
+ + deferred NVS save to prevent overwrite of active session
 
 35g: ratchet_set_active() before Contact Queue decrypt path
-     (was missing, CQ decrypt used whatever slot was active)
+ (was missing, CQ decrypt used whatever slot was active)
 
 35h: NVS fallback in ratchet_set_active() and handshake_set_active():
-     if PSRAM slot empty (zeroed), load from NVS first
-     (after boot, only Slot 0 loaded; Slot 1+ were empty)
+ if PSRAM slot empty (zeroed), load from NVS first
+ (after boot, only Slot 0 loaded; Slot 1+ were empty)
 ```
 
 ### New Lessons Learned (Session 35)
@@ -1894,17 +1894,17 @@ Rule: EVERY operation touching ratchet/handshake state
 
 ---
 
-*Bug Tracker v30.0*  
-*Last updated: February 24, 2026 - Session 35*  
-*Total bugs documented: 50 (all FIXED)*  
-*192 lessons learned!*  
-*🏁 Session 35: Multi-Contact Victory — All Planned Bugs Fixed*
+*Bug Tracker v30.0*
+*Last updated: February 24, 2026 - Session 35*
+*Total bugs documented: 50 (all FIXED)*
+*192 lessons learned!*
+* Session 35: Multi-Contact Victory -- All Planned Bugs Fixed*
 
 ---
 
-## Session 36 — Contact Lifecycle (2026-02-25)
+## Session 36 -- Contact Lifecycle (2026-02-25)
 
-### 🔄 Contact Lifecycle: Delete, Recreate, Zero Compromise
+### Contact Lifecycle: Delete, Recreate, Zero Compromise
 
 **7 bugs found and fixed across 4 sub-sessions (36a-36d).** Complete contact lifecycle implemented: Create → Chat → Delete → Recreate without erase-flash. NTP timestamps, contact names from ConnInfo JSON, 4-key NVS cleanup, KEY-HELLO race condition fix, and UI cleanup on delete.
 
@@ -1925,13 +1925,13 @@ Fallback path for uncompressed JSON also covered.
 Contact delete only erased rat_XX (ratchet state).
 Three more key families remained as orphans:
 
-  rat_XX  = Root Key, Chain Keys, Header Keys (decrypt past + future messages)
-  peer_XX = Queue IDs, DH Keys, Server Host (identity theft)
-  hand_XX = X3DH Handshake Keys (foundation of encryption)
-  rq_XX   = Reply Queue Auth Private Key (send as user)
+ rat_XX = Root Key, Chain Keys, Header Keys (decrypt past + future messages)
+ peer_XX = Queue IDs, DH Keys, Server Host (identity theft)
+ hand_XX = X3DH Handshake Keys (foundation of encryption)
+ rq_XX = Reply Queue Auth Private Key (send as user)
 
 Mausi found all 4 by reading source code (smp_peer.c:1131).
-Hasi had only checked current NVS contents — missing 3 families.
+Hasi had only checked current NVS contents -- missing 3 families.
 Fix: 4-key cleanup loop in remove_contact() AND on_popup_delete().
 ```
 
@@ -1940,8 +1940,8 @@ Fix: 4-key cleanup loop in remove_contact() AND on_popup_delete().
 ```
 cnt_%02x uses hex format, rat_%02u uses decimal format.
 Identical for indices 0-9, diverges from 10 onwards:
-  Index 10: cnt_0a vs rat_10  ← MISMATCH!
-  Index 15: cnt_0f vs rat_15  ← MISMATCH!
+ Index 10: cnt_0a vs rat_10 ← MISMATCH!
+ Index 15: cnt_0f vs rat_15 ← MISMATCH!
 
 Fix: All NVS key formatting unified to %02x (hex).
 ```
@@ -1959,26 +1959,26 @@ Fix: Find last underscore in agent message type string.
 
 ```
 Timeline from log:
-  (245267) APP: 42d -- SEND_KEY queued (slot=0)
-  (245767) peer_send_hello starts
-  (246797) HELLO sent via Peer (sock 56)          <- HELLO FIRST!
-  (247197) NET Task executes KEY now (sock 54)     <- KEY AFTER!
+ (245267) APP: 42d -- SEND_KEY queued (slot=0)
+ (245767) peer_send_hello starts
+ (246797) HELLO sent via Peer (sock 56) <- HELLO FIRST!
+ (247197) NET Task executes KEY now (sock 54) <- KEY AFTER!
 
 Root Cause:
-  App Task queued KEY to Net Task (Ring Buffer), waited 500ms blind,
-  then fired HELLO over separate Peer connection. Two sockets, no sync.
+ App Task queued KEY to Net Task (Ring Buffer), waited 500ms blind,
+ then fired HELLO over separate Peer connection. Two sockets, no sync.
 
 Why phone stays "connecting":
-  1. Phone receives HELLO → wants to respond on Reply Queue
-  2. KEY not arrived yet → Server has no phone auth key
-  3. Server rejects with ERR AUTH
-  4. Phone stuck on "connecting"
+ 1. Phone receives HELLO → wants to respond on Reply Queue
+ 2. KEY not arrived yet → Server has no phone auth key
+ 3. Server rejects with ERR AUTH
+ 4. Phone stuck on "connecting"
 
 Fix: FreeRTOS TaskNotification
-  - s_app_task_handle + NOTIFY_KEY_DONE define
-  - Net Task: xTaskNotify() after KEY OK/Fail/Timeout (all 3 paths!)
-  - App Task: xTaskNotifyWait(5000ms) instead of vTaskDelay(500ms)
-  - No deadlock: all paths notify
+ - s_app_task_handle + NOTIFY_KEY_DONE define
+ - Net Task: xTaskNotify() after KEY OK/Fail/Timeout (all 3 paths!)
+ - App Task: xTaskNotifyWait(5000ms) instead of vTaskDelay(500ms)
+ - No deadlock: all paths notify
 
 Evgeny quote confirming: "concurrency is hard."
 ```
@@ -2015,14 +2015,14 @@ Fix: ui_connect_reset() called in on_bar_new() BEFORE smp_request_add_contact().
 
 ```
 NVS is currently NOT encrypted:
-  nvs_flash_init() instead of nvs_flash_secure_init()
-  All crypto keys stored in PLAINTEXT in flash.
+ nvs_flash_init() instead of nvs_flash_secure_init()
+ All crypto keys stored in PLAINTEXT in flash.
 
 Impact of each key family if extracted:
-  rat_XX → Decrypt past + future messages (Root Key, Chain Keys, Header Keys)
-  peer_XX → Identity theft (Queue IDs, DH Keys, Server Host)
-  hand_XX → Foundation of encryption (X3DH Handshake Keys)
-  rq_XX → Send messages as user (Reply Queue Auth Private Key)
+ rat_XX → Decrypt past + future messages (Root Key, Chain Keys, Header Keys)
+ peer_XX → Identity theft (Queue IDs, DH Keys, Server Host)
+ hand_XX → Foundation of encryption (X3DH Handshake Keys)
+ rq_XX → Send messages as user (Reply Queue Auth Private Key)
 
 Mitigation: Proper deletion on contact delete (Bug #51 fix).
 TODO: NVS Encryption (nvs_flash_secure_init + eFuse keys) for production.
@@ -2035,10 +2035,10 @@ Principle: What is not there cannot be stolen. Deletion > trusting encryption.
 36-prep: UART baudrate 115200 → 921600 (8x speedup for 5000+ line logs)
 36-flow: Auto-QR and auto-contact on fresh start removed
 36-perf: Handshake delays reduced 6.5s → 2s
-36-ui:   Contact list rewritten (665 lines, long-press menu)
-36-log:  Heartbeat 5min (was 30s), hex dumps removed
-36-fix:  42d bitmap reset on delete: smp_clear_42d(idx)
-36-fix:  LIST_H macro collision with FreeRTOS → renamed CLIST_H
+36-ui: Contact list rewritten (665 lines, long-press menu)
+36-log: Heartbeat 5min (was 30s), hex dumps removed
+36-fix: 42d bitmap reset on delete: smp_clear_42d(idx)
+36-fix: LIST_H macro collision with FreeRTOS → renamed CLIST_H
 ```
 
 ### New Lessons Learned (Session 36)
@@ -2049,24 +2049,24 @@ Principle: What is not there cannot be stolen. Deletion > trusting encryption.
 196. **FreeRTOS TaskNotification is more lightweight than Semaphore for 1:1 task synchronization** - No kernel object needed, no priority inversion risk. xTaskNotify/xTaskNotifyWait is simpler and faster than binary semaphore for point-to-point sync (Session 36c)
 197. **xTaskNotify must send on ALL paths (success, error, timeout) or the waiting task deadlocks** - KEY handler must notify on OK, on ERR, and on timeout. Missing any path = App Task waits forever at xTaskNotifyWait. Three paths, three notifications (Session 36c)
 198. **LVGL bubble objects must be explicitly deleted on contact delete** - LVGL objects survive their logical parent (contact struct). ui_chat_clear_contact() iterates children and deletes by user_data tag match (Session 36d)
-199. **QR code widget caches last content — must be explicitly reset on Delete AND before New** - Two separate points of staleness: after delete (old QR flashes) and before new contact (previous QR shows). ui_connect_reset() needed in both paths (Session 36d)
-200. **FreeRTOS list.h defines LIST_H as include guard — own macros must not collide** - Custom header using #define LIST_H conflicts with FreeRTOS internals. Renamed to CLIST_H to avoid silent include-guard collision (Session 36b)
+199. **QR code widget caches last content -- must be explicitly reset on Delete AND before New** - Two separate points of staleness: after delete (old QR flashes) and before new contact (previous QR shows). ui_connect_reset() needed in both paths (Session 36d)
+200. **FreeRTOS list.h defines LIST_H as include guard -- own macros must not collide** - Custom header using #define LIST_H conflicts with FreeRTOS internals. Renamed to CLIST_H to avoid silent include-guard collision (Session 36b)
 201. **SimpleX changed from single underscore to double underscore separator** - Agent message type detection must find the LAST underscore, not the first. Parser assumed single separator but protocol evolved to double (Session 36b)
 202. **UART 115200 at 5000+ log lines = ~39s overhead. 921600 = ~5s. 8x faster, one sdkconfig change** - Four sdkconfig entries control UART baudrate. At high log volume, baudrate becomes a significant development bottleneck (Session 36)
 
 ---
 
-*Bug Tracker v31.0*  
-*Last updated: February 25, 2026 - Session 36*  
-*Total bugs documented: 57 (all FIXED) + Bug E*  
-*202 lessons learned!*  
-*🔄 Session 36: Contact Lifecycle — Delete, Recreate, Zero Compromise*
+*Bug Tracker v31.0*
+*Last updated: February 25, 2026 - Session 36*
+*Total bugs documented: 57 (all FIXED) + Bug E*
+*202 lessons learned!*
+* Session 36: Contact Lifecycle -- Delete, Recreate, Zero Compromise*
 
 ---
 
-## Session 37 — Encrypted Chat History (2026-02-25 to 2026-02-27)
+## Session 37 -- Encrypted Chat History (2026-02-25 to 2026-02-27)
 
-### 💾 AES-256-GCM Encrypted Chat History on SD Card
+### AES-256-GCM Encrypted Chat History on SD Card
 
 **2 bugs found and fixed across 4 sub-sessions (37a-37d).** Implemented complete encrypted chat persistence with per-contact key derivation, append-only storage, SPI bus serialization, and progressive chunked rendering. Contact list redesigned with single-line cards and search.
 
@@ -2074,58 +2074,58 @@ Principle: What is not there cannot be stolen. Deletion > trusting encryption.
 
 ```
 Symptoms:
-  assert failed: spi_ll_get_running_cmd
-  Display tearing/smearing when scrolling during SD access
-  Triggered by chat history load from SD card
+ assert failed: spi_ll_get_running_cmd
+ Display tearing/smearing when scrolling during SD access
+ Triggered by chat history load from SD card
 
 Root Cause:
-  Display and SD card share the SAME SPI2 bus on T-Deck Plus.
-  LVGL Task (display refresh) and App Task (SD read/write) = collision.
+ Display and SD card share the SAME SPI2 bus on T-Deck Plus.
+ LVGL Task (display refresh) and App Task (SD read/write) = collision.
 
 Fix (3 parts):
-  1. SPI2 bus serialization: recursive LVGL mutex for ALL SD operations
-     lvgl_port_lock(0) → SD operation → lvgl_port_unlock()
-  2. DMA draw buffer moved from PSRAM to internal SRAM (~12.8KB)
-     PSRAM access during SPI DMA transfers caused tearing
-  3. Proper error handling for SPI timeout conditions
+ 1. SPI2 bus serialization: recursive LVGL mutex for ALL SD operations
+ lvgl_port_lock(0) → SD operation → lvgl_port_unlock()
+ 2. DMA draw buffer moved from PSRAM to internal SRAM (~12.8KB)
+ PSRAM access during SPI DMA transfers caused tearing
+ 3. Proper error handling for SPI timeout conditions
 ```
 
 ### Bug #59: 1.5s Display Freeze on Chat Open
 
 ```
 Symptom:
-  Opening chat with history freezes display for 1.5 seconds.
-  All 20 LVGL bubble objects created synchronously.
+ Opening chat with history freezes display for 1.5 seconds.
+ All 20 LVGL bubble objects created synchronously.
 
 Root Cause:
-  smp_history_load() → create 20 bubbles → LVGL layout recalc → 1.5s block
+ smp_history_load() → create 20 bubbles → LVGL layout recalc → 1.5s block
 
 Fix: Chunked rendering
-  OLD: load_history() → create 20 bubbles → 1.5s freeze
-  NEW: load_history() → queue 20 records → timer creates 3/tick → 350ms fluid
-       "Loading..." indicator shown during progressive render
+ OLD: load_history() → create 20 bubbles → 1.5s freeze
+ NEW: load_history() → queue 20 records → timer creates 3/tick → 350ms fluid
+ "Loading..." indicator shown during progressive render
 
-  3 bubbles per LVGL timer tick (50ms each)
-  Total render time: ~350ms (vs 1.5s), display stays responsive
+ 3 bubbles per LVGL timer tick (50ms each)
+ Total render time: ~350ms (vs 1.5s), display stays responsive
 ```
 
 ### Chat History Architecture
 
 ```
 Key Management:
-  Master Key (256-bit random) stored in NVS
-  Per-contact key = HKDF-SHA256("simplego-chat", slot_index)
+ Master Key (256-bit random) stored in NVS
+ Per-contact key = HKDF-SHA256("simplego-chat", slot_index)
 
 GCM Nonce (deterministic, never reused):
-  nonce[0..3]  = slot_index (uint32 LE)
-  nonce[4..7]  = msg_index  (uint32 LE)
-  nonce[8..11] = 0x00000000
+ nonce[0..3] = slot_index (uint32 LE)
+ nonce[4..7] = msg_index (uint32 LE)
+ nonce[8..11] = 0x00000000
 
 Record Format:
-  [4B record_len][12B nonce][16B GCM tag][encrypted payload]
+ [4B record_len][12B nonce][16B GCM tag][encrypted payload]
 
 File Header (unencrypted):
-  [4B magic "SGH1"][4B version][4B msg_count][4B last_delivered_idx]
+ [4B magic "SGH1"][4B version][4B msg_count][4B last_delivered_idx]
 
 Storage Path: /sdcard/simplego/msgs/chat_XX.bin (one file per contact)
 ```
@@ -2134,134 +2134,134 @@ Storage Path: /sdcard/simplego/msgs/chat_XX.bin (one file per contact)
 
 ```
 37-guard: Ring buffer NULL-guard for subscribe_all_contacts race condition
-          (subscribe loop could fire before ring buffer init at startup)
+ (subscribe loop could fire before ring buffer init at startup)
 
 37d: Contact list redesign
-     - CARD_H: 44px → 28px (single line, 5-6 contacts visible)
-     - Bottom bar: 3 real lv_btn (100x36px touch targets)
-     - Search overlay with filtered contact list
-     - All green colors → cyan
+ - CARD_H: 44px → 28px (single line, 5-6 contacts visible)
+ - Bottom bar: 3 real lv_btn (100x36px touch targets)
+ - Search overlay with filtered contact list
+ - All green colors → cyan
 ```
 
 ### New Lessons Learned (Session 37)
 
-203. **SPI2 bus is shared between display AND SD card on T-Deck Plus** - Every SD access needs the LVGL mutex (lvgl_port_lock/unlock). Not two separate buses — one single bus. Display and SD card cannot operate concurrently (Session 37b)
+203. **SPI2 bus is shared between display AND SD card on T-Deck Plus** - Every SD access needs the LVGL mutex (lvgl_port_lock/unlock). Not two separate buses -- one single bus. Display and SD card cannot operate concurrently (Session 37b)
 204. **Chunked rendering is mandatory for history loading** - 20 LVGL objects created at once blocks display for 1.5s. 3 per tick (50ms) = 350ms total, display stays responsive. "Loading..." indicator covers the progressive render gap (Session 37b)
 
 ---
 
-*Bug Tracker v32.0*  
-*Last updated: February 27, 2026 - Session 37*  
-*Total bugs documented: 59 (all FIXED) + Bug E*  
-*204 lessons learned!*  
-*💾 Session 37: Encrypted Chat History — SD Card, SPI Bus Wars, Progressive Rendering*
+*Bug Tracker v32.0*
+*Last updated: February 27, 2026 - Session 37*
+*Total bugs documented: 59 (all FIXED) + Bug E*
+*204 lessons learned!*
+* Session 37: Encrypted Chat History -- SD Card, SPI Bus Wars, Progressive Rendering*
 
 ---
 
-## Session 38 — The SPI2 Bus Hunt (2026-02-28 to 2026-03-01)
+## Session 38 -- The SPI2 Bus Hunt (2026-02-28 to 2026-03-01)
 
-### 🔍 Eight Hypotheses, One Root Cause
+### Eight Hypotheses, One Root Cause
 
-**2 bugs found across 2 days of intensive debugging.** Added display and keyboard backlight, moved WiFi/LWIP to PSRAM, then spent two days hunting the display freeze. Eight hypotheses tested systematically — seven wrong, one correct. SD card physically removed proved SPI2 bus sharing is the root cause.
+**2 bugs found across 2 days of intensive debugging.** Added display and keyboard backlight, moved WiFi/LWIP to PSRAM, then spent two days hunting the display freeze. Eight hypotheses tested systematically -- seven wrong, one correct. SD card physically removed proved SPI2 bus sharing is the root cause.
 
 ### Bug #60: Display Freeze on SD Card Access (SPI2 Bus Contention)
 
 ```
 Symptoms:
-  Display freezes completely when loading chat history from SD card
-  Image frozen, main loop continues (heartbeat logs still printing)
-  No crash, no assert, just visual freeze
-  Always in chat with the most messages
+ Display freezes completely when loading chat history from SD card
+ Image frozen, main loop continues (heartbeat logs still printing)
+ No crash, no assert, just visual freeze
+ Always in chat with the most messages
 
 Root Cause:
-  Display (ST7789) and SD card share the SAME SPI2 bus on T-Deck Plus.
-  When SD card is read, SPI2 bus blocked → display rendering stalls.
-  LVGL hangs in lv_timer_handler() waiting for SPI2.
-  S37 mutex fix prevented crashes/tearing but contention remains:
-  one bus, two masters, blocking serialization.
+ Display (ST7789) and SD card share the SAME SPI2 bus on T-Deck Plus.
+ When SD card is read, SPI2 bus blocked → display rendering stalls.
+ LVGL hangs in lv_timer_handler() waiting for SPI2.
+ S37 mutex fix prevented crashes/tearing but contention remains:
+ one bus, two masters, blocking serialization.
 
 Proof:
-  SD card physically removed → device runs HOURS, 100% stable
-  SD card reinserted → freeze returns immediately on history load
+ SD card physically removed → device runs HOURS, 100% stable
+ SD card reinserted → freeze returns immediately on history load
 
 Eight Hypotheses Tested:
-  1. ❌ DMA Timeout → Freeze not in DMA wait path
-  2. ❌ Memory Crash → ESP32 heap was never the problem
-  3. ❌ DMA Callback Revert → Freeze identical without callback
-  4. ❌ bubble_draw_cb → Freeze identical without custom callbacks
-  5. ❌ LVGL Pool 64→192KB → WiFi init crashes (no internal SRAM left)
-  6. ❌ LVGL Pool 64→96KB → Freeze continues unchanged
-  7. ❌ trans_queue_depth 2→1 → Display artifacts (stripes) + OOM
-  8. ✅ SD Card Removed → STABLE → SPI2 bus sharing IS the root cause
+ 1. DMA Timeout → Freeze not in DMA wait path
+ 2. Memory Crash → ESP32 heap was never the problem
+ 3. DMA Callback Revert → Freeze identical without callback
+ 4. bubble_draw_cb → Freeze identical without custom callbacks
+ 5. LVGL Pool 64→192KB → WiFi init crashes (no internal SRAM left)
+ 6. LVGL Pool 64→96KB → Freeze continues unchanged
+ 7. trans_queue_depth 2→1 → Display artifacts (stripes) + OOM
+ 8. SD Card Removed → STABLE → SPI2 bus sharing IS the root cause
 
 Fix Plan (Session 39):
-  Move SD card to SPI3 bus. T-Deck Plus has SPI3 available.
-  Separate buses = zero contention = parallel operation.
+ Move SD card to SPI3 bus. T-Deck Plus has SPI3 available.
+ Separate buses = zero contention = parallel operation.
 
-Status: ROOT CAUSE IDENTIFIED — fix scheduled for Session 39
+Status: ROOT CAUSE IDENTIFIED -- fix scheduled for Session 39
 ```
 
 ### Bug #61: LVGL Heap Exhaustion with Many Chat Bubbles
 
 ```
 Symptom:
-  Display freeze or crash when too many chat bubbles displayed.
-  Always in chat with the most messages (same pattern as Bug #60).
+ Display freeze or crash when too many chat bubbles displayed.
+ Always in chat with the most messages (same pattern as Bug #60).
 
 Root Cause:
-  LVGL has its OWN memory pool (LV_MEM_SIZE=64KB in sdkconfig).
-  This is COMPLETELY SEPARATE from ESP32's system heap.
-  heap_caps_get_free_size() shows ESP32 heap, NOT LVGL pool!
-  64KB supports approximately 8 chat bubbles.
-  More bubbles = pool exhaustion = freeze or crash.
+ LVGL has its OWN memory pool (LV_MEM_SIZE=64KB in sdkconfig).
+ This is COMPLETELY SEPARATE from ESP32's system heap.
+ heap_caps_get_free_size() shows ESP32 heap, NOT LVGL pool!
+ 64KB supports approximately 8 chat bubbles.
+ More bubbles = pool exhaustion = freeze or crash.
 
 Fix:
-  MAX_VISIBLE_BUBBLES = 5 (temporary, target 8)
-  Sliding window: only N most recent bubbles exist as LVGL objects
-  Older messages loaded from SD history on scroll-up
+ MAX_VISIBLE_BUBBLES = 5 (temporary, target 8)
+ Sliding window: only N most recent bubbles exist as LVGL objects
+ Older messages loaded from SD history on scroll-up
 
-Status: TEMPORARY FIX — final sliding window in Session 39
+Status: TEMPORARY FIX -- final sliding window in Session 39
 ```
 
 ### Features Implemented (Session 38)
 
 ```
 1. Keyboard Backlight
-   - I2C address 0x55
-   - Auto-off timer
-   - Independent from SPI bus (I2C)
+ - I2C address 0x55
+ - Auto-off timer
+ - Independent from SPI bus (I2C)
 
 2. Display Backlight
-   - GPIO 42 with pulse-counting (16 brightness levels)
-   - Independent from SPI bus (pure GPIO)
-   - Starts at 50% on boot
+ - GPIO 42 with pulse-counting (16 brightness levels)
+ - Independent from SPI bus (pure GPIO)
+ - Starts at 50% on boot
 
 3. Settings Screen
-   - Brightness sliders for display and keyboard
-   - Preset buttons for quick adjustment
-   - Gear button in chat header for quick access
+ - Brightness sliders for display and keyboard
+ - Preset buttons for quick adjustment
+ - Gear button in chat header for quick access
 
 4. WiFi/LWIP → PSRAM
-   - WiFi and LWIP buffers moved from internal SRAM to PSRAM
-   - 56KB internal SRAM freed
-   - No performance impact observed
+ - WiFi and LWIP buffers moved from internal SRAM to PSRAM
+ - 56KB internal SRAM freed
+ - No performance impact observed
 ```
 
 ### SPI Architecture Decisions
 
 ```
 Synchronous SPI (stable):
-  DMA callback mechanism (S38f) identified as adding complexity
-  without solving fundamental SPI2 contention. Removed.
-  Replaced with synchronous draw_bitmap() + flush_ready().
+ DMA callback mechanism (S38f) identified as adding complexity
+ without solving fundamental SPI2 contention. Removed.
+ Replaced with synchronous draw_bitmap() + flush_ready().
 
 trans_queue_depth:
-  MUST remain at 2. Setting to 1 causes OOM + display stripes.
-  This is a hard constraint of the ESP-IDF SPI driver.
+ MUST remain at 2. Setting to 1 causes OOM + display stripes.
+ This is a hard constraint of the ESP-IDF SPI driver.
 
 Uncommitted changes (waiting for S39 SPI3 fix):
-  - main/main.c: MAX_VISIBLE_BUBBLES 5
-  - tdeck_lvgl.c: Synchronous SPI (DMA callback removed)
+ - main/main.c: MAX_VISIBLE_BUBBLES 5
+ - tdeck_lvgl.c: Synchronous SPI (DMA callback removed)
 ```
 
 ### Key Insight: Correlation ≠ Causation
@@ -2303,17 +2303,17 @@ fa4d40a feat(hal): add dedicated keyboard backlight module
 
 ---
 
-*Bug Tracker v33.0*  
-*Last updated: March 1, 2026 - Session 38*  
-*Total bugs documented: 61 (59 FIXED, 1 identified for S39, 1 temp fix) + Bug E*  
-*209 lessons learned!*  
-*🔍 Session 38: The SPI2 Bus Hunt — Eight Hypotheses, One Root Cause*
+*Bug Tracker v33.0*
+*Last updated: March 1, 2026 - Session 38*
+*Total bugs documented: 61 (59 FIXED, 1 identified for S39, 1 temp fix) + Bug E*
+*209 lessons learned!*
+* Session 38: The SPI2 Bus Hunt -- Eight Hypotheses, One Root Cause*
 
 ---
 
-## Session 39 — On-Device WiFi Manager (2026-03-03)
+## Session 39 -- On-Device WiFi Manager (2026-03-03)
 
-### 📡 First On-Device WiFi Manager for T-Deck Hardware
+### First On-Device WiFi Manager for T-Deck Hardware
 
 **9 bugs found and fixed in a single day.** After exhaustive market research (Meshtastic, MeshCore, Bruce, ESP32Berry, Armachat, ESPP, all ESP-IDF WiFi libraries), confirmed no T-Deck project has on-device WiFi setup. SimpleGo is the first. Complete WiFi backend rewrite, first-boot flow, WPA3 fix, SPI DMA fix, dynamic UI.
 
@@ -2321,136 +2321,136 @@ fa4d40a feat(hal): add dedicated keyboard backlight module
 
 ```
 Problem:
-  smp_wifi.c and wifi_manager.c fought each other.
-  smp_wifi.c had unconditional auto-reconnect on DISCONNECT event.
-  wifi_manager.c disconnects to switch network → smp_wifi.c reconnects to old.
+ smp_wifi.c and wifi_manager.c fought each other.
+ smp_wifi.c had unconditional auto-reconnect on DISCONNECT event.
+ wifi_manager.c disconnects to switch network → smp_wifi.c reconnects to old.
 
-  wifi_manager: esp_wifi_disconnect()  → DISCONNECT event fires
-  smp_wifi:    event_handler()         → esp_wifi_connect(old_network!)
-  wifi_manager: esp_wifi_connect(new)  → ALREADY CONNECTED to old!
+ wifi_manager: esp_wifi_disconnect() → DISCONNECT event fires
+ smp_wifi: event_handler() → esp_wifi_connect(old_network!)
+ wifi_manager: esp_wifi_connect(new) → ALREADY CONNECTED to old!
 
 Fix:
-  Both files merged into single wifi_manager.c.
-  One state machine, one event handler chain, no conflicts.
-  Kconfig credentials eliminated as priority source, NVS-only storage.
+ Both files merged into single wifi_manager.c.
+ One state machine, one event handler chain, no conflicts.
+ Kconfig credentials eliminated as priority source, NVS-only storage.
 ```
 
 ### Bug #63: UI Freeze from vTaskDelay in LVGL Context
 
 ```
 Problem:
-  deferred_wifi_rebuild() called vTaskDelay(pdMS_TO_TICKS(200))
-  Blocked LVGL render task for 200ms — no screen updates, no input.
+ deferred_wifi_rebuild() called vTaskDelay(pdMS_TO_TICKS(200))
+ Blocked LVGL render task for 200ms -- no screen updates, no input.
 
 Fix:
-  Replaced with lv_timer_create() one-shot timer.
-  Fires after 200ms without blocking LVGL task.
+ Replaced with lv_timer_create() one-shot timer.
+ Fires after 200ms without blocking LVGL task.
 ```
 
 ### Bug #64: WiFi Scan Race Condition
 
 ```
 Problem:
-  wifi_scan_poll_cb() called ESP-IDF APIs directly:
-    esp_wifi_scan_get_ap_num() + esp_wifi_scan_get_ap_records()
-  Instead of using cached results from backend.
-  Inconsistent results when scan and UI polling out of sync.
+ wifi_scan_poll_cb() called ESP-IDF APIs directly:
+ esp_wifi_scan_get_ap_num() + esp_wifi_scan_get_ap_records()
+ Instead of using cached results from backend.
+ Inconsistent results when scan and UI polling out of sync.
 
 Fix:
-  Switched to wifi_manager_get_scan_count() / get_scan_results().
-  Backend caches results after scan completion, UI reads cache only.
+ Switched to wifi_manager_get_scan_count() / get_scan_results().
+ Backend caches results after scan completion, UI reads cache only.
 ```
 
 ### Bug #65: First Scan Shows No Results
 
 ```
 Problem:
-  500ms "stale flag guard" ignored wifi_manager_is_scan_done() for first 500ms.
-  ESP32 completes scan in <500ms with few APs → poll misses done signal.
+ 500ms "stale flag guard" ignored wifi_manager_is_scan_done() for first 500ms.
+ ESP32 completes scan in <500ms with few APs → poll misses done signal.
 
 Fix:
-  Stale flag guard completely removed.
-  Backend sets s_scan_done = false before each new scan. Sufficient.
+ Stale flag guard completely removed.
+ Backend sets s_scan_done = false before each new scan. Sufficient.
 ```
 
 ### Bug #66: WPA3 SAE Authentication Failure (0x600)
 
 ```
 Symptom:
-  auth -> init (0x600) on every connection attempt
-  10 retries, then state machine dead
-  Router: WPA2/WPA3 Transition Mode
+ auth -> init (0x600) on every connection attempt
+ 10 retries, then state machine dead
+ Router: WPA2/WPA3 Transition Mode
 
 Root Cause:
-  WIFI_AUTH_WPA_WPA2_PSK threshold made ESP32 attempt WPA3-SAE.
-  SAE negotiation on ESP32-S3 (ESP-IDF 5.5.2) fails consistently
-  with Transition Mode routers.
+ WIFI_AUTH_WPA_WPA2_PSK threshold made ESP32 attempt WPA3-SAE.
+ SAE negotiation on ESP32-S3 (ESP-IDF 5.5.2) fails consistently
+ with Transition Mode routers.
 
 Fix:
-  Threshold: WIFI_AUTH_WPA2_PSK
-  sae_pwe_h2e = WPA3_SAE_PWE_BOTH
-  pmf_cfg.capable = true, required = false
-  Accepts WPA2 and WPA3, but doesn't aggressively attempt SAE.
+ Threshold: WIFI_AUTH_WPA2_PSK
+ sae_pwe_h2e = WPA3_SAE_PWE_BOTH
+ pmf_cfg.capable = true, required = false
+ Accepts WPA2 and WPA3, but doesn't aggressively attempt SAE.
 
-  1 line of code, 100+ test attempts to isolate.
+ 1 line of code, 100+ test attempts to isolate.
 ```
 
 ### Bug #67: Dead State Machine After Exhausted Retries
 
 ```
 Problem:
-  After 10 failed boot retries, WiFi state machine stayed dead.
-  Manual connect via WiFi Manager ignored (retry counter exhausted).
+ After 10 failed boot retries, WiFi state machine stayed dead.
+ Manual connect via WiFi Manager ignored (retry counter exhausted).
 
 Fix:
-  Retry counter reset on every new wifi_manager_connect() call.
-  esp_wifi_disconnect() before esp_wifi_connect() to clean driver state.
+ Retry counter reset on every new wifi_manager_connect() call.
+ esp_wifi_disconnect() before esp_wifi_connect() to clean driver state.
 ```
 
 ### Bug #68: SPI DMA OOM on Screen Switch
 
 ```
 Symptom:
-  lcd_panel.io.spi: spi transmit (queue) color failed
-  TDECK_LVGL: draw_bitmap FAILED: ESP_ERR_NO_MEM (0x101)
-  LVGL buffer at 0x3c1d79a8 (PSRAM range)
+ lcd_panel.io.spi: spi transmit (queue) color failed
+ TDECK_LVGL: draw_bitmap FAILED: ESP_ERR_NO_MEM (0x101)
+ LVGL buffer at 0x3c1d79a8 (PSRAM range)
 
 Root Cause:
-  Previously invisible because WiFi Manager never worked.
-  Working WiFi Manager = first "screen switch during active network session".
-  TLS/SMP/crypto consumed internal SRAM → malloc fell back to PSRAM.
-  ESP32-S3 SPI DMA cannot read from PSRAM.
+ Previously invisible because WiFi Manager never worked.
+ Working WiFi Manager = first "screen switch during active network session".
+ TLS/SMP/crypto consumed internal SRAM → malloc fell back to PSRAM.
+ ESP32-S3 SPI DMA cannot read from PSRAM.
 
 Fix:
-  LVGL draw buffer: MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL
-  Guarantees internal SRAM placement regardless of heap pressure.
+ LVGL draw buffer: MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL
+ Guarantees internal SRAM placement regardless of heap pressure.
 ```
 
 ### Bug #69: Splash Timer Overwrites WiFi Manager
 
 ```
 Problem:
-  First boot: SMP task detects "no WiFi" at ~2040ms → opens Settings/WiFi
-  Splash timer fires at ~3770ms → overwrites with Main Screen
+ First boot: SMP task detects "no WiFi" at ~2040ms → opens Settings/WiFi
+ Splash timer fires at ~3770ms → overwrites with Main Screen
 
 Fix:
-  Navigation guard in ui_splash.c:
-  If current screen != Splash (task already navigated), timer does nothing.
+ Navigation guard in ui_splash.c:
+ If current screen != Splash (task already navigated), timer does nothing.
 ```
 
 ### Bug #70: SSID Not Visible on Main Screen
 
 ```
 Problem:
-  WiFi SSID only appeared after visiting Settings/WiFi.
+ WiFi SSID only appeared after visiting Settings/WiFi.
 
 Root Cause:
-  ui_main_refresh() called only once at screen create.
-  WiFi not yet connected at that point.
+ ui_main_refresh() called only once at screen create.
+ WiFi not yet connected at that point.
 
 Fix:
-  3-second timer hdr_refresh_cb checks WiFi status + unread count.
-  Dynamic header: unread (blue mail icon) / SSID (cyan) / "No WiFi" (grey)
+ 3-second timer hdr_refresh_cb checks WiFi status + unread count.
+ Dynamic header: unread (blue mail icon) / SSID (cyan) / "No WiFi" (grey)
 ```
 
 ### Market Research Results
@@ -2458,13 +2458,13 @@ Fix:
 ```
 No T-Deck project has an on-device WiFi manager:
 
-  Meshtastic (9,000 commits): CLI, phone app, web UI only
-  LilyGo Factory Firmware:    Hardware examples, no WiFi
-  ESP32Berry:                  Had LVGL WiFi, archived May 2024
-  Bruce Firmware:              Best WiFi, but TFT_eSPI not LVGL
-  All ESP-IDF libraries:      Web portals or BLE, no on-device LVGL
+ Meshtastic (9,000 commits): CLI, phone app, web UI only
+ LilyGo Factory Firmware: Hardware examples, no WiFi
+ ESP32Berry: Had LVGL WiFi, archived May 2024
+ Bruce Firmware: Best WiFi, but TFT_eSPI not LVGL
+ All ESP-IDF libraries: Web portals or BLE, no on-device LVGL
 
-  SimpleGo: FIRST on-device WiFi manager for T-Deck with LVGL + keyboard
+ SimpleGo: FIRST on-device WiFi manager for T-Deck with LVGL + keyboard
 ```
 
 ### New Lessons Learned (Session 39)
@@ -2476,11 +2476,11 @@ No T-Deck project has an on-device WiFi manager:
 
 ---
 
-*Bug Tracker v34.0*  
-*Last updated: March 3, 2026 - Session 39*  
-*Total bugs documented: 70 (68 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
-*213 lessons learned!*  
-*📡 Session 39: WiFi Manager — First On-Device WiFi Setup for T-Deck*
+*Bug Tracker v34.0*
+*Last updated: March 3, 2026 - Session 39*
+*Total bugs documented: 70 (68 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*
+*213 lessons learned!*
+* Session 39: WiFi Manager -- First On-Device WiFi Setup for T-Deck*
 
 ---
 
@@ -2494,15 +2494,15 @@ Session 40 solved the chat history display problem with a three-stage sliding wi
 
 ```
 Symptom:
-  7 bubbles rendered instead of 5 during scroll operations.
+ 7 bubbles rendered instead of 5 during scroll operations.
 
 Root Cause:
-  lv_obj_scroll_to_y() inside load_older_messages() synchronously fires
-  a new LV_EVENT_SCROLL, triggering load_newer_messages() in the same frame.
+ lv_obj_scroll_to_y() inside load_older_messages() synchronously fires
+ a new LV_EVENT_SCROLL, triggering load_newer_messages() in the same frame.
 
 Fix:
-  s_window_busy flag prevents re-entrant scroll handling.
-  Set before scroll operations, cleared after completion.
+ s_window_busy flag prevents re-entrant scroll handling.
+ Set before scroll operations, cleared after completion.
 ```
 
 ### Package 40a: Crypto-Separation from SPI Mutex
@@ -2529,10 +2529,10 @@ PSRAM cache (MSG_CACHE_SIZE=30), LVGL window (BUBBLE_WINDOW_SIZE=5), scroll trig
 
 ---
 
-*Bug Tracker v35.0*  
-*Last updated: March 4, 2026 - Session 40*  
-*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
-*220 lessons learned*  
+*Bug Tracker v35.0*
+*Last updated: March 4, 2026 - Session 40*
+*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*
+*220 lessons learned*
 *Session 40: Sliding Window -- Unlimited Encrypted History at Constant Memory*
 
 ---
@@ -2547,21 +2547,21 @@ Session 41 was the most comprehensive cleanup session in the project. Eight sub-
 
 ```
 Deleted:
-  simplex_secretbox_open_debug() -- ~90 lines from simplex_crypto.c/h
-  Brute-force E2E decrypt loop (Methods 0-3) -- replaced with direct decrypt_client_msg()
-  KEY_DEBUG ESP_LOG_BUFFER_HEX blocks from smp_tasks.c
-  Empty ui_task() and its xTaskCreatePinnedToCore call
-  T6-Diag5 hex dump block from smp_network.c
+ simplex_secretbox_open_debug() -- ~90 lines from simplex_crypto.c/h
+ Brute-force E2E decrypt loop (Methods 0-3) -- replaced with direct decrypt_client_msg()
+ KEY_DEBUG ESP_LOG_BUFFER_HEX blocks from smp_tasks.c
+ Empty ui_task() and its xTaskCreatePinnedToCore call
+ T6-Diag5 hex dump block from smp_network.c
 
 Changed:
-  RECV, BLOCK_TX, DH shared secret: LOGI to LOGD
-  smp_storage.c: memset() replaced with mbedtls_platform_zeroize() (CWE-14)
+ RECV, BLOCK_TX, DH shared secret: LOGI to LOGD
+ smp_storage.c: memset() replaced with mbedtls_platform_zeroize() (CWE-14)
 
 GitHub Security:
-  CodeQL C/C++ analysis enabled
-  Dependabot alerts enabled
-  Secret push protection enabled
-  SECURITY.md vulnerability reporting policy added
+ CodeQL C/C++ analysis enabled
+ Dependabot alerts enabled
+ Secret push protection enabled
+ SECURITY.md vulnerability reporting policy added
 ```
 
 ### 41b: LVGL Pool Measurements (Definitive)
@@ -2578,16 +2578,16 @@ Fragmentation: 44% to 48%, stabilizes (no degradation over time)
 
 ```
 Symptom:
-  AES-GCM decrypt fails on 13KB+ message bodies
-  Only 9.6KB contiguous internal SRAM free at runtime
+ AES-GCM decrypt fails on 13KB+ message bodies
+ Only 9.6KB contiguous internal SRAM free at runtime
 
 Root Cause:
-  ESP-IDF hardware AES accelerator requires contiguous internal SRAM for DMA.
-  When internal SRAM is fragmented, hardware accelerator silently fails.
+ ESP-IDF hardware AES accelerator requires contiguous internal SRAM for DMA.
+ When internal SRAM is fragmented, hardware accelerator silently fails.
 
 Fix:
-  CONFIG_MBEDTLS_HARDWARE_AES=n in sdkconfig.defaults
-  Software AES uses CPU, allocates from any heap including PSRAM.
+ CONFIG_MBEDTLS_HARDWARE_AES=n in sdkconfig.defaults
+ Software AES uses CPU, allocates from any heap including PSRAM.
 
 Build: idf.py fullclean && idf.py erase-flash && idf.py build flash monitor
 ```
@@ -2596,38 +2596,38 @@ Build: idf.py fullclean && idf.py erase-flash && idf.py build flash monitor
 
 ```
 Root Cause:
-  Live message handler created bubble THEN checked eviction.
-  Pool check rejected new bubble because eviction had not freed space.
+ Live message handler created bubble THEN checked eviction.
+ Pool check rejected new bubble because eviction had not freed space.
 
 Fix:
-  Evict FIRST if bubble_count >= BUBBLE_WINDOW_SIZE, THEN create.
-  Safety margin lowered from 8192 to 4096 bytes (eviction frees ~1.2KB).
-  Files: ui_chat.c, ui_chat_bubble.c
+ Evict FIRST if bubble_count >= BUBBLE_WINDOW_SIZE, THEN create.
+ Safety margin lowered from 8192 to 4096 bytes (eviction frees ~1.2KB).
+ Files: ui_chat.c, ui_chat_bubble.c
 ```
 
 ### 41e: LVGL Pool Fragmentation Diagnosis
 
 ```
 Finding: Screens created on first visit but NEVER deleted.
-  After Main + Contacts + Chat + Settings: 4 screens simultaneous
-  ~14KB permanently consumed by inactive screens
-  Pool after: 8576 bytes free (86% used) -- insufficient for 5 bubbles
+ After Main + Contacts + Chat + Settings: 4 screens simultaneous
+ ~14KB permanently consumed by inactive screens
+ Pool after: 8576 bytes free (86% used) -- insufficient for 5 bubbles
 ```
 
 ### 41f: Screen Lifecycle Fix + Dangling Pointer Protection
 
 ```
 Screen Lifecycle (ui_manager.c):
-  Delete previous screen after lv_scr_load().
-  Main screen exempt (permanent). All others: ephemeral.
+ Delete previous screen after lv_scr_load().
+ Main screen exempt (permanent). All others: ephemeral.
 
 Dangling Pointer Protection:
-  ui_chat.c: ui_chat_cleanup() nullifies 6 static LVGL pointers.
-  if (!screen) return guards on 4 public functions.
-  ui_chat_bubble.c: chat_bubble_cleanup() zeros tracked_msgs[].
+ ui_chat.c: ui_chat_cleanup() nullifies 6 static LVGL pointers.
+ if (!screen) return guards on 4 public functions.
+ ui_chat_bubble.c: chat_bubble_cleanup() zeros tracked_msgs[].
 
 Result: Pool ~42,970 bytes free (31% used), stable across 8 visits.
-        Before fix: 8,576 bytes free (86% used). Recovery: ~34KB.
+ Before fix: 8,576 bytes free (86% used). Recovery: ~34KB.
 ```
 
 ### 41g: Comment Cleanup (9 files)
@@ -2645,12 +2645,12 @@ Marked: extern declarations with TODO for header migration
 
 ```
 133 lines removed from smp_peer.c:
-  CONF_CMP diagnostic blocks, AUFTRAG-15a/17 blocks
-  6 printf hex-dump loops, DEBUG-Check block
+ CONF_CMP diagnostic blocks, AUFTRAG-15a/17 blocks
+ 6 printf hex-dump loops, DEBUG-Check block
 
 Zero printf remaining in production code.
 Build fix: dead call to deleted simplex_secretbox_open_debug()
-           replaced with simplex_secretbox_open().
+ replaced with simplex_secretbox_open().
 ```
 
 ### New Lessons Learned (Session 41)
@@ -2663,10 +2663,10 @@ Build fix: dead call to deleted simplex_secretbox_open_debug()
 
 ---
 
-*Bug Tracker v36.0*  
-*Last updated: March 4, 2026 - Session 41*  
-*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
-*225 lessons learned*  
+*Bug Tracker v36.0*
+*Last updated: March 4, 2026 - Session 41*
+*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*
+*225 lessons learned*
 *Session 41: Pre-GitHub Cleanup and Stabilization*
 
 ---
@@ -2681,11 +2681,11 @@ No new bugs. No functional changes. Every task produced identical object code. S
 
 ```
 1281 to 1207 lines (74 lines removed):
-  9 printf blocks removed (Layer dumps L0-L6, SKEY hex, A_MSG hex+ASCII)
-  Auth-key-prefix log removed (security: Ed25519 key bytes to serial)
-  Plaintext message log removed (privacy: cleartext to serial)
-  8 verbose LOGIs downgraded to LOGD
-  Session/task comments removed, German to English
+ 9 printf blocks removed (Layer dumps L0-L6, SKEY hex, A_MSG hex+ASCII)
+ Auth-key-prefix log removed (security: Ed25519 key bytes to serial)
+ Plaintext message log removed (privacy: cleartext to serial)
+ 8 verbose LOGIs downgraded to LOGD
+ Session/task comments removed, German to English
 
 Result: Zero printf in production. Verified across entire codebase.
 
@@ -2697,13 +2697,13 @@ Side fix: smp_storage.c missing #include "mbedtls/platform_util.h" added.
 ```
 Architectural anomaly eliminated. 7 symbols migrated to owning modules:
 
-  ED25519_SPKI_HEADER[12]  -> smp_contacts.c / smp_contacts.h
-  X25519_SPKI_HEADER[12]   -> smp_contacts.c / smp_contacts.h
-  contacts_db              -> smp_contacts.c / smp_contacts.h
-  base64url_chars[]        -> smp_utils.c / smp_utils.h
-  pending_peer             -> smp_peer.c / smp_peer.h
-  peer_conn                -> smp_peer.c / smp_peer.h
-  wifi_connected           -> wifi_manager.c / wifi_manager.h
+ ED25519_SPKI_HEADER[12] -> smp_contacts.c / smp_contacts.h
+ X25519_SPKI_HEADER[12] -> smp_contacts.c / smp_contacts.h
+ contacts_db -> smp_contacts.c / smp_contacts.h
+ base64url_chars[] -> smp_utils.c / smp_utils.h
+ pending_peer -> smp_peer.c / smp_peer.h
+ peer_conn -> smp_peer.c / smp_peer.h
+ wifi_connected -> wifi_manager.c / wifi_manager.h
 
 smp_types.h: types only, no object declarations.
 smp_globals.c: deleted.
@@ -2730,11 +2730,11 @@ smp_ratchet.c re-delivery log already ESP_LOGW. No changes needed.
 ```
 530 lines to 118 lines. Five static helpers extracted:
 
-  app_init_run()                  Initialization, subscribe, wildcard ACK
-  app_process_deferred_work()     NVS saves (contacts, RQ, history)
-  app_process_keyboard_queue()    Keyboard send, delivery status, history
-  app_handle_reply_queue_msg()    Reply Queue: E2E, agent, 42d, ACK
-  app_handle_contact_queue_msg()  Contact Queue: SMP, parse, ACK
+ app_init_run() Initialization, subscribe, wildcard ACK
+ app_process_deferred_work() NVS saves (contacts, RQ, history)
+ app_process_keyboard_queue() Keyboard send, delivery status, history
+ app_handle_reply_queue_msg() Reply Queue: E2E, agent, 42d, ACK
+ app_handle_contact_queue_msg() Contact Queue: SMP, parse, ACK
 
 No new headers. No logic changes. Identical object code.
 ```
@@ -2744,13 +2744,13 @@ No new headers. No logic changes. Identical object code.
 ```
 All 47 source files in main/ now carry standardized header:
 
-  /**
-   * SimpleGo - filename.c
-   * Brief description
-   *
-   * Copyright (c) 2025-2026 Sascha Daemgen, IT and More Systems
-   * SPDX-License-Identifier: AGPL-3.0
-   */
+ /**
+ * SimpleGo - filename.c
+ * Brief description
+ *
+ * Copyright (c) 2025-2026 Sascha Daemgen, IT and More Systems
+ * SPDX-License-Identifier: AGPL-3.0
+ */
 
 Side effect: 7 files had UTF-8 BOM characters, cleaned during pass.
 Processed in 9 rounds with intermediate build verification.
@@ -2759,11 +2759,11 @@ Processed in 9 rounds with intermediate build verification.
 ### Ownership Model Established
 
 ```
-smp_types.h:    types only (typedef, enum, #define)
+smp_types.h: types only (typedef, enum, #define)
 smp_contacts.c: contacts_db, SPKI headers
-smp_peer.c:     pending_peer, peer_conn
+smp_peer.c: pending_peer, peer_conn
 wifi_manager.c: wifi_connected
-smp_utils.c:    base64url_chars
+smp_utils.c: base64url_chars
 ```
 
 ### New Lessons Learned (Session 42)
@@ -2775,8 +2775,28 @@ smp_utils.c:    base64url_chars
 
 ---
 
-*Bug Tracker v37.0*  
-*Last updated: March 5, 2026 - Session 42*  
-*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*  
-*229 lessons learned*  
-*Session 42: Consolidation and Quality Pass -- Zero printf in production*
+---
+
+## Session 43 -- 2026-03-05 (Documentation and Web Session)
+
+No new bugs. No firmware changes.
+
+### New Lessons Learned (Session 43)
+
+230. **Add-Content in PowerShell appends blindly to any file regardless of structure** - For structured markdown documents always use Set-Content with complete content or precise -replace operations. Never use Add-Content for session documentation files (Session 43)
+231. **Session documentation files have strict naming conventions** - Pattern is NN_PARTMM_SESSION_SS.md where NN is file sequence, MM is part number, SS is session number. The SESSION_XX_PROTOCOL.md pattern does not exist in this codebase (Session 43)
+232. **Official architecture documents from Evgeny must be preserved in evgeny_reference.md** - Unverified figures (battery runtime) must not be published in public docs until measured on device. Architectural explanations (resource-based addressing, polling elimination) are verified and can be integrated immediately (Session 43)
+
+### Open Security Items (carried forward)
+
+- [ ] 5 logging categories with security-relevant data (contact links, SUB hex, response hex, block headers, parser bytes)
+- [ ] eFuse + nvs_flash_secure_init combined with CRYSTALS-Kyber (Kickstarter phase)
+- [ ] Private Message Routing (post-MVP)
+
+---
+
+*Bug Tracker v38.0*
+*Last updated: March 5, 2026 - Session 43*
+*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*
+*232 lessons learned*
+*Session 43: Documentation Site and SMP-in-C Guide -- No firmware changes*
