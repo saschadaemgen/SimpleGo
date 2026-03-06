@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-ARCHITECTURE_AND_SECURITY" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">SimpleGo Architecture &amp; Security | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/ARCHITECTURE_AND_SECURITY"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="SimpleGo Architecture &amp; Security | SimpleGo"><meta data-rh="true" name="description" content="Document version: Session 43 | March 2026"><meta data-rh="true" property="og:description" content="Document version: Session 43 | March 2026"><link data-rh="true" rel="icon" href="https://simplego.dev/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/ARCHITECTURE_AND_SECURITY"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/ARCHITECTURE_AND_SECURITY" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/ARCHITECTURE_AND_SECURITY" hreflang="x-default"><link rel="stylesheet" href="/assets/css/styles.aafd99a0.css">
+<script src="/assets/js/runtime~main.695db2a4.js" defer="defer"></script>
+<script src="/assets/js/main.52f7719f.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a href="https://simplego.dev" target="_self" rel="noopener noreferrer" class="navbar__brand"><div class="navbar__logo"><img src="https://simplego.dev/favicon-32.png" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="https://simplego.dev/favicon-32.png" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate">SimpleGo</b></a><a class="navbar__item navbar__link" href="/">Docs</a><a class="navbar__item navbar__link" href="/getting-started">Getting Started</a><a class="navbar__item navbar__link" href="/architecture">Architecture</a><a class="navbar__item navbar__link" href="/smp-in-c">SMP in C</a><a class="navbar__item navbar__link" href="/hardware">Hardware</a><a class="navbar__item navbar__link" href="/security">Security</a><a class="navbar__item navbar__link" href="/reference/constants">Reference</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://simplego.dev/product.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Product<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/crypto.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Crypto<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/flash.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Flash Tool<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/network.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Network<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><main class="docMainContainer_TBSr docMainContainerEnhanced_lQrH"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>SimpleGo Architecture &amp; Security</h1></header>
+<p><strong>Document version:</strong> Session 43 | March 2026<br>
+<strong>Hardware:</strong> LilyGo T-Deck Plus<br>
+<strong>Copyright:</strong> © 2025-2026 Sascha Dämgen, IT and More Systems, Recklinghausen<br>
+<strong>License:</strong> AGPL-3.0 (Software) | CERN-OHL-W-2.0 (Hardware)</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="overview">Overview<a href="#overview" class="hash-link" aria-label="Direct link to Overview" title="Direct link to Overview" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Details</th></tr></thead><tbody><tr><td>Protocol</td><td>SimpleX Messaging Protocol (SMP) v7, first native C implementation worldwide</td></tr><tr><td>Hardware</td><td>LilyGo T-Deck Plus: ESP32-S3 Dual-Core 240 MHz, 8 MB PSRAM, 320×240 ST7789V, BB Q20 QWERTY</td></tr><tr><td>Firmware stack</td><td>ESP-IDF 5.5.2 / FreeRTOS / LVGL v9 / mbedTLS / libsodium</td></tr><tr><td>Encryption</td><td>4 independent layers per message: Double Ratchet (X448) + 2× NaCl cryptobox + TLS 1.3</td></tr><tr><td>Test status</td><td>Verified against official SimpleX Chat App, 7 parallel contacts stable</td></tr><tr><td>Codebase</td><td>47 source files, 21,863 lines of C</td></tr><tr><td>License</td><td>AGPL-3.0 (software), CERN-OHL-W-2.0 (hardware)</td></tr></tbody></table>
+<p>SimpleGo is not an app running on a smartphone OS. It is a complete autonomous firmware running as multiple parallel FreeRTOS tasks on two CPU cores of the ESP32-S3. No Android, no Linux, no baseband processor.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="1-freertos-task-architecture">1. FreeRTOS Task Architecture<a href="#1-freertos-task-architecture" class="hash-link" aria-label="Direct link to 1. FreeRTOS Task Architecture" title="Direct link to 1. FreeRTOS Task Architecture" translate="no">​</a></h2>
+<p>Four tasks run concurrently across the two cores. The allocation is deliberate: network I/O is isolated on Core 0 so a hanging TLS handshake never blocks the UI. App logic requiring NVS writes stays on a Main Task with internal SRAM stack (a hard ESP32-S3 hardware constraint).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Task</th><th>Core</th><th>Stack</th><th>Responsibility</th></tr></thead><tbody><tr><td><code>network_task</code></td><td>Core 0</td><td>16 KB SRAM</td><td>All SSL/TLS connections. Reads SMP frames from server, writes commands. Isolated so a hanging TLS handshake never blocks the UI core.</td></tr><tr><td><code>smp_app_task</code></td><td>Core 1</td><td>16 KB SRAM</td><td>SMP protocol state machine, ratchet encryption, NVS persistence, contact management. Must run in internal SRAM: tasks with PSRAM stacks cannot write NVS on ESP32-S3 (hardware constraint: PSRAM cache is disabled during flash writes).</td></tr><tr><td><code>lvgl_task</code></td><td>Core 1</td><td>8 KB SRAM</td><td>Dedicated LVGL rendering task. Calls <code>lv_timer_handler()</code> in its own loop. Shares SPI2 bus with SD card via recursive mutex <code>tdeck_lvgl_lock</code>.</td></tr><tr><td><code>wifi_manager</code></td><td>Core 0</td><td>4 KB PSRAM</td><td>WiFi connection management, multi-network storage, reconnects, WPA3 compatibility.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="inter-task-communication">Inter-Task Communication<a href="#inter-task-communication" class="hash-link" aria-label="Direct link to Inter-Task Communication" title="Direct link to Inter-Task Communication" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Mechanism</th><th>Direction</th><th>Description</th></tr></thead><tbody><tr><td><code>rx_ring_buffer</code></td><td>Network → App</td><td>Received SMP frames (up to 16 KB each). Capacity: 4 frames = 64 KB in PSRAM.</td></tr><tr><td><code>tx_ring_buffer</code></td><td>App → Network</td><td>Encrypted commands, sent via active TLS connection.</td></tr><tr><td><code>ui_event_queue</code></td><td>UI → App</td><td>LVGL events as FreeRTOS queue. <code>smp_app_task</code> processes sequentially.</td></tr><tr><td><code>frame_pool</code></td><td>global</td><td>Reusable frame pool in PSRAM. <code>sodium_memzero()</code> on release.</td></tr><tr><td><code>tdeck_lvgl_lock</code></td><td>LVGL ↔ SD</td><td>Recursive mutex for SPI2 bus. AES-GCM runs outside this mutex. Otherwise 500 ms hold and display freeze.</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="2-memory-architecture">2. Memory Architecture<a href="#2-memory-architecture" class="hash-link" aria-label="Direct link to 2. Memory Architecture" title="Direct link to 2. Memory Architecture" translate="no">​</a></h2>
+<p>The ESP32-S3 has four physically separate memory regions. Understanding this separation is central to both performance and security: PSRAM has no DMA support, which forces mbedTLS and LVGL draw buffers into internal SRAM.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Region</th><th>Size</th><th>Utilization</th><th>Contents</th></tr></thead><tbody><tr><td>Internal SRAM</td><td>512 KB</td><td>~35%</td><td>TLS stack, LVGL draw buffers (25.6 KB, DMA required), task stacks. mbedTLS cannot use PSRAM (no DMA).</td></tr><tr><td>PSRAM</td><td>8 MB</td><td>~2%</td><td>128-contact ratchet array (~68 KB), frame pool (64 KB), ring buffers, WiFi manager stack. <strong>Security gap: <code>s_msg_cache</code> holds up to 30 decrypted messages in plaintext, never zeroed (SEC-01, open).</strong></td></tr><tr><td>NVS Flash</td><td>128 KB</td><td>~50%</td><td>Ratchet keys, queue keys, handshake keys. <strong>Security gap: <code>nvs_flash_init()</code> without encryption. All private keys readable in plaintext from flash (SEC-02, deferred to Kickstarter phase).</strong></td></tr><tr><td>SD card</td><td>up to 128 GB</td><td>&lt; 1%</td><td>Correct: AES-256-GCM encrypted. HKDF-SHA512 per-contact key. Plaintext never leaves this layer without an explicit decrypt call.</td></tr><tr><td>LVGL pool</td><td>64 KB (internal)</td><td>~31%</td><td>Separate memory subsystem, does not appear in heap reports. LVGL labels contain message text. Stable at 31% after Session 41f screen lifecycle fix. Memory wipe on standby missing (SEC-04, open).</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="psram-vs-internal-sram-decision-rules">PSRAM vs Internal SRAM: Decision Rules<a href="#psram-vs-internal-sram-decision-rules" class="hash-link" aria-label="Direct link to PSRAM vs Internal SRAM: Decision Rules" title="Direct link to PSRAM vs Internal SRAM: Decision Rules" translate="no">​</a></h3>
+<p>The following operations <strong>must</strong> stay in internal SRAM:</p>
+<ul>
+<li class="">mbedTLS TLS stack (no DMA in PSRAM)</li>
+<li class="">LVGL draw buffers (SPI-DMA requirement)</li>
+<li class="">Task stacks for any task that writes NVS</li>
+</ul>
+<p>The following can use PSRAM:</p>
+<ul>
+<li class="">Ratchet state array (128 contacts × ~530 bytes = ~68 KB)</li>
+<li class="">Frame pool and ring buffers</li>
+<li class="">WiFi manager stack (no NVS writes)</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="3-four-encryption-layers">3. Four Encryption Layers<a href="#3-four-encryption-layers" class="hash-link" aria-label="Direct link to 3. Four Encryption Layers" title="Direct link to 3. Four Encryption Layers" translate="no">​</a></h2>
+<p>Every message passes through four cryptographically independent layers. Each layer protects against a distinct attacker model. They are not sequential. They are nested envelopes.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#</th><th>Layer</th><th>Algorithm</th><th>Protects Against</th></tr></thead><tbody><tr><td>1</td><td>Double Ratchet (E2E)</td><td>X3DH (X448) + Double Ratchet + AES-256-GCM</td><td>End-to-end interception. Perfect Forward Secrecy + Post-Compromise Security. Every message has its own key.</td></tr><tr><td>2</td><td>Per-Queue NaCl cryptobox</td><td>X25519 + XSalsa20 + Poly1305</td><td>Traffic correlation between queues. Knowledge of Queue A gives zero information about Queue B.</td></tr><tr><td>3</td><td>Server-to-Recipient NaCl</td><td>NaCl cryptobox (X25519 + XSalsa20 + Poly1305)</td><td>Correlation of incoming and outgoing server frames. Protects against full server access.</td></tr><tr><td>4</td><td>TLS 1.3 transport</td><td>TLS 1.3, ALPN <code>smp/1</code>, mbedTLS</td><td>Network attacker. No downgrade. Transport layer only, not a message envelope.</td></tr></tbody></table>
+<p><strong>Content padding:</strong> All messages are padded to fixed 16 KB blocks at every layer. A network attacker sees only equal-sized packets. Actual message length is not observable.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="reverse-engineered-crypto-details">Reverse-Engineered Crypto Details<a href="#reverse-engineered-crypto-details" class="hash-link" aria-label="Direct link to Reverse-Engineered Crypto Details" title="Direct link to Reverse-Engineered Crypto Details" translate="no">​</a></h3>
+<p>Two non-obvious protocol details that took significant effort to discover and are documented here for implementers:</p>
+<p><strong>Non-standard XSalsa20:</strong> SimpleX uses <code>HSalsa20(key, zeros[16])</code> instead of the standard <code>HSalsa20(key, nonce[0:16])</code>. Without this exact knowledge, decryption fails silently with no error message.</p>
+<p><strong>X448 byte order:</strong> Haskell&#x27;s <code>cryptonite</code> library outputs X448 keys in reversed byte order. SimpleGo explicitly reverses in <code>smp_x448.c</code> for protocol compatibility. This was verified byte-by-byte against the Haskell reference implementation.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="crypto-library-assignment">Crypto Library Assignment<a href="#crypto-library-assignment" class="hash-link" aria-label="Direct link to Crypto Library Assignment" title="Direct link to Crypto Library Assignment" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Purpose</th><th>Algorithm</th><th>Library</th></tr></thead><tbody><tr><td>X3DH Key Agreement</td><td>X448</td><td>wolfSSL (wolfcrypt/curve448)</td></tr><tr><td>Per-Queue NaCl (Layer 2)</td><td>X25519 + XSalsa20 + Poly1305</td><td>libsodium</td></tr><tr><td>Server-to-Recipient NaCl (Layer 3)</td><td>X25519 + XSalsa20 + Poly1305</td><td>libsodium</td></tr><tr><td>Double Ratchet Symmetric</td><td>AES-256-GCM</td><td>mbedTLS</td></tr><tr><td>Key Derivation (Ratchet)</td><td>HKDF-SHA512</td><td>mbedTLS</td></tr><tr><td>Message Hashing</td><td>SHA-256</td><td>mbedTLS</td></tr><tr><td>SD Card Encryption</td><td>AES-256-GCM</td><td>mbedTLS</td></tr><tr><td>TLS 1.3 Transport</td><td>TLS 1.3</td><td>mbedTLS</td></tr><tr><td>Secure Memory Wipe</td><td>sodium_memzero / mbedtls_platform_zeroize</td><td>libsodium / mbedTLS</td></tr></tbody></table>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="smp-connection-lifecycle">SMP Connection Lifecycle<a href="#smp-connection-lifecycle" class="hash-link" aria-label="Direct link to SMP Connection Lifecycle" title="Direct link to SMP Connection Lifecycle" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Phase</th><th>What happens</th></tr></thead><tbody><tr><td>1. TLS Connect</td><td>TCP connect, TLS 1.3 handshake, ALPN <code>smp/1</code>. mbedTLS verifies server certificate via key hash pinning.</td></tr><tr><td>2. SMP Handshake</td><td>Server sends version range and public key. Client responds with own key and auth. Version negotiation settles on SMP v7.</td></tr><tr><td>3. Subscribe</td><td>For each contact: SUB command. <code>NEW</code> already creates the queue subscribed. SUB is a noop but re-delivers the last unACKed message. <code>subscribe_all_contacts()</code> iterates all 128 slots.</td></tr><tr><td>4. Message Loop</td><td>Decrypt MSG frames (all 3 message layers), parse JSON, write SD history, update UI, send ACK.</td></tr><tr><td>5. Keep-Alive</td><td><strong>Missing: PING command not yet implemented.</strong> Without keep-alive, server drops subscription after timeout. Scheduled for next session.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="lost-response-handling">Lost Response Handling<a href="#lost-response-handling" class="hash-link" aria-label="Direct link to Lost Response Handling" title="Direct link to Lost Response Handling" translate="no">​</a></h3>
+<p>This was identified by Evgeny Poberezkin (SimpleX inventor) as the most critical networking correctness requirement:</p>
+<blockquote>
+<p>&quot;Whatever you do for networking, make sure to handle lost responses, that was the biggest learning. For us it was a large source of bugs.&quot;</p>
+</blockquote>
+<p>The problem: a command is sent, no response arrives. Did the server not receive it, or was the response lost in transit? The device cannot distinguish these cases at the network level.</p>
+<p>The solution: all state-changing commands are idempotent. Keys are persisted to NVS flash <strong>before</strong> the command is sent. If the response is lost, the same stored key is reused on retry. No new key is generated, no ratchet desynchronization.</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Generate key → Persist to NVS → Send command → [response lost] → Retry with SAME key</span><br></span></code></pre></div></div>
+<p>This pattern is implemented correctly in <code>smp_queue.c</code> for SKEY and LKEY operations.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="16-kb-block-framing">16 KB Block Framing<a href="#16-kb-block-framing" class="hash-link" aria-label="Direct link to 16 KB Block Framing" title="Direct link to 16 KB Block Framing" translate="no">​</a></h3>
+<p>Every SMP frame is exactly 16,384 bytes. The first 2 bytes are the content length (big-endian). The remaining bytes are content followed by zero padding. The receive buffer is allocated at exactly <code>SMP_BLOCK_SIZE</code>. No dynamic sizing, no chunking, no XFTP fallback for text messages.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Constant</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td><code>SMP_BLOCK_SIZE</code></td><td>16,384 bytes</td><td>Hard transport limit</td></tr><tr><td><code>HISTORY_MAX_PAYLOAD</code></td><td>16,000 bytes</td><td>Usable payload after framing overhead</td></tr><tr><td><code>HISTORY_MAX_TEXT</code></td><td>4,096 bytes</td><td>Maximum text stored to SD card</td></tr><tr><td><code>HISTORY_DISPLAY_TEXT</code></td><td>512 bytes</td><td>Truncation limit for LVGL bubbles only, never applied before SD write</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="5-ui-architecture">5. UI Architecture<a href="#5-ui-architecture" class="hash-link" aria-label="Direct link to 5. UI Architecture" title="Direct link to 5. UI Architecture" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="screen-lifecycle">Screen Lifecycle<a href="#screen-lifecycle" class="hash-link" aria-label="Direct link to Screen Lifecycle" title="Direct link to Screen Lifecycle" translate="no">​</a></h3>
+<p>All screens except Main are ephemeral, created on entry, destroyed on exit. LVGL pool consumption dropped from 86% to 31% after the Session 41f lifecycle fix.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Screen</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>Main Screen</td><td>Permanent</td><td>Always in memory. Never destroyed.</td></tr><tr><td>Contacts Screen</td><td>Ephemeral</td><td>Created on entry, destroyed on exit.</td></tr><tr><td>Chat Screen</td><td>Ephemeral</td><td><code>ui_chat_cleanup()</code> must be called before destroy. Nulls all 6 static LVGL pointers, prevents dangling pointer crashes. Does <strong>not</strong> zero the PSRAM cache (SEC-01).</td></tr><tr><td>Settings Screen</td><td>Ephemeral</td><td>Settings written directly to NVS on change.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="chat-sliding-window">Chat Sliding Window<a href="#chat-sliding-window" class="hash-link" aria-label="Direct link to Chat Sliding Window" title="Direct link to Chat Sliding Window" translate="no">​</a></h3>
+<p>Three-tier architecture to avoid SD card reads on every scroll operation:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Tier</th><th>Capacity</th><th>Security Status</th></tr></thead><tbody><tr><td>SD card</td><td>Unlimited</td><td>Correct: AES-256-GCM encrypted. Plaintext only leaves via explicit decrypt call.</td></tr><tr><td>PSRAM cache</td><td>30 messages (~120 KB)</td><td><strong>Security gap: plaintext in PSRAM, never zeroed (SEC-01). <code>sodium_memzero()</code> missing on <code>s_msg_cache</code>.</strong></td></tr><tr><td>LVGL window</td><td>5 bubbles (~6 KB)</td><td>LVGL labels contain message text. No explicit wipe on bubble eviction. Screen destroy is not sufficient.</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="6-file-by-file-analysis">6. File-by-File Analysis<a href="#6-file-by-file-analysis" class="hash-link" aria-label="Direct link to 6. File-by-File Analysis" title="Direct link to 6. File-by-File Analysis" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="core">core/<a href="#core" class="hash-link" aria-label="Direct link to core/" title="Direct link to core/" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>core/smp_tasks.c</code></td><td>Task definitions, <code>smp_app_run()</code></td><td>Clean after Session 42 refactor: 530 → 118 lines, 5 static helpers extracted.</td></tr><tr><td><code>core/smp_frame_pool.c</code></td><td>Reusable 16 KB frame pool in PSRAM</td><td><code>sodium_memzero()</code> on release. Correct.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="crypto">crypto/<a href="#crypto" class="hash-link" aria-label="Direct link to crypto/" title="Direct link to crypto/" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>crypto/simplex_crypto.c</code></td><td>Core NaCl crypto: <code>simplex_secretbox_open/seal</code> (layers 2+3), non-standard XSalsa20</td><td>libsodium. Correct.</td></tr><tr><td><code>crypto/smp_crypto.c</code></td><td>NaCl crypto_box wrappers: Layer 3 decrypt, peer encrypt/decrypt</td><td>libsodium only. Correct.</td></tr><tr><td><code>crypto/smp_x448.c</code></td><td>X448 DH for X3DH</td><td>wolfSSL. Byte-order reversal correct. No DH secret in logs.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="net">net/<a href="#net" class="hash-link" aria-label="Direct link to net/" title="Direct link to net/" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>net/smp_network.c</code></td><td>Raw TLS send/receive, mbedTLS context</td><td>mbedTLS. Core transport layer.</td></tr><tr><td><code>net/wifi_manager.c</code></td><td>Multi-network WiFi, WPA3</td><td>Credentials persisted before <code>esp_wifi_connect()</code> correctly.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="protocol">protocol/<a href="#protocol" class="hash-link" aria-label="Direct link to protocol/" title="Direct link to protocol/" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>protocol/smp_handshake.c</code></td><td>TLS connect, SMP handshake, version negotiation</td><td>Clean after Session 42: 74 debug statements removed, 1281 → 1207 lines.</td></tr><tr><td><code>protocol/smp_agent.c</code></td><td>Protocol state machine, frame dispatch</td><td>Clean.</td></tr><tr><td><code>protocol/smp_queue.c</code></td><td>Queue operations: NEW, SUB, SEND</td><td>Very clean. Write-before-send correctly implemented.</td></tr><tr><td><code>protocol/smp_ack.c</code></td><td>ACK command for all queue types</td><td>libsodium + mbedTLS via smp_network. Clean.</td></tr><tr><td><code>protocol/smp_parser.c</code></td><td>Agent protocol message parser</td><td>Parses all incoming server frames. Uses smp_crypto (libsodium). Clean.</td></tr><tr><td><code>protocol/smp_e2e.c</code></td><td>E2E decrypt flow</td><td>Clean: direct call, not brute-force methods 0-3.</td></tr><tr><td><code>protocol/smp_ratchet.c</code></td><td>Double Ratchet (X448/wolfSSL + AES-256-GCM/mbedTLS + HKDF-SHA512/mbedTLS)</td><td>Cleanest file in codebase. Zero printf. Re-delivery error -10 is normal behavior, not an error.</td></tr><tr><td><code>protocol/reply_queue.c</code></td><td>Reply queues for 128 contacts</td><td>PSRAM guard correct. NVS-deferred pattern correct.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="state">state/<a href="#state" class="hash-link" aria-label="Direct link to state/" title="Direct link to state/" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>state/smp_contacts.c</code></td><td>128-contact management in PSRAM</td><td>Correct. <code>subscribe_all_contacts()</code> stable.</td></tr><tr><td><code>state/smp_peer.c</code></td><td>Peer connection management</td><td>Clean. BUG #19 comment documentation excellent.</td></tr><tr><td><code>state/smp_history.c</code></td><td>SD card history (AES-256-GCM + HKDF-SHA512)</td><td>mbedTLS. AES-GCM runs outside SPI2 mutex (correct). HKDF info parameter weak (SEC-05, deferred).</td></tr><tr><td><code>state/smp_storage.c</code></td><td>NVS abstraction</td><td><code>mbedtls_platform_zeroize()</code> correctly used after Session 42 fix (SEC-03 closed).</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="ui">ui/<a href="#ui" class="hash-link" aria-label="Direct link to ui/" title="Direct link to ui/" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>ui/ui_manager.c</code></td><td>Screen navigation and lifecycle</td><td>Correct after Session 41f. Ephemeral screens correctly destroyed.</td></tr><tr><td><code>ui/ui_theme.c</code></td><td>Colors, fonts, spacing</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_main.c</code></td><td>Main screen (permanent, never destroyed)</td><td>Stable.</td></tr><tr><td><code>ui/screens/ui_chat.c</code></td><td>Chat screen, PSRAM cache management</td><td><code>s_msg_cache</code> never zeroed (SEC-01 open). <code>sodium_memzero()</code> completely missing.</td></tr><tr><td><code>ui/screens/ui_chat_bubble.c</code></td><td>Message bubble widget</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_contacts.c</code></td><td>Contact list screen</td><td>Ephemeral. Clean.</td></tr><tr><td><code>ui/screens/ui_contacts_row.c</code></td><td>Contact list row widget</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_contacts_popup.c</code></td><td>Contact action popup</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_connect.c</code></td><td>Connection setup screen</td><td>Ephemeral. Clean.</td></tr><tr><td><code>ui/screens/ui_settings.c</code></td><td>Settings screen (root)</td><td>Ephemeral. NVS write on change.</td></tr><tr><td><code>ui/screens/ui_settings_wifi.c</code></td><td>WiFi settings sub-screen</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_settings_bright.c</code></td><td>Backlight settings sub-screen</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_settings_info.c</code></td><td>Device info sub-screen</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_splash.c</code></td><td>Splash screen on boot</td><td>Clean.</td></tr><tr><td><code>ui/screens/ui_developer.c</code></td><td>Developer debug screen</td><td>Should be stripped or gated for production builds.</td></tr><tr><td><code>ui/fonts/simplego_umlauts_10.c</code></td><td>Custom font glyphs 10px</td><td>Static data.</td></tr><tr><td><code>ui/fonts/simplego_umlauts_12.c</code></td><td>Custom font glyphs 12px</td><td>Static data.</td></tr><tr><td><code>ui/fonts/simplego_umlauts_14.c</code></td><td>Custom font glyphs 14px</td><td>Static data.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="util-and-root">util/ and root<a href="#util-and-root" class="hash-link" aria-label="Direct link to util/ and root" title="Direct link to util/ and root" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>util/smp_utils.c</code></td><td>Shared utilities (hex dump, string helpers)</td><td>Clean.</td></tr><tr><td><code>main.c</code></td><td>App entry point, task launch</td><td>Clean.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="devicest_deck_plushal_impl">devices/t_deck_plus/hal_impl/<a href="#devicest_deck_plushal_impl" class="hash-link" aria-label="Direct link to devices/t_deck_plus/hal_impl/" title="Direct link to devices/t_deck_plus/hal_impl/" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Function</th><th>Status</th></tr></thead><tbody><tr><td><code>tdeck_lvgl.c</code></td><td>LVGL init, rendering task Core 1</td><td>Draw buffers correctly in internal SRAM (SPI-DMA requirement). Recursive mutex correct.</td></tr><tr><td><code>tdeck_display.c</code></td><td>ST7789V SPI display driver</td><td>Clean.</td></tr><tr><td><code>tdeck_keyboard.c</code></td><td>BB Q20 I2C keyboard at 0x55</td><td>Clean.</td></tr><tr><td><code>tdeck_touch.c</code></td><td>Capacitive touch driver</td><td>Clean.</td></tr><tr><td><code>tdeck_backlight.c</code></td><td>GPIO 42 backlight, pulse-counting protocol, 16 levels</td><td>Clean.</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="7-security-status">7. Security Status<a href="#7-security-status" class="hash-link" aria-label="Direct link to 7. Security Status" title="Direct link to 7. Security Status" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="known-vulnerabilities-complete-list">Known Vulnerabilities: Complete List<a href="#known-vulnerabilities-complete-list" class="hash-link" aria-label="Direct link to Known Vulnerabilities: Complete List" title="Direct link to Known Vulnerabilities: Complete List" translate="no">​</a></h3>
+<p>No finding is downplayed or marked acceptable. This is an honest inventory of what is missing.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ID</th><th>Severity</th><th>Description</th><th>Status</th></tr></thead><tbody><tr><td>SEC-01</td><td><strong>CRITICAL</strong></td><td>Decrypted messages in PSRAM (<code>s_msg_cache</code>, 30 messages, ~120 KB, never zeroed). Physical attacker with JTAG can read all messages in plaintext while device is powered.</td><td><strong>OPEN</strong></td></tr><tr><td>SEC-02</td><td><strong>CRITICAL</strong></td><td>Cryptographic keys plaintext in NVS flash (<code>nvs_flash_init()</code> without encryption). Physical attacker who reads the flash chip via SPI tap or desolder gets all private keys.</td><td><strong>OPEN, deferred to Kickstarter phase</strong></td></tr><tr><td>SEC-03</td><td><strong>HIGH</strong></td><td><code>memset</code> instead of <code>mbedtls_platform_zeroize</code> in <code>smp_storage.c</code> (CWE-14, compiler may eliminate as dead store).</td><td><strong>CLOSED, Session 42</strong></td></tr><tr><td>SEC-04</td><td><strong>HIGH</strong></td><td>No memory wipe on display timeout / screen lock. Device appears locked but holds plaintext in PSRAM and LVGL pool.</td><td><strong>OPEN</strong></td></tr><tr><td>SEC-05</td><td><strong>MEDIUM</strong></td><td>HKDF info parameter too weak (only slot index, no device binding). Same master key on another device with same slot index produces identical derived keys.</td><td><strong>DEFERRED, resolved automatically when eFuse binding implemented</strong></td></tr><tr><td>SEC-06</td><td><strong>MEDIUM</strong></td><td>No post-quantum protection active (<code>has_kem=false</code>, Kyber disabled). Key exchange not quantum-resistant. AES-256-GCM for SD card is already quantum-resistant (256-bit survives Grover).</td><td><strong>DEFERRED, requires SEC-01 and SEC-02 first</strong></td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-is-correctly-implemented">What Is Correctly Implemented<a href="#what-is-correctly-implemented" class="hash-link" aria-label="Direct link to What Is Correctly Implemented" title="Direct link to What Is Correctly Implemented" translate="no">​</a></h3>
+<ul>
+<li class="">Write-before-send in <code>smp_queue.c</code>: NVS persist before network send for SKEY/LKEY. Idempotency correct.</li>
+<li class="">Credentials persistence in <code>wifi_manager.c</code>: WiFi credentials saved before <code>esp_wifi_connect()</code>.</li>
+<li class="">PSRAM guard in <code>reply_queue.c</code>: prevents NVS overwrite of valid PSRAM state.</li>
+<li class="">AES-GCM outside SPI2 mutex: mutex hold reduced from ~500 ms to under 10 ms.</li>
+<li class="">DMA draw buffers in internal SRAM: correct, not in PSRAM (SPI-DMA requirement).</li>
+<li class=""><code>sodium_memzero()</code> in <code>frame_pool</code>: frame release securely zeros sensitive data.</li>
+<li class="">X448 byte-order in <code>smp_x448.c</code>: correctly documented and verified against Haskell.</li>
+<li class="">Non-standard XSalsa20 in <code>simplex_crypto.c</code>: correctly reverse-engineered and verified.</li>
+<li class="">Screen lifecycle after Session 41f: LVGL pool stable at 31%.</li>
+<li class="">SD card history: AES-256-GCM correct. Plaintext never leaves SD without explicit decrypt.</li>
+<li class=""><code>mbedtls_platform_zeroize</code> in <code>smp_storage.c</code>: CWE-14 closed in Session 42.</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="8-roadmap">8. Roadmap<a href="#8-roadmap" class="hash-link" aria-label="Direct link to 8. Roadmap" title="Direct link to 8. Roadmap" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="immediate-next-session">Immediate: Next Session<a href="#immediate-next-session" class="hash-link" aria-label="Direct link to Immediate: Next Session" title="Direct link to Immediate: Next Session" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Task</th><th>Priority</th><th>Rationale</th></tr></thead><tbody><tr><td>SEC-01: <code>sodium_memzero()</code> on <code>s_msg_cache</code> in <code>ui_chat_cleanup()</code>, on contact switch, and on display timeout</td><td>Critical</td><td>Physical attacker can read all messages in RAM</td></tr><tr><td>SEC-04: Screen lock with full memory wipe (PSRAM cache + LVGL labels)</td><td>High</td><td>Depends on SEC-01</td></tr><tr><td>PING/PONG keep-alive on main SSL connection</td><td>High</td><td>Without it, server drops subscription after timeout</td></tr><tr><td>5 security log categories cleanup (Aschenputtel Findings 1-5)</td><td>High</td><td>Production-sensitive data in serial output</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="kickstarter-phase">Kickstarter Phase<a href="#kickstarter-phase" class="hash-link" aria-label="Direct link to Kickstarter Phase" title="Direct link to Kickstarter Phase" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Task</th><th>Dependency</th></tr></thead><tbody><tr><td>SEC-02: <code>nvs_flash_secure_init()</code> + eFuse key binding, all private keys encrypted at rest</td><td>eFuse provisioning</td></tr><tr><td>SEC-05: Strengthen HKDF info to <code>simplego-slot-XX-DEVICESERIAL</code></td><td>Resolved by SEC-02</td></tr><tr><td>SEC-06: Activate CRYSTALS-Kyber + NTRU Prime (<code>has_kem=false</code> → <code>true</code>)</td><td>SEC-01 + SEC-02 must be closed first</td></tr><tr><td>Secure boot: firmware signature bound to ESP32-S3 eFuse</td><td>eFuse provisioning</td></tr><tr><td>Private Message Routing</td><td>Independent</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-roadmap">Hardware Roadmap<a href="#hardware-roadmap" class="hash-link" aria-label="Direct link to Hardware Roadmap" title="Direct link to Hardware Roadmap" translate="no">​</a></h3>
+<ul>
+<li class=""><strong>ESP32-P4 board (ordered):</strong> Guition JC4880P443C_I_W: 400 MHz RISC-V dual-core, 32 MB PSRAM, WiFi 6, hardware security features.</li>
+<li class=""><strong>PCB design:</strong> Model 3 Vault (full specification). Model 2 as downgrade variant via DNP (Do Not Populate).</li>
+<li class=""><strong>Triple-vendor Secure Elements:</strong> ATECC608B (Microchip) + OPTIGA Trust M (Infineon) + SE050 (NXP). Three vendors: if one chip has a backdoor, the full key cannot be reconstructed.</li>
+<li class=""><strong>Three physical kill switches:</strong> WiFi/BLE, LoRa, LTE.</li>
+<li class=""><strong>M.2 slot</strong> for optional LTE modules (avoids LTE certification costs per device).</li>
+</ul>
+<hr>
+<p><em>SimpleGo, IT and More Systems, Recklinghausen</em><br>
+<em>First native C implementation of the SimpleX Messaging Protocol</em></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/ARCHITECTURE_AND_SECURITY.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#overview" class="table-of-contents__link toc-highlight">Overview</a></li><li><a href="#1-freertos-task-architecture" class="table-of-contents__link toc-highlight">1. FreeRTOS Task Architecture</a><ul><li><a href="#inter-task-communication" class="table-of-contents__link toc-highlight">Inter-Task Communication</a></li></ul></li><li><a href="#2-memory-architecture" class="table-of-contents__link toc-highlight">2. Memory Architecture</a><ul><li><a href="#psram-vs-internal-sram-decision-rules" class="table-of-contents__link toc-highlight">PSRAM vs Internal SRAM: Decision Rules</a></li></ul></li><li><a href="#3-four-encryption-layers" class="table-of-contents__link toc-highlight">3. Four Encryption Layers</a><ul><li><a href="#reverse-engineered-crypto-details" class="table-of-contents__link toc-highlight">Reverse-Engineered Crypto Details</a></li><li><a href="#crypto-library-assignment" class="table-of-contents__link toc-highlight">Crypto Library Assignment</a></li><li><a href="#smp-connection-lifecycle" class="table-of-contents__link toc-highlight">SMP Connection Lifecycle</a></li><li><a href="#lost-response-handling" class="table-of-contents__link toc-highlight">Lost Response Handling</a></li><li><a href="#16-kb-block-framing" class="table-of-contents__link toc-highlight">16 KB Block Framing</a></li></ul></li><li><a href="#5-ui-architecture" class="table-of-contents__link toc-highlight">5. UI Architecture</a><ul><li><a href="#screen-lifecycle" class="table-of-contents__link toc-highlight">Screen Lifecycle</a></li><li><a href="#chat-sliding-window" class="table-of-contents__link toc-highlight">Chat Sliding Window</a></li></ul></li><li><a href="#6-file-by-file-analysis" class="table-of-contents__link toc-highlight">6. File-by-File Analysis</a><ul><li><a href="#core" class="table-of-contents__link toc-highlight">core/</a></li><li><a href="#crypto" class="table-of-contents__link toc-highlight">crypto/</a></li><li><a href="#net" class="table-of-contents__link toc-highlight">net/</a></li><li><a href="#protocol" class="table-of-contents__link toc-highlight">protocol/</a></li><li><a href="#state" class="table-of-contents__link toc-highlight">state/</a></li><li><a href="#ui" class="table-of-contents__link toc-highlight">ui/</a></li><li><a href="#util-and-root" class="table-of-contents__link toc-highlight">util/ and root</a></li><li><a href="#devicest_deck_plushal_impl" class="table-of-contents__link toc-highlight">devices/t_deck_plus/hal_impl/</a></li></ul></li><li><a href="#7-security-status" class="table-of-contents__link toc-highlight">7. Security Status</a><ul><li><a href="#known-vulnerabilities-complete-list" class="table-of-contents__link toc-highlight">Known Vulnerabilities: Complete List</a></li><li><a href="#what-is-correctly-implemented" class="table-of-contents__link toc-highlight">What Is Correctly Implemented</a></li></ul></li><li><a href="#8-roadmap" class="table-of-contents__link toc-highlight">8. Roadmap</a><ul><li><a href="#immediate-next-session" class="table-of-contents__link toc-highlight">Immediate: Next Session</a></li><li><a href="#kickstarter-phase" class="table-of-contents__link toc-highlight">Kickstarter Phase</a></li><li><a href="#hardware-roadmap" class="table-of-contents__link toc-highlight">Hardware Roadmap</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos.html">Terms of Service</a><a href="https://simplego.dev/legal/privacy.html">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer.html">Disclaimer</a><a href="https://simplego.dev/imprint.html">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup.html">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement.html">Law Enforcement</a><a href="https://simplego.dev/legal/transparency.html">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact.html">Partnership</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — S.D – IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>
