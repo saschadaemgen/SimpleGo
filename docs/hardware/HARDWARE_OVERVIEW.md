@@ -29,10 +29,10 @@ SimpleGo represents the **world's first native hardware implementation** of the 
 | Document | Description |
 |----------|-------------|
 | **[HARDWARE_OVERVIEW.md](HARDWARE_OVERVIEW.md)** | This document - architecture overview |
-| **[HARDWARE_SECURITY.md](HARDWARE_SECURITY.md)** | Security model, threat analysis, countermeasures |
+| **[SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md)** | Security model, threat analysis, countermeasures |
 | **[HARDWARE_TIERS.md](HARDWARE_TIERS.md)** | Three product tiers with full specifications |
 | **[HAL_ARCHITECTURE.md](HAL_ARCHITECTURE.md)** | Hardware Abstraction Layer design |
-| **[DEVICE_TEMPLATES.md](DEVICE_TEMPLATES.md)** | Guide for new device implementations |
+| **[../ADDING_NEW_DEVICE.md](../ADDING_NEW_DEVICE.md)** | Guide for new device implementations |
 | **[COMPONENT_SELECTION.md](COMPONENT_SELECTION.md)** | Component specifications and sourcing |
 
 ---
@@ -218,9 +218,9 @@ simplex_client/
 
 ## Quick Links
 
-- **Security details**: [HARDWARE_SECURITY.md](HARDWARE_SECURITY.md)
+- **Security details**: [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md)
 - **Product specifications**: [HARDWARE_TIERS.md](HARDWARE_TIERS.md)
-- **Add new device**: [DEVICE_TEMPLATES.md](DEVICE_TEMPLATES.md)
+- **Add new device**: [../ADDING_NEW_DEVICE.md](../ADDING_NEW_DEVICE.md)
 - **Component info**: [COMPONENT_SELECTION.md](COMPONENT_SELECTION.md)
 
 ---

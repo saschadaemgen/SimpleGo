@@ -1,3 +1,11 @@
+---
+slug: /protocol-analysis/session-index
+title: Session Index
+---
+---
+slug: /protocol-analysis/session-index
+title: Session Index
+---
 
 ## Session 43 — 2026-03-05
 **Type:** Documentation and Web Session

@@ -233,4 +233,4 @@ Recipient:
 
 ## License
 
-AGPL-3.0 - See [LICENSE](../LICENSE)
+AGPL-3.0 - See [LICENSE](https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE)

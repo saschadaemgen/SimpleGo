@@ -409,12 +409,12 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | Document | Lines | Description |
 |----------|-------|-------------|
 | [01_SIMPLEX_PROTOCOL_INDEX.md](01_SIMPLEX_PROTOCOL_INDEX.md) | ~310 | Navigation index |
-| [02_SIMPLEX_STATUS.md](02_SIMPLEX_STATUS.md) | ~330 | Current status summary |
+| [STATUS.md](STATUS.md) | ~330 | Current status summary |
 | [03_PART1_INTRO_SESSIONS_1-2.md](03_PART1_INTRO_SESSIONS_1-2.md) | ~2300 | Foundation, TLS 1.3, basic SMP |
 | [04_PART2_SESSIONS_3-4.md](04_PART2_SESSIONS_3-4.md) | ~1000 | Wire format, bugs #1-8 |
 | [05_PART3_SESSIONS_5-6.md](05_PART3_SESSIONS_5-6.md) | ~800 | X448 breakthrough, SMPQueueInfo |
 | [06_PART4_SESSION_7.md](06_PART4_SESSION_7.md) | ~3200 | AES-GCM verification, Tail encoding |
-| [07_PART5_SESSION_8_BREAKTHROUGH.md](07_PART5_SESSION_8_BREAKTHROUGH.md) | ~400 | AgentConfirmation works! |
+| [07_PART5_SESSION_8.md](07_PART5_SESSION_8.md) | ~400 | AgentConfirmation works! |
 | [08_PART6_SESSION_9.md](08_PART6_SESSION_9.md) | ~450 | Reply Queue HSalsa20 fix |
 | [09_PART7_SESSION_10.md](09_PART7_SESSION_10.md) | ~400 | cmNonce fix, app "connecting" |
 | [10_PART8_SESSION_11.md](10_PART8_SESSION_11.md) | ~400 | Regression & Recovery |
@@ -1470,7 +1470,7 @@ TLS 1.3 → SMP Transport → Server Decrypt → E2E Decrypt → unPad
 | #1-8 | Wire format bugs | [Part 2](04_PART2_SESSIONS_3-4.md) |
 | #9 | wolfSSL X448 byte-order | [Part 3](05_PART3_SESSIONS_5-6.md) |
 | #10-12 | SMPQueueInfo encoding | [Part 3](05_PART3_SESSIONS_5-6.md) |
-| #13-14 | AAD prefix, IV order | [Part 5](07_PART5_SESSION_8_BREAKTHROUGH.md) |
+| #13-14 | AAD prefix, IV order | [Part 5](07_PART5_SESSION_8.md) |
 | #15-16 | HSalsa20, A_CRYPTO | [Part 6](08_PART6_SESSION_9.md) |
 | #17 | cmNonce instead of msgId | [Part 7](09_PART7_SESSION_10.md) |
 | #18 | Reply Queue E2E -- SOLVED! | [Part 15](17_PART15_SESSION_18.md) |
@@ -1492,7 +1492,7 @@ TLS 1.3 → SMP Transport → Server Decrypt → E2E Decrypt → unPad
 | TLS 1.3, Basic SMP | [Part 1](03_PART1_INTRO_SESSIONS_1-2.md) |
 | Wire format, smpEncode | [Part 2](04_PART2_SESSIONS_3-4.md), [Part 4](06_PART4_SESSION_7.md) |
 | X448 Cryptography | [Part 3](05_PART3_SESSIONS_5-6.md) |
-| AgentConfirmation | [Part 5](07_PART5_SESSION_8_BREAKTHROUGH.md) |
+| AgentConfirmation | [Part 5](07_PART5_SESSION_8.md) |
 | Reply Queue E2E | [Part 6](08_PART6_SESSION_9.md) - [Part 15](17_PART15_SESSION_18.md) |
 | Double Ratchet Header | [Part 16](18_PART16_SESSION_19.md) |
 | Double Ratchet Body | [Part 17](19_PART17_SESSION_20.md) |
