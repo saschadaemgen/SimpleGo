@@ -30,29 +30,30 @@ export default function Footer() {
           <div className={styles.footerCol}>
             <h4>Project</h4>
             <a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="https://simplego.dev/flash.html">Flash Tool</a>
-            <a href="https://simplego.dev/network.html">Network</a>
+            <a href="https://simplego.dev/installer">Flash Tool</a>
+            <a href="https://simplego.dev/network">Network</a>
             <a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a>
           </div>
 
           <div className={styles.footerCol}>
             <h4>Legal</h4>
-            <a href="https://simplego.dev/legal/tos.html">Terms of Service</a>
-            <a href="https://simplego.dev/legal/privacy.html">Privacy Policy</a>
-            <a href="https://simplego.dev/legal/disclaimer.html">Disclaimer</a>
-            <a href="https://simplego.dev/imprint.html">Imprint</a>
+            <a href="https://simplego.dev/legal/tos">Terms of Service</a>
+            <a href="https://simplego.dev/legal/privacy">Privacy Policy</a>
+            <a href="https://simplego.dev/legal/disclaimer">Disclaimer</a>
+            <a href="https://simplego.dev/imprint">Imprint</a>
           </div>
 
           <div className={styles.footerCol}>
             <h4>Trust &amp; Compliance</h4>
-            <a href="https://simplego.dev/legal/aup.html">Acceptable Use</a>
-            <a href="https://simplego.dev/legal/law-enforcement.html">Law Enforcement</a>
-            <a href="https://simplego.dev/legal/transparency.html">Transparency Report</a>
+            <a href="https://simplego.dev/legal/aup">Acceptable Use</a>
+            <a href="https://simplego.dev/legal/law-enforcement">Law Enforcement</a>
+            <a href="https://simplego.dev/legal/transparency">Transparency Report</a>
           </div>
 
           <div className={styles.footerCol}>
             <h4>Company</h4>
-            <a href="https://simplego.dev/contact.html">Partnership</a>
+            <a href="https://simplego.dev/contact">Partnership</a>
+            <a href="https://simplego.dev/ost">Soundtrack</a>
             <a href="#">Kickstarter <span className={styles.comingSoon}>SOON</span></a>
             <a href="mailto:contact@simplego.dev">Contact</a>
           </div>
@@ -63,7 +64,7 @@ export default function Footer() {
       <div className={styles.footerBottom}>
         <div className={styles.container}>
           <div className={styles.footerBottomInner}>
-            <span>&copy; 2026 SimpleGo.dev &mdash; S.D &ndash; IT and More Systems</span>
+            <span>&copy; 2026 SimpleGo.dev &mdash; IT and More Systems</span>
             <span>
               Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a>
               {' '}&middot;{' '}
