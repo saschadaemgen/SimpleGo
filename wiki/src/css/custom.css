@@ -89,6 +89,59 @@ html, body {
   border-color: #45BDD1 !important;
 }
 
+/* ═══ MOBILE NAVBAR / HAMBURGER ═══ */
+.navbar__toggle {
+  color: #CBD5E1 !important;
+}
+.navbar-sidebar {
+  background: rgba(5,10,18,0.98) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+}
+.navbar-sidebar .navbar__brand {
+  padding: 1rem 1.5rem !important;
+  border-bottom: 1px solid rgba(69,189,209,0.12) !important;
+}
+.navbar-sidebar .navbar__logo {
+  height: 24px !important;
+}
+.navbar-sidebar__brand .navbar__title {
+  display: none !important;
+}
+.navbar-sidebar .navbar__link {
+  font-size: 0.9rem !important;
+  padding: 0.8rem 1.5rem !important;
+  color: rgba(203,213,225,0.65) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+}
+.navbar-sidebar .navbar__link:hover {
+  color: #45BDD1 !important;
+  background: rgba(69,189,209,0.06) !important;
+}
+.navbar-sidebar__close {
+  color: #CBD5E1 !important;
+}
+.navbar-sidebar__back {
+  color: #45BDD1 !important;
+}
+/* Make sure mobile toggle is visible */
+@media (max-width: 996px) {
+  .navbar__toggle {
+    display: flex !important;
+    color: #CBD5E1 !important;
+    margin-right: 0.5rem;
+  }
+  .navbar__items--right {
+    display: none;
+  }
+  .navbar-sidebar .navbar__items--right {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
 /* ═══ SIDEBAR ═══ */
 .theme-doc-sidebar-container {
   background: rgba(5,10,18,0.98) !important;

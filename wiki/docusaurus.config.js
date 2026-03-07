@@ -11,7 +11,6 @@ const config = {
   organizationName: 'saschadaemgen',
   projectName: 'SimpleGo',
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
   markdown: {
     format: 'detect',
   },
@@ -31,19 +30,11 @@ const config = {
           sidebarPath: './sidebars.js',
           editUrl: 'https://github.com/saschadaemgen/SimpleGo/edit/main/docs/',
           exclude: [
-            'protocol-analysis/**',
-            'release-info/**',
-            'hardware/**',
-            'legal/**',
-            'security/**',
-            'BUGS.md',
-            'BUILD_SYSTEM.md',
-            'DEVELOPMENT.md',
-            'DEVNOTES.md',
-            'DISCLAIMER.md',
             'LEGAL.md',
-            'SPONSORS.md',
+            'DISCLAIMER.md',
             'TRADEMARK.md',
+            'SPONSORS.md',
+            'hardware/LICENSE',
           ],
         },
         blog: false,
@@ -61,21 +52,16 @@ const config = {
       respectPrefersColorScheme: false,
     },
     navbar: {
-      title: 'SimpleGo',
+      title: '',
       logo: {
         alt: 'SimpleGo',
-        src: 'https://simplego.dev/favicon-32.png',
-        href: 'https://simplego.dev',
+        src: 'img/logo.svg',
+        href: '/',
         target: '_self',
       },
       items: [
         {to: '/', label: 'Docs', position: 'left', activeBaseRegex: '^/$'},
-        {to: '/getting-started', label: 'Getting Started', position: 'left'},
-        {to: '/architecture', label: 'Architecture', position: 'left'},
-        {to: '/smp-in-c', label: 'SMP in C', position: 'left'},
-        {to: '/hardware', label: 'Hardware', position: 'left'},
-        {to: '/security', label: 'Security', position: 'left'},
-        {to: '/reference/constants', label: 'Reference', position: 'left'},
+        {href: 'https://simplego.dev', label: 'Home', position: 'right'},
         {href: 'https://simplego.dev/product.html', label: 'Product', position: 'right'},
         {href: 'https://simplego.dev/crypto.html', label: 'Crypto', position: 'right'},
         {href: 'https://simplego.dev/flash.html', label: 'Flash Tool', position: 'right'},
@@ -87,11 +73,13 @@ const config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Documentation',
           items: [
             {label: 'Getting Started', to: '/getting-started'},
-            {label: 'SMP in C', to: '/smp-in-c'},
             {label: 'Architecture', to: '/architecture'},
+            {label: 'SMP in C', to: '/smp-in-c'},
+            {label: 'Protocol Analysis', to: '/protocol-analysis'},
+            {label: 'Hardware', to: '/hardware'},
             {label: 'Security', to: '/security'},
             {label: 'Reference', to: '/reference/constants'},
           ],
@@ -102,6 +90,8 @@ const config = {
             {label: 'simplego.dev', href: 'https://simplego.dev'},
             {label: 'GitHub', href: 'https://github.com/saschadaemgen/SimpleGo'},
             {label: 'X / Twitter', href: 'https://x.com/simplegodev'},
+            {label: 'Flash Tool', href: 'https://simplego.dev/flash.html'},
+            {label: 'Network', href: 'https://simplego.dev/network.html'},
           ],
         },
         {
@@ -109,10 +99,21 @@ const config = {
           items: [
             {label: 'Imprint', href: 'https://simplego.dev/imprint.html'},
             {label: 'Privacy Policy', href: 'https://simplego.dev/legal/privacy.html'},
+            {label: 'Terms of Service', href: 'https://simplego.dev/legal/tos.html'},
+            {label: 'Disclaimer', href: 'https://simplego.dev/legal/disclaimer.html'},
+            {label: 'Law Enforcement', href: 'https://simplego.dev/legal/law-enforcement.html'},
+            {label: 'Transparency Report', href: 'https://simplego.dev/legal/transparency.html'},
+          ],
+        },
+        {
+          title: 'Company',
+          items: [
+            {label: 'Partnership', href: 'https://simplego.dev/contact.html'},
+            {label: 'Contact', href: 'mailto:contact@simplego.dev'},
           ],
         },
       ],
-      copyright: `© ${new Date().getFullYear()} SimpleGo.dev – S.D - IT and More Systems · Software: AGPL-3.0 · Hardware: CERN-OHL-W-2.0`,
+      copyright: `© ${new Date().getFullYear()} SimpleGo.dev -- S.D - IT and More Systems · Software: AGPL-3.0 · Hardware: CERN-OHL-W-2.0`,
     },
     prism: {
       theme: prismThemes.oneDark,
@@ -122,7 +123,7 @@ const config = {
     docs: {
       sidebar: {
         hideable: true,
-        autoCollapseCategories: false,
+        autoCollapseCategories: true,
       },
     },
   }),
