@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-protocol-analysis/PART32_SESSION_35" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">PART32_SESSION_35 | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/protocol-analysis/PART32_SESSION_35"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="PART32_SESSION_35 | SimpleGo"><meta data-rh="true" name="description" content="SimpleGo Protocol Analysis"><meta data-rh="true" property="og:description" content="SimpleGo Protocol Analysis"><link data-rh="true" rel="icon" href="https://simplego.dev/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/protocol-analysis/PART32_SESSION_35"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/protocol-analysis/PART32_SESSION_35" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/protocol-analysis/PART32_SESSION_35" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Protocol Analysis","item":"https://wiki.simplego.dev/protocol-analysis"},{"@type":"ListItem","position":2,"name":"PART32_SESSION_35","item":"https://wiki.simplego.dev/protocol-analysis/PART32_SESSION_35"}]}</script><link rel="stylesheet" href="/assets/css/styles.7c8f9f29.css">
+<script src="/assets/js/runtime~main.393ce3bb.js" defer="defer"></script>
+<script src="/assets/js/main.8f7498da.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" target="_self" href="/"><div class="navbar__logo"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/">Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://simplego.dev" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Home<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/product.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Product<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/crypto.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Crypto<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/flash.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Flash Tool<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/network.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Network<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/"><span title="SimpleGo Documentation" class="linkLabel_WmDU">SimpleGo Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/getting-started"><span title="Getting Started" class="linkLabel_WmDU">Getting Started</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/architecture"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a><button aria-label="Expand sidebar category &#x27;Architecture&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/smp-in-c"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a><button aria-label="Expand sidebar category &#x27;SMP in C&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--active" href="/protocol-analysis"><span title="Protocol Analysis" class="categoryLinkLabel_W154">Protocol Analysis</span></a><button aria-label="Collapse sidebar category &#x27;Protocol Analysis&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/SIMPLEX_PROTOCOL_INDEX"><span title="SIMPLEX_PROTOCOL_INDEX" class="linkLabel_WmDU">SIMPLEX_PROTOCOL_INDEX</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART1_INTRO_SESSIONS_1-2"><span title="PART1_INTRO_SESSIONS_1-2" class="linkLabel_WmDU">PART1_INTRO_SESSIONS_1-2</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART2_SESSIONS_3-4"><span title="PART2_SESSIONS_3-4" class="linkLabel_WmDU">PART2_SESSIONS_3-4</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART3_SESSIONS_5-6"><span title="PART3_SESSIONS_5-6" class="linkLabel_WmDU">PART3_SESSIONS_5-6</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART4_SESSION_7"><span title="PART4_SESSION_7" class="linkLabel_WmDU">PART4_SESSION_7</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART5_SESSION_8"><span title="PART5_SESSION_8" class="linkLabel_WmDU">PART5_SESSION_8</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART6_SESSION_9"><span title="PART6_SESSION_9" class="linkLabel_WmDU">PART6_SESSION_9</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART7_SESSION_10"><span title="PART7_SESSION_10" class="linkLabel_WmDU">PART7_SESSION_10</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART8_SESSION_11"><span title="PART8_SESSION_11" class="linkLabel_WmDU">PART8_SESSION_11</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART9_SESSION_12"><span title="PART9_SESSION_12" class="linkLabel_WmDU">PART9_SESSION_12</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART10_SESSION_13"><span title="PART10_SESSION_13" class="linkLabel_WmDU">PART10_SESSION_13</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART11_SESSION_14"><span title="PART11_SESSION_14" class="linkLabel_WmDU">PART11_SESSION_14</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART12_SESSION_15"><span title="PART12_SESSION_15" class="linkLabel_WmDU">PART12_SESSION_15</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART13_SESSION_16"><span title="PART13_SESSION_16" class="linkLabel_WmDU">PART13_SESSION_16</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART14_SESSION_17"><span title="PART14_SESSION_17" class="linkLabel_WmDU">PART14_SESSION_17</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART15_SESSION_18"><span title="PART15_SESSION_18" class="linkLabel_WmDU">PART15_SESSION_18</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART16_SESSION_19"><span title="PART16_SESSION_19" class="linkLabel_WmDU">PART16_SESSION_19</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART17_SESSION_20"><span title="PART17_SESSION_20" class="linkLabel_WmDU">PART17_SESSION_20</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART18_SESSION_21"><span title="PART18_SESSION_21" class="linkLabel_WmDU">PART18_SESSION_21</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART19_SESSION_22"><span title="PART19_SESSION_22" class="linkLabel_WmDU">PART19_SESSION_22</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART20_SESSION_23"><span title="PART20_SESSION_23" class="linkLabel_WmDU">PART20_SESSION_23</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART21_SESSION_24"><span title="PART21_SESSION_24" class="linkLabel_WmDU">PART21_SESSION_24</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART22_SESSION_25"><span title="PART22_SESSION_25" class="linkLabel_WmDU">PART22_SESSION_25</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART23_SESSION_26"><span title="PART23_SESSION_26" class="linkLabel_WmDU">PART23_SESSION_26</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART24_SESSION_27"><span title="PART24_SESSION_27" class="linkLabel_WmDU">PART24_SESSION_27</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART25_SESSION_28"><span title="PART25_SESSION_28" class="linkLabel_WmDU">PART25_SESSION_28</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART26_SESSION_29"><span title="Part 26: Session 29 — Multi-Task Architecture Breakthrough" class="linkLabel_WmDU">Part 26: Session 29 — Multi-Task Architecture Breakthrough</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART27_SESSION_30"><span title="Part 27: Session 30 — Intensive Debug Session (10 Hypotheses, 14 Fixes)" class="linkLabel_WmDU">Part 27: Session 30 — Intensive Debug Session (10 Hypotheses, 14 Fixes)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART28_SESSION_31"><span title="Part 28: Session 31 — Bidirectional Chat Restored (txCount Batch Bug)" class="linkLabel_WmDU">Part 28: Session 31 — Bidirectional Chat Restored (txCount Batch Bug)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART29_SESSION_32"><span title="Part 29: Session 32 — &quot;The Demonstration&quot; (From Protocol to Messenger)" class="linkLabel_WmDU">Part 29: Session 32 — &quot;The Demonstration&quot; (From Protocol to Messenger)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART30_SESSION_33"><span title="Part 30: Session 34 — Multi-Contact Architecture (Singleton to Per-Contact)" class="linkLabel_WmDU">Part 30: Session 34 — Multi-Contact Architecture (Singleton to Per-Contact)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART30_SESSION_34"><span title="PART30_SESSION_34" class="linkLabel_WmDU">PART30_SESSION_34</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH"><span title="PART31_SESSION_34_BREAKTHROUGH" class="linkLabel_WmDU">PART31_SESSION_34_BREAKTHROUGH</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/protocol-analysis/PART32_SESSION_35"><span title="PART32_SESSION_35" class="linkLabel_WmDU">PART32_SESSION_35</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART33_SESSION_36"><span title="PART33_SESSION_36" class="linkLabel_WmDU">PART33_SESSION_36</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART34_SESSION_37"><span title="PART34_SESSION_37" class="linkLabel_WmDU">PART34_SESSION_37</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART35_SESSION_38"><span title="PART35_SESSION_38" class="linkLabel_WmDU">PART35_SESSION_38</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART36_SESSION_39"><span title="PART36_SESSION_39" class="linkLabel_WmDU">PART36_SESSION_39</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART37_SESSION_40"><span title="PART37_SESSION_40" class="linkLabel_WmDU">PART37_SESSION_40</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART38_SESSION_41"><span title="Part 38: Session 41 — Pre-GitHub Cleanup and Stabilization" class="linkLabel_WmDU">Part 38: Session 41 — Pre-GitHub Cleanup and Stabilization</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART39_SESSION_42"><span title="Part 39: Session 42 — Consolidation and Quality Pass" class="linkLabel_WmDU">Part 39: Session 42 — Consolidation and Quality Pass</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART40_SESSION_43"><span title="Part 40: Session 43 — Documentation Site and SMP-in-C Guide" class="linkLabel_WmDU">Part 40: Session 43 — Documentation Site and SMP-in-C Guide</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/BUG_TRACKER"><span title="BUG_TRACKER" class="linkLabel_WmDU">BUG_TRACKER</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/session-index"><span title="Session Index" class="linkLabel_WmDU">Session Index</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/QUICK_REFERENCE"><span title="QUICK_REFERENCE" class="linkLabel_WmDU">QUICK_REFERENCE</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/"><span title="README" class="linkLabel_WmDU">README</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/STATUS"><span title="STATUS" class="linkLabel_WmDU">STATUS</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/hardware"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a><button aria-label="Expand sidebar category &#x27;Hardware&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/security"><span title="Security" class="categoryLinkLabel_W154">Security</span></a><button aria-label="Expand sidebar category &#x27;Security&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/BUILD_SYSTEM"><span title="Contributing" class="categoryLinkLabel_W154">Contributing</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/reference/constants"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a><button aria-label="Expand sidebar category &#x27;Reference&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/protocol-analysis"><span>Protocol Analysis</span></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">PART32_SESSION_35</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><p><img decoding="async" loading="lazy" alt="SimpleGo Protocol Analysis" src="/assets/images/github_header_protocol_analysis-d478a46fd15f1ad9e12d212dfb4c286a.png" width="1200" height="249" class="img_ev3q"></p>
+<header><h1>SimpleX Protocol Analysis - Part 32: Session 35</h1></header>
+<h1>🏁 Multi-Contact Victory: Bidirectional Messenger with Chat Filter</h1>
+<p><strong>Document Version:</strong> v1
+<strong>Date:</strong> 2026-02-24 Session 35
+<strong>Version:</strong> v0.1.17-alpha (NOT CHANGED without explicit permission!)
+<strong>Status:</strong> ✅ ALL PLANNED BUGS FIXED - Multi-contact messenger fully operational
+<strong>Previous:</strong> Part 31 - Session 34 Day 2 (Multi-Contact Bidirectional BREAKTHROUGH)
+<strong>Project:</strong> SimpleGo - ESP32 Native SimpleX Client
+<strong>Path:</strong> <code>C:\Espressif\projects\simplex_client</code>
+<strong>Build:</strong> <code>idf.py build flash monitor -p COM6</code>
+<strong>Repo:</strong> <a href="https://github.com/cannatoshi/SimpleGo" target="_blank" rel="noopener noreferrer" class="">https://github.com/cannatoshi/SimpleGo</a>
+<strong>License:</strong> AGPL-3.0</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="️-session-35-summary">⚠️ SESSION 35 SUMMARY<a href="#️-session-35-summary" class="hash-link" aria-label="Direct link to ⚠️ SESSION 35 SUMMARY" title="Direct link to ⚠️ SESSION 35 SUMMARY" translate="no">​</a></h2>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">═══════════════════════════════════════════════════════════════════════════════</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  🏁🏁🏁 MULTI-CONTACT VICTORY — ALL PLANNED BUGS FIXED 🏁🏁🏁</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  ┌─────────────────────────────────────────────────────────────────────────┐</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   2 contacts simultaneously connected                                  │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Bidirectional messages for both contacts                             │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Delivery receipts (double checkmarks) for both contacts              │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Per-contact chat filter: messages only in correct chat               │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Tested after idf.py erase-flash with fresh handshakes               │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   20+ messages exchanged between both contacts                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Fixes: 35a-35h across 10 files                                      │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Root Cause Pattern: &quot;wrong slot active&quot; (same as Session 34)         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Date: February 24, 2026                                              │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Duration: ~6 hours                                                   │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  └─────────────────────────────────────────────────────────────────────────┘</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">═══════════════════════════════════════════════════════════════════════════════</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="585-session-35-overview">585. Session 35 Overview<a href="#585-session-35-overview" class="hash-link" aria-label="Direct link to 585. Session 35 Overview" title="Direct link to 585. Session 35 Overview" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5851-starting-point">585.1 Starting Point<a href="#5851-starting-point" class="hash-link" aria-label="Direct link to 585.1 Starting Point" title="Direct link to 585.1 Starting Point" translate="no">​</a></h3>
+<p>Session 34 had introduced the multi-contact architecture (128 contacts via PSRAM arrays). Contact 0 worked bidirectionally with double checkmarks. Contact 1 had several remaining issues:</p>
+<ul>
+<li class="">Bug A: Phone shows &quot;connecting&quot; instead of &quot;connected&quot; (Kickstarter-killer)</li>
+<li class="">Bug B: All messages visible in all chats (no per-contact filtering)</li>
+<li class="">Bug C: ERR AUTH on some operations</li>
+<li class="">Bug D: Delivery receipts inconsistent</li>
+<li class="">Bug E: Contact name shows placeholder instead of real name</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5852-team-and-roles">585.2 Team and Roles<a href="#5852-team-and-roles" class="hash-link" aria-label="Direct link to 585.2 Team and Roles" title="Direct link to 585.2 Team and Roles" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Role</th><th>Who</th><th>Task</th></tr></thead><tbody><tr><td>👑🐭 Princess Mausi</td><td>Claude (Strategy Chat)</td><td>Systematic file-by-file diagnosis, fix coordination</td></tr><tr><td>🐰👑 Princess Hasi</td><td>Claude (Implementation Chat)</td><td>All fixes (35a-35h), 10 files modified</td></tr><tr><td>👑 Cannatoshi</td><td>Prince / Client</td><td>Hardware testing, erase-flash verification</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="586-diagnosis-phase-root-cause-analysis-mausi">586. Diagnosis Phase: Root Cause Analysis (Mausi)<a href="#586-diagnosis-phase-root-cause-analysis-mausi" class="hash-link" aria-label="Direct link to 586. Diagnosis Phase: Root Cause Analysis (Mausi)" title="Direct link to 586. Diagnosis Phase: Root Cause Analysis (Mausi)" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5861-systematic-file-by-file-tracing">586.1 Systematic File-by-File Tracing<a href="#5861-systematic-file-by-file-tracing" class="hash-link" aria-label="Direct link to 586.1 Systematic File-by-File Tracing" title="Direct link to 586.1 Systematic File-by-File Tracing" translate="no">​</a></h3>
+<p>Mausi analyzed four source files systematically, comparing Contact 0 (working) vs Contact 1 (broken):</p>
+<ol>
+<li class=""><strong>smp_handshake.c:</strong> Clean multi-contact, uses <code>handshake_array[active_handshake_idx]</code> correctly</li>
+<li class=""><strong>smp_agent.c:</strong> handle_confirmation() extracts auth key, but no contact_idx reference visible</li>
+<li class=""><strong>main.c:</strong> Post-startup orchestration, delegates to smp_app_run() in smp_tasks.c</li>
+<li class=""><strong>smp_tasks.c:</strong> 42d block (post-confirmation flow) identified as bug location</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5862-key-finding-wrong-slot-active-during-decrypt">586.2 Key Finding: Wrong Slot Active During Decrypt<a href="#5862-key-finding-wrong-slot-active-during-decrypt" class="hash-link" aria-label="Direct link to 586.2 Key Finding: Wrong Slot Active During Decrypt" title="Direct link to 586.2 Key Finding: Wrong Slot Active During Decrypt" translate="no">​</a></h3>
+<p><code>ratchet_set_active(hs_contact)</code> was called AFTER <code>smp_agent_process_message()</code> instead of BEFORE. Contact 1&#x27;s Confirmation was decrypted using Slot 0&#x27;s ratchet keys. This is the same &quot;wrong slot active&quot; pattern from Session 34.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5863-key-command-target-discovery">586.3 KEY Command Target Discovery<a href="#5863-key-command-target-discovery" class="hash-link" aria-label="Direct link to 586.3 KEY Command Target Discovery" title="Direct link to 586.3 KEY Command Target Discovery" translate="no">​</a></h3>
+<p>After comparing <code>reply_queue_encode_info()</code> with <code>queue_encode_info()</code> and analyzing the NET_CMD_SEND_KEY handler: the KEY command was securing the Contact Queue (<code>contacts[1].recipient_id</code>) instead of the Reply Queue (<code>reply_queue_get(1)-&gt;rcv_id</code>). The phone could not send its HELLO to RQ[1].</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="587-fix-phase-assignments-35a-35h">587. Fix Phase: Assignments 35a-35h<a href="#587-fix-phase-assignments-35a-35h" class="hash-link" aria-label="Direct link to 587. Fix Phase: Assignments 35a-35h" title="Direct link to 587. Fix Phase: Assignments 35a-35h" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5871-fix-35a-ratchet-slot-ordering">587.1 Fix 35a: Ratchet Slot Ordering<a href="#5871-fix-35a-ratchet-slot-ordering" class="hash-link" aria-label="Direct link to 587.1 Fix 35a: Ratchet Slot Ordering" title="Direct link to 587.1 Fix 35a: Ratchet Slot Ordering" translate="no">​</a></h3>
+<p><strong>Files:</strong> smp_tasks.c, smp_agent.c
+<strong>Problem:</strong> Wrong ratchet slot active during Reply Queue decrypt
+<strong>Fix:</strong> Call <code>ratchet_set_active()</code> + <code>handshake_set_active()</code> BEFORE <code>smp_agent_process_message()</code>, not after</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5872-fix-35c-key-command-target-queue">587.2 Fix 35c: KEY Command Target Queue<a href="#5872-fix-35c-key-command-target-queue" class="hash-link" aria-label="Direct link to 587.2 Fix 35c: KEY Command Target Queue" title="Direct link to 587.2 Fix 35c: KEY Command Target Queue" translate="no">​</a></h3>
+<p><strong>Files:</strong> smp_tasks.c
+<strong>Problem:</strong> KEY command secures Contact Queue instead of Reply Queue
+<strong>Fix:</strong> KEY targets Reply Queue (<code>reply_queue_get(idx)-&gt;rcv_id</code>) instead of Contact Queue (<code>contacts[idx].recipient_id</code>)</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5873-fix-35e-per-contact-chat-filter">587.3 Fix 35e: Per-Contact Chat Filter<a href="#5873-fix-35e-per-contact-chat-filter" class="hash-link" aria-label="Direct link to 587.3 Fix 35e: Per-Contact Chat Filter" title="Direct link to 587.3 Fix 35e: Per-Contact Chat Filter" translate="no">​</a></h3>
+<p><strong>Files:</strong> ui_chat.c, ui_chat.h, smp_tasks.c, smp_tasks.h, smp_events.h, smp_agent.c
+<strong>Problem:</strong> All messages visible in all chat screens
+<strong>Fix:</strong> Per-contact bubble tagging with <code>lv_obj_set_user_data()</code> + <code>LV_OBJ_FLAG_HIDDEN</code> filter. Each chat bubble stores its contact_idx, and switching contacts hides/shows the appropriate bubbles.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5874-fix-35f-psram-guard-for-reply-queue">587.4 Fix 35f: PSRAM Guard for Reply Queue<a href="#5874-fix-35f-psram-guard-for-reply-queue" class="hash-link" aria-label="Direct link to 587.4 Fix 35f: PSRAM Guard for Reply Queue" title="Direct link to 587.4 Fix 35f: PSRAM Guard for Reply Queue" translate="no">​</a></h3>
+<p><strong>Files:</strong> reply_queue.c
+<strong>Problem:</strong> RQ[1] PSRAM data overwritten by NVS load
+<strong>Fix:</strong> PSRAM guard: check if PSRAM slot is already valid before loading from NVS. Deferred NVS save to prevent overwrite.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5875-fix-35g-contact-queue-decrypt-ratchet-switch">587.5 Fix 35g: Contact Queue Decrypt Ratchet Switch<a href="#5875-fix-35g-contact-queue-decrypt-ratchet-switch" class="hash-link" aria-label="Direct link to 587.5 Fix 35g: Contact Queue Decrypt Ratchet Switch" title="Direct link to 587.5 Fix 35g: Contact Queue Decrypt Ratchet Switch" translate="no">​</a></h3>
+<p><strong>Files:</strong> smp_tasks.c
+<strong>Problem:</strong> Contact Queue decrypt did not switch to correct ratchet slot
+<strong>Fix:</strong> Call <code>ratchet_set_active()</code> before Contact Queue decrypt path</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5876-fix-35h-psram-slots-empty-after-boot-for-contact-0">587.6 Fix 35h: PSRAM Slots Empty After Boot for Contact &gt;0<a href="#5876-fix-35h-psram-slots-empty-after-boot-for-contact-0" class="hash-link" aria-label="Direct link to 587.6 Fix 35h: PSRAM Slots Empty After Boot for Contact &gt;0" title="Direct link to 587.6 Fix 35h: PSRAM Slots Empty After Boot for Contact &gt;0" translate="no">​</a></h3>
+<p><strong>Files:</strong> smp_ratchet.c, smp_handshake.c
+<strong>Problem:</strong> After boot, only Slot 0 is loaded from NVS. Any <code>ratchet_set_active(N)</code> for N&gt;0 operates on empty PSRAM.
+<strong>Fix:</strong> NVS fallback in <code>ratchet_set_active()</code>: if PSRAM slot is empty, load from NVS first. Save/load logic in <code>handshake_set_active()</code> mirrors the same pattern.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="588-session-35-fix-summary-table">588. Session 35 Fix Summary Table<a href="#588-session-35-fix-summary-table" class="hash-link" aria-label="Direct link to 588. Session 35 Fix Summary Table" title="Direct link to 588. Session 35 Fix Summary Table" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Fix</th><th>Files</th><th>Problem</th><th>Solution</th></tr></thead><tbody><tr><td>35a</td><td>smp_tasks.c, smp_agent.c</td><td>Wrong ratchet slot during RQ decrypt</td><td>set_active BEFORE process_message</td></tr><tr><td>35c</td><td>smp_tasks.c</td><td>KEY secures wrong queue</td><td>KEY targets Reply Queue</td></tr><tr><td>35e</td><td>ui_chat.c/h, smp_tasks.c/h, smp_events.h, smp_agent.c</td><td>All messages in all chats</td><td>Per-contact bubble tagging + HIDDEN filter</td></tr><tr><td>35f</td><td>reply_queue.c</td><td>PSRAM overwritten by NVS</td><td>PSRAM guard + deferred save</td></tr><tr><td>35g</td><td>smp_tasks.c</td><td>CQ decrypt without ratchet switch</td><td>ratchet_set_active before CQ decrypt</td></tr><tr><td>35h</td><td>smp_ratchet.c, smp_handshake.c</td><td>PSRAM empty for Contact &gt;0 after boot</td><td>NVS fallback in set_active</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="589-verified-result">589. Verified Result<a href="#589-verified-result" class="hash-link" aria-label="Direct link to 589. Verified Result" title="Direct link to 589. Verified Result" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Feature</th><th>Status</th></tr></thead><tbody><tr><td>2 contacts simultaneously connected</td><td>✅</td></tr><tr><td>Bidirectional messages for both contacts</td><td>✅</td></tr><tr><td>Delivery receipts (double checkmarks) for both</td><td>✅</td></tr><tr><td>Per-contact chat filter (messages only in correct chat)</td><td>✅</td></tr><tr><td>Tested after <code>idf.py erase-flash</code> with fresh handshakes</td><td>✅</td></tr><tr><td>20+ messages exchanged between both contacts</td><td>✅</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="590-session-35-lessons-learned">590. Session 35 Lessons Learned<a href="#590-session-35-lessons-learned" class="hash-link" aria-label="Direct link to 590. Session 35 Lessons Learned" title="Direct link to 590. Session 35 Lessons Learned" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l187-wrong-slot-active-is-the-most-common-multi-contact-bug">L187: &quot;Wrong Slot Active&quot; Is the Most Common Multi-Contact Bug<a href="#l187-wrong-slot-active-is-the-most-common-multi-contact-bug" class="hash-link" aria-label="Direct link to L187: &quot;Wrong Slot Active&quot; Is the Most Common Multi-Contact Bug" title="Direct link to L187: &quot;Wrong Slot Active&quot; Is the Most Common Multi-Contact Bug" translate="no">​</a></h3>
+<p><strong>Severity: Architectural</strong></p>
+<p>Every operation that touches ratchet or handshake state MUST set the active slot first. The pattern from Session 34 repeats: decrypt with wrong slot = crypto failure, KEY on wrong queue = connection failure, NVS load overwrites active PSRAM = data corruption. Before any crypto or protocol operation: <code>ratchet_set_active(contact_idx)</code> + <code>handshake_set_active(contact_idx)</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l188-psram-slots-do-not-survive-reboot-for-contact-0">L188: PSRAM Slots Do Not Survive Reboot for Contact &gt;0<a href="#l188-psram-slots-do-not-survive-reboot-for-contact-0" class="hash-link" aria-label="Direct link to L188: PSRAM Slots Do Not Survive Reboot for Contact &gt;0" title="Direct link to L188: PSRAM Slots Do Not Survive Reboot for Contact &gt;0" translate="no">​</a></h3>
+<p><strong>Severity: Critical</strong></p>
+<p>After boot, only Slot 0 is loaded from NVS into PSRAM. Any <code>ratchet_set_active(N)</code> for N&gt;0 must include an NVS fallback: if the PSRAM slot is empty (zeroed), load from NVS before returning. Without this, Contact 1+ after reboot operates on empty crypto state.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l189-key-secures-the-reply-queue-not-the-contact-queue">L189: KEY Secures the Reply Queue, Not the Contact Queue<a href="#l189-key-secures-the-reply-queue-not-the-contact-queue" class="hash-link" aria-label="Direct link to L189: KEY Secures the Reply Queue, Not the Contact Queue" title="Direct link to L189: KEY Secures the Reply Queue, Not the Contact Queue" translate="no">​</a></h3>
+<p><strong>Severity: Critical</strong></p>
+<p>The phone sends its messages (HELLO, chat, receipts) to the Reply Queue. KEY must authorize the sender on the Reply Queue (<code>reply_queue_get(idx)-&gt;rcv_id</code>), not on the Contact Queue (<code>contacts[idx].recipient_id</code>). Wrong target = phone stuck on &quot;connecting&quot;.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l190-per-contact-chat-filter-via-lvgl-user_data--hidden-flag">L190: Per-Contact Chat Filter via LVGL user_data + HIDDEN Flag<a href="#l190-per-contact-chat-filter-via-lvgl-user_data--hidden-flag" class="hash-link" aria-label="Direct link to L190: Per-Contact Chat Filter via LVGL user_data + HIDDEN Flag" title="Direct link to L190: Per-Contact Chat Filter via LVGL user_data + HIDDEN Flag" translate="no">​</a></h3>
+<p><strong>Severity: High</strong></p>
+<p>Each chat bubble stores its contact_idx via <code>lv_obj_set_user_data()</code>. When switching contacts, iterate all children and set <code>LV_OBJ_FLAG_HIDDEN</code> for non-matching contact_idx. This avoids rebuilding the entire chat view on contact switch.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l191-psram-guard-prevents-nvs-overwrite">L191: PSRAM Guard Prevents NVS Overwrite<a href="#l191-psram-guard-prevents-nvs-overwrite" class="hash-link" aria-label="Direct link to L191: PSRAM Guard Prevents NVS Overwrite" title="Direct link to L191: PSRAM Guard Prevents NVS Overwrite" translate="no">​</a></h3>
+<p><strong>Severity: High</strong></p>
+<p>When loading from NVS at boot, check if the PSRAM slot already has valid data (e.g., from a just-completed handshake). If PSRAM is already valid, skip NVS load. Deferred NVS save ensures the PSRAM data persists for next boot without overwriting current session state.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l192-systematic-file-by-file-comparison-beats-log-analysis">L192: Systematic File-by-File Comparison Beats Log Analysis<a href="#l192-systematic-file-by-file-comparison-beats-log-analysis" class="hash-link" aria-label="Direct link to L192: Systematic File-by-File Comparison Beats Log Analysis" title="Direct link to L192: Systematic File-by-File Comparison Beats Log Analysis" translate="no">​</a></h3>
+<p><strong>Severity: Methodological</strong></p>
+<p>Comparing Contact 0 (working) vs Contact 1 (broken) through systematic file-by-file tracing finds root causes faster than log analysis alone. The diagnosis pattern: identify where the code paths diverge for different contact indices.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="591-session-36-planning-prepared-by-mausi">591. Session 36 Planning (Prepared by Mausi)<a href="#591-session-36-planning-prepared-by-mausi" class="hash-link" aria-label="Direct link to 591. Session 36 Planning (Prepared by Mausi)" title="Direct link to 591. Session 36 Planning (Prepared by Mausi)" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="assignments-prepared">Assignments Prepared<a href="#assignments-prepared" class="hash-link" aria-label="Direct link to Assignments Prepared" title="Direct link to Assignments Prepared" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Assignment</th><th>Description</th><th>Priority</th></tr></thead><tbody><tr><td>35g/h</td><td>NTP timestamp for chat bubbles (currently &quot;--:--&quot;)</td><td>High</td></tr><tr><td>Bug E</td><td>Contact name from ConnInfo JSON (currently placeholder)</td><td>High</td></tr><tr><td>35i</td><td>Contact delete function</td><td>Medium</td></tr><tr><td>35j</td><td>Long-press menu in contact list</td><td>Medium</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="roadmap">Roadmap<a href="#roadmap" class="hash-link" aria-label="Direct link to Roadmap" title="Direct link to Roadmap" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Session 36 Priority Order:</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  1. NTP Timestamps + Contact Name (Bug E)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  2. Contact Delete + Long-Press Menu</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  3. SD Card History with Encryption</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  4. Encrypted Backup (Post-Kickstarter)</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="sd-encryption-theory-discussed">SD Encryption Theory (Discussed)<a href="#sd-encryption-theory-discussed" class="hash-link" aria-label="Direct link to SD Encryption Theory (Discussed)" title="Direct link to SD Encryption Theory (Discussed)" translate="no">​</a></h3>
+<p>AES-256-GCM for SD card chat history. Encrypted backup as post-Kickstarter premium feature. Details to be finalized in Session 36.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="592-files-changed-10-files-1-commit">592. Files Changed (10 Files, 1 Commit)<a href="#592-files-changed-10-files-1-commit" class="hash-link" aria-label="Direct link to 592. Files Changed (10 Files, 1 Commit)" title="Direct link to 592. Files Changed (10 Files, 1 Commit)" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Changes</th></tr></thead><tbody><tr><td>main/main.c</td><td>Boot sequence adjustments</td></tr><tr><td>main/core/smp_tasks.c</td><td>Fix 35a (ratchet ordering), 35c (KEY target), 35g (CQ decrypt switch)</td></tr><tr><td>main/include/smp_tasks.h</td><td>Updated declarations</td></tr><tr><td>main/protocol/reply_queue.c</td><td>Fix 35f (PSRAM guard, deferred NVS)</td></tr><tr><td>main/protocol/smp_agent.c</td><td>Fix 35a (ratchet ordering at process_message)</td></tr><tr><td>main/protocol/smp_handshake.c</td><td>Fix 35h (save/load in set_active)</td></tr><tr><td>main/protocol/smp_ratchet.c</td><td>Fix 35h (NVS fallback in set_active)</td></tr><tr><td>main/state/smp_peer.c</td><td>Per-contact peer state adjustments</td></tr><tr><td>main/ui/screens/ui_chat.c</td><td>Fix 35e (per-contact bubble tagging, HIDDEN filter)</td></tr><tr><td>main/ui/screens/ui_chat.h</td><td>Fix 35e (contact_idx in bubble API)</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="commit">Commit<a href="#commit" class="hash-link" aria-label="Direct link to Commit" title="Direct link to Commit" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">feat(multi-contact): fix bidirectional handshake and per-contact chat filtering</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="593-open-items-for-session-36">593. Open Items for Session 36<a href="#593-open-items-for-session-36" class="hash-link" aria-label="Direct link to 593. Open Items for Session 36" title="Direct link to 593. Open Items for Session 36" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Item</th><th>Description</th><th>Priority</th></tr></thead><tbody><tr><td>NTP</td><td>Chat bubbles show &quot;--:--&quot; (no timestamps)</td><td>High</td></tr><tr><td>Bug E</td><td>Contact name shows placeholder</td><td>High</td></tr><tr><td>Contact Delete</td><td>No delete function yet</td><td>Medium</td></tr><tr><td>Long-Press</td><td>No context menu in contact list</td><td>Medium</td></tr><tr><td>SD History</td><td>Chat history not persisted to SD</td><td>Medium</td></tr><tr><td>SPI Glitches</td><td>lcd_panel.io.spi errors (cosmetic)</td><td>Low</td></tr><tr><td>Bug C</td><td>ERR AUTH status after all fixes (re-check)</td><td>Medium</td></tr><tr><td>Bug D</td><td>Receipts after all fixes (re-check)</td><td>Low</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="594-session-35-summary">594. Session 35 Summary<a href="#594-session-35-summary" class="hash-link" aria-label="Direct link to 594. Session 35 Summary" title="Direct link to 594. Session 35 Summary" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-was-achieved">What Was Achieved<a href="#what-was-achieved" class="hash-link" aria-label="Direct link to What Was Achieved" title="Direct link to What Was Achieved" translate="no">​</a></h3>
+<ul>
+<li class="">✅ Bug A FIXED: Phone shows &quot;connected&quot; for Contact 1 (KEY target corrected)</li>
+<li class="">✅ Bug B FIXED: Per-contact chat filter (messages only in correct chat)</li>
+<li class="">✅ Ratchet slot ordering fixed (decrypt with correct slot)</li>
+<li class="">✅ PSRAM guard prevents NVS overwrite</li>
+<li class="">✅ NVS fallback for Contact &gt;0 after boot</li>
+<li class="">✅ 20+ messages exchanged, both contacts bidirectional</li>
+<li class="">✅ Tested after full erase-flash with fresh handshakes</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-takeaway">Key Takeaway<a href="#key-takeaway" class="hash-link" aria-label="Direct link to Key Takeaway" title="Direct link to Key Takeaway" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">SESSION 35 SUMMARY:</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  🏁 MULTI-CONTACT VICTORY — ALL PLANNED BUGS FIXED</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  2 contacts simultaneously connected               ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Bidirectional messages for both                    ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Delivery receipts for both                         ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Per-contact chat filter                            ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Fresh handshake test (erase-flash)                 ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  20+ messages exchanged                             ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Root Cause Pattern: &quot;wrong slot active&quot;</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Same pattern as Session 34, now fully resolved.</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">&quot;Multi-contact victory. The messenger works.&quot; — Mausi 👑🐭</span><br></span></code></pre></div></div>
+<hr>
+<p><strong>DOCUMENT CREATED: 2026-02-24 Session 35</strong>
+<strong>Status: ✅ All planned bugs fixed</strong>
+<strong>Key Achievement: Multi-Contact Victory with Per-Contact Chat Filter</strong>
+<strong>Milestone 11: Multi-Contact Chat Filter</strong>
+<strong>Next: Session 36 - NTP Timestamps, Contact Names, Delete Function</strong></p>
+<hr>
+<p><em>Created by Princess Mausi (👑🐭) on February 24, 2026</em>
+<em>Session 35 was the victory lap. The multi-contact messenger works. Time to polish.</em></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/protocol-analysis/34_PART32_SESSION_35.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">PART31_SESSION_34_BREAKTHROUGH</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/protocol-analysis/PART33_SESSION_36"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">PART33_SESSION_36</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#️-session-35-summary" class="table-of-contents__link toc-highlight">⚠️ SESSION 35 SUMMARY</a></li><li><a href="#585-session-35-overview" class="table-of-contents__link toc-highlight">585. Session 35 Overview</a><ul><li><a href="#5851-starting-point" class="table-of-contents__link toc-highlight">585.1 Starting Point</a></li><li><a href="#5852-team-and-roles" class="table-of-contents__link toc-highlight">585.2 Team and Roles</a></li></ul></li><li><a href="#586-diagnosis-phase-root-cause-analysis-mausi" class="table-of-contents__link toc-highlight">586. Diagnosis Phase: Root Cause Analysis (Mausi)</a><ul><li><a href="#5861-systematic-file-by-file-tracing" class="table-of-contents__link toc-highlight">586.1 Systematic File-by-File Tracing</a></li><li><a href="#5862-key-finding-wrong-slot-active-during-decrypt" class="table-of-contents__link toc-highlight">586.2 Key Finding: Wrong Slot Active During Decrypt</a></li><li><a href="#5863-key-command-target-discovery" class="table-of-contents__link toc-highlight">586.3 KEY Command Target Discovery</a></li></ul></li><li><a href="#587-fix-phase-assignments-35a-35h" class="table-of-contents__link toc-highlight">587. Fix Phase: Assignments 35a-35h</a><ul><li><a href="#5871-fix-35a-ratchet-slot-ordering" class="table-of-contents__link toc-highlight">587.1 Fix 35a: Ratchet Slot Ordering</a></li><li><a href="#5872-fix-35c-key-command-target-queue" class="table-of-contents__link toc-highlight">587.2 Fix 35c: KEY Command Target Queue</a></li><li><a href="#5873-fix-35e-per-contact-chat-filter" class="table-of-contents__link toc-highlight">587.3 Fix 35e: Per-Contact Chat Filter</a></li><li><a href="#5874-fix-35f-psram-guard-for-reply-queue" class="table-of-contents__link toc-highlight">587.4 Fix 35f: PSRAM Guard for Reply Queue</a></li><li><a href="#5875-fix-35g-contact-queue-decrypt-ratchet-switch" class="table-of-contents__link toc-highlight">587.5 Fix 35g: Contact Queue Decrypt Ratchet Switch</a></li><li><a href="#5876-fix-35h-psram-slots-empty-after-boot-for-contact-0" class="table-of-contents__link toc-highlight">587.6 Fix 35h: PSRAM Slots Empty After Boot for Contact &gt;0</a></li></ul></li><li><a href="#588-session-35-fix-summary-table" class="table-of-contents__link toc-highlight">588. Session 35 Fix Summary Table</a></li><li><a href="#589-verified-result" class="table-of-contents__link toc-highlight">589. Verified Result</a></li><li><a href="#590-session-35-lessons-learned" class="table-of-contents__link toc-highlight">590. Session 35 Lessons Learned</a><ul><li><a href="#l187-wrong-slot-active-is-the-most-common-multi-contact-bug" class="table-of-contents__link toc-highlight">L187: &quot;Wrong Slot Active&quot; Is the Most Common Multi-Contact Bug</a></li><li><a href="#l188-psram-slots-do-not-survive-reboot-for-contact-0" class="table-of-contents__link toc-highlight">L188: PSRAM Slots Do Not Survive Reboot for Contact &gt;0</a></li><li><a href="#l189-key-secures-the-reply-queue-not-the-contact-queue" class="table-of-contents__link toc-highlight">L189: KEY Secures the Reply Queue, Not the Contact Queue</a></li><li><a href="#l190-per-contact-chat-filter-via-lvgl-user_data--hidden-flag" class="table-of-contents__link toc-highlight">L190: Per-Contact Chat Filter via LVGL user_data + HIDDEN Flag</a></li><li><a href="#l191-psram-guard-prevents-nvs-overwrite" class="table-of-contents__link toc-highlight">L191: PSRAM Guard Prevents NVS Overwrite</a></li><li><a href="#l192-systematic-file-by-file-comparison-beats-log-analysis" class="table-of-contents__link toc-highlight">L192: Systematic File-by-File Comparison Beats Log Analysis</a></li></ul></li><li><a href="#591-session-36-planning-prepared-by-mausi" class="table-of-contents__link toc-highlight">591. Session 36 Planning (Prepared by Mausi)</a><ul><li><a href="#assignments-prepared" class="table-of-contents__link toc-highlight">Assignments Prepared</a></li><li><a href="#roadmap" class="table-of-contents__link toc-highlight">Roadmap</a></li><li><a href="#sd-encryption-theory-discussed" class="table-of-contents__link toc-highlight">SD Encryption Theory (Discussed)</a></li></ul></li><li><a href="#592-files-changed-10-files-1-commit" class="table-of-contents__link toc-highlight">592. Files Changed (10 Files, 1 Commit)</a><ul><li><a href="#commit" class="table-of-contents__link toc-highlight">Commit</a></li></ul></li><li><a href="#593-open-items-for-session-36" class="table-of-contents__link toc-highlight">593. Open Items for Session 36</a></li><li><a href="#594-session-35-summary" class="table-of-contents__link toc-highlight">594. Session 35 Summary</a><ul><li><a href="#what-was-achieved" class="table-of-contents__link toc-highlight">What Was Achieved</a></li><li><a href="#key-takeaway" class="table-of-contents__link toc-highlight">Key Takeaway</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos.html">Terms of Service</a><a href="https://simplego.dev/legal/privacy.html">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer.html">Disclaimer</a><a href="https://simplego.dev/imprint.html">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup.html">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement.html">Law Enforcement</a><a href="https://simplego.dev/legal/transparency.html">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact.html">Partnership</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — S.D – IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>

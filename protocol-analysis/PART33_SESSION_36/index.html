@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-protocol-analysis/PART33_SESSION_36" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">PART33_SESSION_36 | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/protocol-analysis/PART33_SESSION_36"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="PART33_SESSION_36 | SimpleGo"><meta data-rh="true" name="description" content="SimpleGo Protocol Analysis"><meta data-rh="true" property="og:description" content="SimpleGo Protocol Analysis"><link data-rh="true" rel="icon" href="https://simplego.dev/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/protocol-analysis/PART33_SESSION_36"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/protocol-analysis/PART33_SESSION_36" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/protocol-analysis/PART33_SESSION_36" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Protocol Analysis","item":"https://wiki.simplego.dev/protocol-analysis"},{"@type":"ListItem","position":2,"name":"PART33_SESSION_36","item":"https://wiki.simplego.dev/protocol-analysis/PART33_SESSION_36"}]}</script><link rel="stylesheet" href="/assets/css/styles.7c8f9f29.css">
+<script src="/assets/js/runtime~main.393ce3bb.js" defer="defer"></script>
+<script src="/assets/js/main.8f7498da.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" target="_self" href="/"><div class="navbar__logo"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/">Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://simplego.dev" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Home<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/product.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Product<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/crypto.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Crypto<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/flash.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Flash Tool<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/network.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Network<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/"><span title="SimpleGo Documentation" class="linkLabel_WmDU">SimpleGo Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/getting-started"><span title="Getting Started" class="linkLabel_WmDU">Getting Started</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/architecture"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a><button aria-label="Expand sidebar category &#x27;Architecture&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/smp-in-c"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a><button aria-label="Expand sidebar category &#x27;SMP in C&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--active" href="/protocol-analysis"><span title="Protocol Analysis" class="categoryLinkLabel_W154">Protocol Analysis</span></a><button aria-label="Collapse sidebar category &#x27;Protocol Analysis&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/SIMPLEX_PROTOCOL_INDEX"><span title="SIMPLEX_PROTOCOL_INDEX" class="linkLabel_WmDU">SIMPLEX_PROTOCOL_INDEX</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART1_INTRO_SESSIONS_1-2"><span title="PART1_INTRO_SESSIONS_1-2" class="linkLabel_WmDU">PART1_INTRO_SESSIONS_1-2</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART2_SESSIONS_3-4"><span title="PART2_SESSIONS_3-4" class="linkLabel_WmDU">PART2_SESSIONS_3-4</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART3_SESSIONS_5-6"><span title="PART3_SESSIONS_5-6" class="linkLabel_WmDU">PART3_SESSIONS_5-6</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART4_SESSION_7"><span title="PART4_SESSION_7" class="linkLabel_WmDU">PART4_SESSION_7</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART5_SESSION_8"><span title="PART5_SESSION_8" class="linkLabel_WmDU">PART5_SESSION_8</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART6_SESSION_9"><span title="PART6_SESSION_9" class="linkLabel_WmDU">PART6_SESSION_9</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART7_SESSION_10"><span title="PART7_SESSION_10" class="linkLabel_WmDU">PART7_SESSION_10</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART8_SESSION_11"><span title="PART8_SESSION_11" class="linkLabel_WmDU">PART8_SESSION_11</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART9_SESSION_12"><span title="PART9_SESSION_12" class="linkLabel_WmDU">PART9_SESSION_12</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART10_SESSION_13"><span title="PART10_SESSION_13" class="linkLabel_WmDU">PART10_SESSION_13</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART11_SESSION_14"><span title="PART11_SESSION_14" class="linkLabel_WmDU">PART11_SESSION_14</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART12_SESSION_15"><span title="PART12_SESSION_15" class="linkLabel_WmDU">PART12_SESSION_15</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART13_SESSION_16"><span title="PART13_SESSION_16" class="linkLabel_WmDU">PART13_SESSION_16</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART14_SESSION_17"><span title="PART14_SESSION_17" class="linkLabel_WmDU">PART14_SESSION_17</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART15_SESSION_18"><span title="PART15_SESSION_18" class="linkLabel_WmDU">PART15_SESSION_18</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART16_SESSION_19"><span title="PART16_SESSION_19" class="linkLabel_WmDU">PART16_SESSION_19</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART17_SESSION_20"><span title="PART17_SESSION_20" class="linkLabel_WmDU">PART17_SESSION_20</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART18_SESSION_21"><span title="PART18_SESSION_21" class="linkLabel_WmDU">PART18_SESSION_21</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART19_SESSION_22"><span title="PART19_SESSION_22" class="linkLabel_WmDU">PART19_SESSION_22</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART20_SESSION_23"><span title="PART20_SESSION_23" class="linkLabel_WmDU">PART20_SESSION_23</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART21_SESSION_24"><span title="PART21_SESSION_24" class="linkLabel_WmDU">PART21_SESSION_24</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART22_SESSION_25"><span title="PART22_SESSION_25" class="linkLabel_WmDU">PART22_SESSION_25</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART23_SESSION_26"><span title="PART23_SESSION_26" class="linkLabel_WmDU">PART23_SESSION_26</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART24_SESSION_27"><span title="PART24_SESSION_27" class="linkLabel_WmDU">PART24_SESSION_27</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART25_SESSION_28"><span title="PART25_SESSION_28" class="linkLabel_WmDU">PART25_SESSION_28</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART26_SESSION_29"><span title="Part 26: Session 29 — Multi-Task Architecture Breakthrough" class="linkLabel_WmDU">Part 26: Session 29 — Multi-Task Architecture Breakthrough</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART27_SESSION_30"><span title="Part 27: Session 30 — Intensive Debug Session (10 Hypotheses, 14 Fixes)" class="linkLabel_WmDU">Part 27: Session 30 — Intensive Debug Session (10 Hypotheses, 14 Fixes)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART28_SESSION_31"><span title="Part 28: Session 31 — Bidirectional Chat Restored (txCount Batch Bug)" class="linkLabel_WmDU">Part 28: Session 31 — Bidirectional Chat Restored (txCount Batch Bug)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART29_SESSION_32"><span title="Part 29: Session 32 — &quot;The Demonstration&quot; (From Protocol to Messenger)" class="linkLabel_WmDU">Part 29: Session 32 — &quot;The Demonstration&quot; (From Protocol to Messenger)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART30_SESSION_33"><span title="Part 30: Session 34 — Multi-Contact Architecture (Singleton to Per-Contact)" class="linkLabel_WmDU">Part 30: Session 34 — Multi-Contact Architecture (Singleton to Per-Contact)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART30_SESSION_34"><span title="PART30_SESSION_34" class="linkLabel_WmDU">PART30_SESSION_34</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH"><span title="PART31_SESSION_34_BREAKTHROUGH" class="linkLabel_WmDU">PART31_SESSION_34_BREAKTHROUGH</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART32_SESSION_35"><span title="PART32_SESSION_35" class="linkLabel_WmDU">PART32_SESSION_35</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/protocol-analysis/PART33_SESSION_36"><span title="PART33_SESSION_36" class="linkLabel_WmDU">PART33_SESSION_36</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART34_SESSION_37"><span title="PART34_SESSION_37" class="linkLabel_WmDU">PART34_SESSION_37</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART35_SESSION_38"><span title="PART35_SESSION_38" class="linkLabel_WmDU">PART35_SESSION_38</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART36_SESSION_39"><span title="PART36_SESSION_39" class="linkLabel_WmDU">PART36_SESSION_39</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART37_SESSION_40"><span title="PART37_SESSION_40" class="linkLabel_WmDU">PART37_SESSION_40</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART38_SESSION_41"><span title="Part 38: Session 41 — Pre-GitHub Cleanup and Stabilization" class="linkLabel_WmDU">Part 38: Session 41 — Pre-GitHub Cleanup and Stabilization</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART39_SESSION_42"><span title="Part 39: Session 42 — Consolidation and Quality Pass" class="linkLabel_WmDU">Part 39: Session 42 — Consolidation and Quality Pass</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART40_SESSION_43"><span title="Part 40: Session 43 — Documentation Site and SMP-in-C Guide" class="linkLabel_WmDU">Part 40: Session 43 — Documentation Site and SMP-in-C Guide</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/BUG_TRACKER"><span title="BUG_TRACKER" class="linkLabel_WmDU">BUG_TRACKER</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/session-index"><span title="Session Index" class="linkLabel_WmDU">Session Index</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/QUICK_REFERENCE"><span title="QUICK_REFERENCE" class="linkLabel_WmDU">QUICK_REFERENCE</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/"><span title="README" class="linkLabel_WmDU">README</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/STATUS"><span title="STATUS" class="linkLabel_WmDU">STATUS</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/hardware"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a><button aria-label="Expand sidebar category &#x27;Hardware&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/security"><span title="Security" class="categoryLinkLabel_W154">Security</span></a><button aria-label="Expand sidebar category &#x27;Security&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/BUILD_SYSTEM"><span title="Contributing" class="categoryLinkLabel_W154">Contributing</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/reference/constants"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a><button aria-label="Expand sidebar category &#x27;Reference&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/protocol-analysis"><span>Protocol Analysis</span></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">PART33_SESSION_36</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><p><img decoding="async" loading="lazy" alt="SimpleGo Protocol Analysis" src="/assets/images/github_header_protocol_analysis-d478a46fd15f1ad9e12d212dfb4c286a.png" width="1200" height="249" class="img_ev3q"></p>
+<header><h1>SimpleX Protocol Analysis - Part 33: Session 36</h1></header>
+<h1>Contact Lifecycle: Delete, Recreate, Zero Compromise</h1>
+<p><strong>Document Version:</strong> v1
+<strong>Date:</strong> 2026-02-25 Session 36
+<strong>Status:</strong> COMPLETED -- Contact lifecycle fully functional
+<strong>Previous:</strong> Part 32 - Session 35 (Multi-Contact Victory)
+<strong>Project:</strong> SimpleGo - ESP32 Native SimpleX Client
+<strong>Path:</strong> C:\Espressif\projects\simplex_client
+<strong>Build:</strong> idf.py build flash monitor -p COM6
+<strong>License:</strong> AGPL-3.0</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="session-36-summary">SESSION 36 SUMMARY<a href="#session-36-summary" class="hash-link" aria-label="Direct link to SESSION 36 SUMMARY" title="Direct link to SESSION 36 SUMMARY" translate="no">​</a></h2>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Complete Contact Lifecycle: Create -&gt; Chat -&gt; Delete -&gt; Recreate</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">No erase-flash required!</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">4 Sub-Sessions (36a, 36b, 36c, 36d)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">12 Git Commits</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">7 Bugs Fixed (#51-#57)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">10 New Lessons (#193-#202)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">10 Files Changed</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">MILESTONE 12: Contact Lifecycle</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Date: February 25, 2026</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="phase-0-preparation-and-baudrate-fix">Phase 0: Preparation and Baudrate Fix<a href="#phase-0-preparation-and-baudrate-fix" class="hash-link" aria-label="Direct link to Phase 0: Preparation and Baudrate Fix" title="Direct link to Phase 0: Preparation and Baudrate Fix" translate="no">​</a></h2>
+<p>UART baudrate raised from 115200 to 921600 (PowerShell one-liner).
+With 5000+ log lines per session, this reduces UART overhead from ~39s to ~5s (8x speedup).
+All 4 sdkconfig entries changed simultaneously.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="phase-1-task-35g----ntp-timestamps--bug-e-conninfo-displayname">Phase 1: Task 35g -- NTP Timestamps + Bug E (ConnInfo displayName)<a href="#phase-1-task-35g----ntp-timestamps--bug-e-conninfo-displayname" class="hash-link" aria-label="Direct link to Phase 1: Task 35g -- NTP Timestamps + Bug E (ConnInfo displayName)" title="Direct link to Phase 1: Task 35g -- NTP Timestamps + Bug E (ConnInfo displayName)" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="ntp-time-sync">NTP Time Sync<a href="#ntp-time-sync" class="hash-link" aria-label="Direct link to NTP Time Sync" title="Direct link to NTP Time Sync" translate="no">​</a></h3>
+<p>SNTP initialization added to main.c after WiFi connect.
+Max 10s sync timeout, non-blocking.
+Chat bubbles now show real timestamps (Mon | 14:35) instead of &quot;--:--&quot;.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bug-e-fix-contact-name-from-conninfo-json">Bug E Fix: Contact Name from ConnInfo JSON<a href="#bug-e-fix-contact-name-from-conninfo-json" class="hash-link" aria-label="Direct link to Bug E Fix: Contact Name from ConnInfo JSON" title="Direct link to Bug E Fix: Contact Name from ConnInfo JSON" translate="no">​</a></h3>
+<p><strong>Problem:</strong> handle_conninfo() in smp_agent.c decompressed the JSON from the phone, logged it, but never extracted the displayName field.</p>
+<p><strong>JSON Format:</strong></p>
+<div class="language-json codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-json codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token property" style="color:hsl(355, 65%, 65%)">&quot;v&quot;</span><span class="token operator" style="color:hsl(207, 82%, 66%)">:</span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;1-16&quot;</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token property" style="color:hsl(355, 65%, 65%)">&quot;event&quot;</span><span class="token operator" style="color:hsl(207, 82%, 66%)">:</span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;x.info&quot;</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token property" style="color:hsl(355, 65%, 65%)">&quot;params&quot;</span><span class="token operator" style="color:hsl(207, 82%, 66%)">:</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token property" style="color:hsl(355, 65%, 65%)">&quot;profile&quot;</span><span class="token operator" style="color:hsl(207, 82%, 66%)">:</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token property" style="color:hsl(355, 65%, 65%)">&quot;displayName&quot;</span><span class="token operator" style="color:hsl(207, 82%, 66%)">:</span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;Name&quot;</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token property" style="color:hsl(355, 65%, 65%)">&quot;fullName&quot;</span><span class="token operator" style="color:hsl(207, 82%, 66%)">:</span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;&quot;</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><br></span></code></pre></div></div>
+<p><strong>Fix:</strong> strstr() search for &quot;displayName&quot;:&quot;&quot; in decompressed JSON, extract name into contact_t, persist to NVS, update UI header. Fallback path for uncompressed JSON also covered.</p>
+<p><strong>Commit:</strong> fix(agent): extract displayName from ConnInfo JSON</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="phase-2-hasis-autonomous-rebuild">Phase 2: Hasi&#x27;s Autonomous Rebuild<a href="#phase-2-hasis-autonomous-rebuild" class="hash-link" aria-label="Direct link to Phase 2: Hasi&#x27;s Autonomous Rebuild" title="Direct link to Phase 2: Hasi&#x27;s Autonomous Rebuild" translate="no">​</a></h2>
+<p>Hasi built significantly more than tasked in the first phase:</p>
+<ul>
+<li class="">Flow rebuild: No auto-QR, no auto-contact on fresh start</li>
+<li class="">Connection acceleration: Delays reduced from 6.5s to 2s</li>
+<li class="">Contact list completely rewritten (665 lines)</li>
+<li class="">Long-press menu with Delete and Info</li>
+<li class="">Logging cleanup (heartbeat 5min instead of 30s, hex dumps removed)</li>
+</ul>
+<p><strong>Mausi note:</strong> Hasi built features autonomously instead of executing tasks. For Session 37, roles must be enforced more strictly.</p>
+<p><strong>Commits:</strong></p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">refactor(flow): remove auto-QR and auto-contact on fresh start</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">perf(tasks): reduce handshake delays from 6.5s to 2s</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">feat(ui): redesign contacts screen matching chat layout</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">feat(ui): add long-press context menu with delete and info</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">chore(log): reduce verbose debug logging in network and app tasks</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="phase-3-task-36a----nvs-key-cleanup-bug-51">Phase 3: Task 36a -- NVS Key Cleanup (Bug #51)<a href="#phase-3-task-36a----nvs-key-cleanup-bug-51" class="hash-link" aria-label="Direct link to Phase 3: Task 36a -- NVS Key Cleanup (Bug #51)" title="Direct link to Phase 3: Task 36a -- NVS Key Cleanup (Bug #51)" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="problem">Problem<a href="#problem" class="hash-link" aria-label="Direct link to Problem" title="Direct link to Problem" translate="no">​</a></h3>
+<p>When deleting a contact, orphaned NVS keys remained in flash storage.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="initial-fix-hasi">Initial Fix (Hasi)<a href="#initial-fix-hasi" class="hash-link" aria-label="Direct link to Initial Fix (Hasi)" title="Direct link to Initial Fix (Hasi)" translate="no">​</a></h3>
+<p>Hasi implemented only rat_XX deletion.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="mausi-correction">Mausi Correction<a href="#mausi-correction" class="hash-link" aria-label="Direct link to Mausi Correction" title="Direct link to Mausi Correction" translate="no">​</a></h3>
+<p>Hasi had only checked the current NVS contents. Mausi read the source code (smp_peer.c line 1131: smp_storage_save_blob_sync(&quot;peer_%02x&quot;, ...)) and found all four key families:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">rat_XX  -- Ratchet state (Root Key, Chain Keys, Header Keys)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">peer_XX -- Peer state (Queue IDs, DH Keys, Server Host)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">hand_XX -- Handshake state (X3DH Keys)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">rq_XX   -- Reply Queue state (Auth Private Key)</span><br></span></code></pre></div></div>
+<p><strong>Lesson #193:</strong> Always search the source code for where keys are written, not the current NVS contents. 100x Reading Principle.</p>
+<p><strong>Commit:</strong> fix(storage): clean all orphaned NVS keys on contact delete</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="phase-4-task-36b----nvs-cleanup-completed--format-fix-bugs-52-53">Phase 4: Task 36b -- NVS Cleanup Completed + Format Fix (Bugs #52, #53)<a href="#phase-4-task-36b----nvs-cleanup-completed--format-fix-bugs-52-53" class="hash-link" aria-label="Direct link to Phase 4: Task 36b -- NVS Cleanup Completed + Format Fix (Bugs #52, #53)" title="Direct link to Phase 4: Task 36b -- NVS Cleanup Completed + Format Fix (Bugs #52, #53)" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="4-key-cleanup-loop">4-Key Cleanup Loop<a href="#4-key-cleanup-loop" class="hash-link" aria-label="Direct link to 4-Key Cleanup Loop" title="Direct link to 4-Key Cleanup Loop" translate="no">​</a></h3>
+<p>Extended to both delete paths: remove_contact() and on_popup_delete().</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bug-52-format-mismatch">Bug #52: Format Mismatch<a href="#bug-52-format-mismatch" class="hash-link" aria-label="Direct link to Bug #52: Format Mismatch" title="Direct link to Bug #52: Format Mismatch" translate="no">​</a></h3>
+<p>cnt_%02x uses hex format, rat_%02u uses decimal format. Identical for indices 0-9, but diverges from 10 onwards (cnt_0a vs rat_10).</p>
+<p><strong>Fix:</strong> All NVS key formatting unified to %02x (hex).</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bug-53-parser-double-underscore">Bug #53: Parser Double-Underscore<a href="#bug-53-parser-double-underscore" class="hash-link" aria-label="Direct link to Bug #53: Parser Double-Underscore" title="Direct link to Bug #53: Parser Double-Underscore" translate="no">​</a></h3>
+<p>SimpleX changed separator from single underscore to double underscore. Parser must find the last underscore to correctly split agent message types.</p>
+<p><strong>Fix:</strong> fix(parser): handle double-underscore separator in agent message type detection</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="additional-fixes">Additional Fixes<a href="#additional-fixes" class="hash-link" aria-label="Direct link to Additional Fixes" title="Direct link to Additional Fixes" translate="no">​</a></h3>
+<ul>
+<li class="">42d bitmap reset: smp_clear_42d(idx) on contact delete</li>
+<li class="">LIST_H macro collision with FreeRTOS renamed to CLIST_H</li>
+</ul>
+<p><strong>Commit:</strong> fix(tasks): clear 42d bitmap on contact delete for slot reuse</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="security-discussion-nvs-keys-and-encryption">Security Discussion: NVS Keys and Encryption<a href="#security-discussion-nvs-keys-and-encryption" class="hash-link" aria-label="Direct link to Security Discussion: NVS Keys and Encryption" title="Direct link to Security Discussion: NVS Keys and Encryption" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="prince-asked-is-this-a-security-feature">Prince asked: &quot;Is this a security feature?&quot;<a href="#prince-asked-is-this-a-security-feature" class="hash-link" aria-label="Direct link to Prince asked: &quot;Is this a security feature?&quot;" title="Direct link to Prince asked: &quot;Is this a security feature?&quot;" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="mausis-analysis-yes-critical">Mausi&#x27;s Analysis: Yes, critical.<a href="#mausis-analysis-yes-critical" class="hash-link" aria-label="Direct link to Mausi&#x27;s Analysis: Yes, critical." title="Direct link to Mausi&#x27;s Analysis: Yes, critical." translate="no">​</a></h3>
+<p>The four NVS key families contain:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Key</th><th>Contents</th><th>Compromise Impact</th></tr></thead><tbody><tr><td>rat_XX</td><td>Root Key, Chain Keys, Header Keys</td><td>Decrypt past + future messages</td></tr><tr><td>peer_XX</td><td>Queue IDs, DH Keys, Server Host</td><td>Identity theft</td></tr><tr><td>hand_XX</td><td>X3DH Handshake Keys</td><td>Foundation of encryption</td></tr><tr><td>rq_XX</td><td>Reply Queue Auth Private Key</td><td>Send messages as the user</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="critical-discovery">Critical Discovery<a href="#critical-discovery" class="hash-link" aria-label="Direct link to Critical Discovery" title="Direct link to Critical Discovery" translate="no">​</a></h3>
+<p>NVS is currently NOT encrypted. nvs_flash_init() instead of nvs_flash_secure_init(). All crypto keys stored in plaintext in flash.</p>
+<p><strong>Lesson #194:</strong> NVS keys are currently NOT encrypted (nvs_flash_init not nvs_flash_secure_init). All crypto keys in plaintext.</p>
+<p><strong>Lesson #195:</strong> What is not there cannot be stolen. Deletion &gt; trusting encryption. Defense in Depth.</p>
+<p><strong>TODO (Production):</strong> NVS Encryption (nvs_flash_secure_init + eFuse keys) together with post-quantum crypto (CRYSTALS-Kyber) for Kickstarter phase.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="phase-5-task-36c----key-before-hello-race-condition-bug-54">Phase 5: Task 36c -- KEY-before-HELLO Race Condition (Bug #54)<a href="#phase-5-task-36c----key-before-hello-race-condition-bug-54" class="hash-link" aria-label="Direct link to Phase 5: Task 36c -- KEY-before-HELLO Race Condition (Bug #54)" title="Direct link to Phase 5: Task 36c -- KEY-before-HELLO Race Condition (Bug #54)" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-smoking-gun">The Smoking Gun<a href="#the-smoking-gun" class="hash-link" aria-label="Direct link to The Smoking Gun" title="Direct link to The Smoking Gun" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">(245267) APP: 42d -- SEND_KEY queued (slot=0)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">(245767) peer_send_hello starts</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">(246797) HELLO sent via Peer (sock 56)          &lt;- HELLO FIRST!</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">(247197) NET Task executes KEY now (sock 54)     &lt;- KEY AFTER!</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="root-cause">Root Cause<a href="#root-cause" class="hash-link" aria-label="Direct link to Root Cause" title="Direct link to Root Cause" translate="no">​</a></h3>
+<p>App Task queued KEY to Net Task via Ring Buffer, waited only 500ms blind, then fired HELLO immediately over a separate Peer connection. Two different sockets, no synchronization.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="why-the-phone-stays-on-connecting">Why the Phone Stays on &quot;connecting&quot;<a href="#why-the-phone-stays-on-connecting" class="hash-link" aria-label="Direct link to Why the Phone Stays on &quot;connecting&quot;" title="Direct link to Why the Phone Stays on &quot;connecting&quot;" translate="no">​</a></h3>
+<ol>
+<li class="">Phone receives HELLO</li>
+<li class="">Phone wants to respond on Reply Queue</li>
+<li class="">KEY has not arrived yet -&gt; Server does not have Phone&#x27;s auth key</li>
+<li class="">Server rejects with ERR AUTH</li>
+<li class="">Phone stays on &quot;connecting&quot;</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="fix-freertos-tasknotification">Fix: FreeRTOS TaskNotification<a href="#fix-freertos-tasknotification" class="hash-link" aria-label="Direct link to Fix: FreeRTOS TaskNotification" title="Direct link to Fix: FreeRTOS TaskNotification" translate="no">​</a></h3>
+<div class="language-c codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-c codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)">// s_app_task_handle + NOTIFY_KEY_DONE define</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Net Task sends xTaskNotify() after KEY OK/Fail/Timeout (all 3 paths!)</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// App Task waits with xTaskNotifyWait(5000ms) instead of vTaskDelay(500ms)</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// No deadlock risk because all paths notify</span><br></span></code></pre></div></div>
+<p><strong>Key Design Decision:</strong> xTaskNotify must fire on ALL paths (success, failure, timeout) -- otherwise the waiting task hangs forever.</p>
+<p><strong>Evgeny quote confirming:</strong> &quot;concurrency is hard.&quot;</p>
+<p><strong>Lesson #196:</strong> TaskNotification is more lightweight than Semaphore for 1:1 task synchronization.</p>
+<p><strong>Lesson #197:</strong> xTaskNotify must send on ALL paths (success, error, timeout) or the waiting task deadlocks.</p>
+<p><strong>Commit:</strong> fix(tasks): synchronize KEY-before-HELLO with FreeRTOS TaskNotification</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="phase-6-task-36d----ui-cleanup-on-delete-bugs-55-56-57">Phase 6: Task 36d -- UI Cleanup on Delete (Bugs #55, #56, #57)<a href="#phase-6-task-36d----ui-cleanup-on-delete-bugs-55-56-57" class="hash-link" aria-label="Direct link to Phase 6: Task 36d -- UI Cleanup on Delete (Bugs #55, #56, #57)" title="Direct link to Phase 6: Task 36d -- UI Cleanup on Delete (Bugs #55, #56, #57)" translate="no">​</a></h2>
+<p>Three problems solved simultaneously:</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bug-55-chat-bubbles-survive-delete">Bug #55: Chat Bubbles Survive Delete<a href="#bug-55-chat-bubbles-survive-delete" class="hash-link" aria-label="Direct link to Bug #55: Chat Bubbles Survive Delete" title="Direct link to Bug #55: Chat Bubbles Survive Delete" translate="no">​</a></h3>
+<p>New function ui_chat_clear_contact(int idx) deletes all LVGL bubble objects with matching contact tag.</p>
+<p><strong>Lesson #198:</strong> LVGL bubble objects must be explicitly deleted on contact delete -- they survive the contact.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bug-56-qr-code-flashes-after-delete">Bug #56: QR Code Flashes After Delete<a href="#bug-56-qr-code-flashes-after-delete" class="hash-link" aria-label="Direct link to Bug #56: QR Code Flashes After Delete" title="Direct link to Bug #56: QR Code Flashes After Delete" translate="no">​</a></h3>
+<p>New function ui_connect_reset() hides QR, shows placeholder, sets status to &quot;Generating...&quot;.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bug-57-stale-qr-on--new">Bug #57: Stale QR on &quot;+ New&quot;<a href="#bug-57-stale-qr-on--new" class="hash-link" aria-label="Direct link to Bug #57: Stale QR on &quot;+ New&quot;" title="Direct link to Bug #57: Stale QR on &quot;+ New&quot;" translate="no">​</a></h3>
+<p>ui_connect_reset() also called in on_bar_new() BEFORE smp_request_add_contact().</p>
+<p><strong>Lesson #199:</strong> QR code widget caches last content -- must be explicitly reset on Delete AND before New.</p>
+<p><strong>Commit:</strong> fix(ui): clear chat bubbles and reset QR cache on contact delete</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="complete-bug-list-session-36">Complete Bug List (Session 36)<a href="#complete-bug-list-session-36" class="hash-link" aria-label="Direct link to Complete Bug List (Session 36)" title="Direct link to Complete Bug List (Session 36)" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Bug</th><th>Description</th><th>Root Cause</th><th>Fix</th><th>Phase</th></tr></thead><tbody><tr><td>E</td><td>Contact name shows placeholder</td><td>displayName not extracted from ConnInfo JSON</td><td>strstr() + NVS persist</td><td>35g</td></tr><tr><td>#51</td><td>Orphaned NVS keys on delete</td><td>Only rat_XX deleted, 3 families missed</td><td>4-key cleanup loop</td><td>36a</td></tr><tr><td>#52</td><td>NVS key format mismatch</td><td>%02u (decimal) vs %02x (hex) diverges at idx 10+</td><td>Unified to %02x</td><td>36b</td></tr><tr><td>#53</td><td>Parser fails on INVITATION</td><td>SimpleX changed _ to __ separator</td><td>Find last underscore</td><td>36b</td></tr><tr><td>#54</td><td>KEY-HELLO race condition</td><td>500ms blind delay, 2 sockets, no sync</td><td>FreeRTOS TaskNotification</td><td>36c</td></tr><tr><td>#55</td><td>Chat bubbles survive delete</td><td>LVGL objects not cleared</td><td>ui_chat_clear_contact()</td><td>36d</td></tr><tr><td>#56</td><td>QR code flashes after delete</td><td>Widget caches last content</td><td>ui_connect_reset()</td><td>36d</td></tr><tr><td>#57</td><td>Stale QR on &quot;+ New&quot;</td><td>No reset before new contact request</td><td>ui_connect_reset() in on_bar_new()</td><td>36d</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="additional-fixes-non-bug">Additional Fixes (Non-Bug)<a href="#additional-fixes-non-bug" class="hash-link" aria-label="Direct link to Additional Fixes (Non-Bug)" title="Direct link to Additional Fixes (Non-Bug)" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>42d bitmap reset</td><td>smp_clear_42d(idx) on contact delete for slot reuse</td></tr><tr><td>LIST_H rename</td><td>FreeRTOS list.h defines LIST_H as include guard -- renamed to CLIST_H</td></tr><tr><td>UART baudrate</td><td>115200 -&gt; 921600 (8x speedup for 5000+ line logs)</td></tr><tr><td>Heartbeat interval</td><td>30s -&gt; 5min (reduced log noise)</td></tr><tr><td>Hex dump removal</td><td>Debug hex dumps stripped from production paths</td></tr><tr><td>Connection delays</td><td>6.5s -&gt; 2s handshake delay reduction</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="all-lessons-learned-session-36">All Lessons Learned (Session 36)<a href="#all-lessons-learned-session-36" class="hash-link" aria-label="Direct link to All Lessons Learned (Session 36)" title="Direct link to All Lessons Learned (Session 36)" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#</th><th>Lesson</th><th>Context</th></tr></thead><tbody><tr><td>193</td><td>Always search source code for where NVS keys are written, not current NVS contents. 100x Reading Principle.</td><td>36a: Mausi found 4 key families vs Hasi&#x27;s 1</td></tr><tr><td>194</td><td>NVS is currently NOT encrypted (nvs_flash_init not nvs_flash_secure_init). All crypto keys in plaintext in flash.</td><td>Security audit</td></tr><tr><td>195</td><td>What is not there cannot be stolen. Deletion &gt; trusting encryption. Defense in Depth.</td><td>Security principle</td></tr><tr><td>196</td><td>FreeRTOS TaskNotification is more lightweight than Semaphore for 1:1 task synchronization</td><td>KEY-HELLO sync</td></tr><tr><td>197</td><td>xTaskNotify must send on ALL paths (success, error, timeout) or the waiting task deadlocks permanently</td><td>Deadlock prevention</td></tr><tr><td>198</td><td>LVGL bubble objects must be explicitly deleted on contact delete -- they survive the contact</td><td>ui_chat_clear_contact</td></tr><tr><td>199</td><td>QR code widget caches last content -- must be explicitly reset on Delete AND before New</td><td>ui_connect_reset</td></tr><tr><td>200</td><td>FreeRTOS list.h defines LIST_H as include guard -- own macros must not collide</td><td>CLIST_H rename</td></tr><tr><td>201</td><td>SimpleX changed from single underscore to double underscore separator -- parser must find last underscore</td><td>Double-underscore bug</td></tr><tr><td>202</td><td>UART 115200 at 5000+ log lines = ~39s overhead. 921200 = ~5s. 8x faster, one sdkconfig change.</td><td>Baudrate fix</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="files-changed----session-36-overview">Files Changed -- Session 36 Overview<a href="#files-changed----session-36-overview" class="hash-link" aria-label="Direct link to Files Changed -- Session 36 Overview" title="Direct link to Files Changed -- Session 36 Overview" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Path</th><th>Changes</th></tr></thead><tbody><tr><td>main.c</td><td>main/</td><td>NTP init, flow rebuild (no auto-QR/contact)</td></tr><tr><td>smp_agent.c</td><td>main/protocol/</td><td>Bug E: displayName from ConnInfo JSON</td></tr><tr><td>smp_parser.c</td><td>main/protocol/</td><td>Double-underscore separator fix</td></tr><tr><td>smp_tasks.c</td><td>main/core/</td><td>42d bitmap reset, KEY-HELLO TaskNotification, delay reduction, logging</td></tr><tr><td>smp_contacts.c</td><td>main/state/</td><td>4-key NVS cleanup in remove_contact()</td></tr><tr><td>ui_contacts.c</td><td>main/ui/screens/</td><td>Complete redesign, long-press menu, 4-key NVS cleanup, chat clear, QR reset</td></tr><tr><td>ui_chat.c</td><td>main/ui/screens/</td><td>ui_chat_clear_contact(), dynamic header</td></tr><tr><td>ui_chat.h</td><td>main/ui/screens/</td><td>Declaration ui_chat_clear_contact()</td></tr><tr><td>ui_connect.c</td><td>main/ui/screens/</td><td>ui_connect_reset()</td></tr><tr><td>ui_connect.h</td><td>main/ui/screens/</td><td>Declaration ui_connect_reset()</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="git-commits-session-36">Git Commits (Session 36)<a href="#git-commits-session-36" class="hash-link" aria-label="Direct link to Git Commits (Session 36)" title="Direct link to Git Commits (Session 36)" translate="no">​</a></h2>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">feat(ntp): add SNTP time sync after WiFi connect</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">fix(agent): extract displayName from ConnInfo JSON</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">refactor(flow): remove auto-QR and auto-contact on fresh start</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">perf(tasks): reduce handshake delays from 6.5s to 2s</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">feat(ui): redesign contacts screen matching chat layout</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">feat(ui): add long-press context menu with delete and info</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">chore(log): reduce verbose debug logging in network and app tasks</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">fix(parser): handle double-underscore separator in agent message type detection</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">fix(storage): clean all orphaned NVS keys on contact delete</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">fix(tasks): clear 42d bitmap on contact delete for slot reuse</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">fix(tasks): synchronize KEY-before-HELLO with FreeRTOS TaskNotification</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">fix(ui): clear chat bubbles and reset QR cache on contact delete</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="open-bugs-after-session-36">Open Bugs (after Session 36)<a href="#open-bugs-after-session-36" class="hash-link" aria-label="Direct link to Open Bugs (after Session 36)" title="Direct link to Open Bugs (after Session 36)" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Bug</th><th>Description</th><th>Priority</th><th>Target</th></tr></thead><tbody><tr><td>-</td><td>Umlauts not rendered (LVGL font)</td><td>P2</td><td>Session 37</td></tr><tr><td>-</td><td>Server DEL missing on UI delete</td><td>P3</td><td>Session 37+</td></tr><tr><td>-</td><td>First message invisible on fresh contact</td><td>P4</td><td>Session 37+</td></tr><tr><td>-</td><td>SPI display glitches</td><td>P4</td><td>Later</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="next-session-37">Next Session: 37<a href="#next-session-37" class="hash-link" aria-label="Direct link to Next Session: 37" title="Direct link to Next Session: 37" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="main-goals">Main Goals<a href="#main-goals" class="hash-link" aria-label="Direct link to Main Goals" title="Direct link to Main Goals" translate="no">​</a></h3>
+<ol>
+<li class="">Encrypted chat history on SD card (architecture + implementation)</li>
+<li class="">LVGL font rebuild with umlauts (Latin-1 Supplement)</li>
+<li class="">Contact list enhancements (last message, timestamp, counter, unread badge)</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="dependencies">Dependencies<a href="#dependencies" class="hash-link" aria-label="Direct link to Dependencies" title="Direct link to Dependencies" translate="no">​</a></h3>
+<ul>
+<li class="">Contact list enhancements depend on SD history (needs data)</li>
+<li class="">SD infrastructure already fully prepared</li>
+<li class="">Font rebuild is independent and can run in parallel</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="architecture-insight-contact-lifecycle-pattern">Architecture Insight: Contact Lifecycle Pattern<a href="#architecture-insight-contact-lifecycle-pattern" class="hash-link" aria-label="Direct link to Architecture Insight: Contact Lifecycle Pattern" title="Direct link to Architecture Insight: Contact Lifecycle Pattern" translate="no">​</a></h2>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">SESSION 36 PATTERN: Every lifecycle operation must clean ALL state layers</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Create Contact:</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; NVS: rat_XX, peer_XX, hand_XX, rq_XX (4 key families)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; PSRAM: ratchet slot, handshake slot, contact struct, reply queue</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; UI: contact list entry, chat bubbles, QR code</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; Network: SMP queues on server</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Delete Contact:</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; NVS: erase all 4 key families (%02x format!)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; PSRAM: zero slots, clear contact struct, clear reply queue</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; Bitmap: smp_clear_42d(idx)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; UI: clear bubbles, reset QR, remove list entry</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; Network: TODO -- server DEL command (Session 37+)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Recreate Contact:</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; All slots clean, no orphaned state</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; New handshake proceeds as if first contact ever</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    -&gt; No erase-flash required!</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="session-36-statistics">Session 36 Statistics<a href="#session-36-statistics" class="hash-link" aria-label="Direct link to Session 36 Statistics" title="Direct link to Session 36 Statistics" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Sub-sessions</td><td>4 (36a, 36b, 36c, 36d)</td></tr><tr><td>Git commits</td><td>12</td></tr><tr><td>Bugs fixed</td><td>7 (#51-#57) + Bug E</td></tr><tr><td>New lessons</td><td>10 (#193-#202)</td></tr><tr><td>Files changed</td><td>10</td></tr><tr><td>Lines rewritten</td><td>665+ (contact list alone)</td></tr><tr><td>UART speedup</td><td>8x (115200 -&gt; 921600)</td></tr><tr><td>Handshake speedup</td><td>3.25x (6.5s -&gt; 2s)</td></tr></tbody></table>
+<hr>
+<p><em>Part 33 - Session 36 Contact Lifecycle</em>
+<em>SimpleGo Protocol Analysis</em>
+<em>Date: February 25, 2026</em>
+<em>Bugs: 57 total (all FIXED) + Bug E</em>
+<em>Lessons: 202 total</em>
+<em>Milestone 12: Contact Lifecycle</em></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/protocol-analysis/35_PART33_SESSION_36.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/protocol-analysis/PART32_SESSION_35"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">PART32_SESSION_35</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/protocol-analysis/PART34_SESSION_37"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">PART34_SESSION_37</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#session-36-summary" class="table-of-contents__link toc-highlight">SESSION 36 SUMMARY</a></li><li><a href="#phase-0-preparation-and-baudrate-fix" class="table-of-contents__link toc-highlight">Phase 0: Preparation and Baudrate Fix</a></li><li><a href="#phase-1-task-35g----ntp-timestamps--bug-e-conninfo-displayname" class="table-of-contents__link toc-highlight">Phase 1: Task 35g -- NTP Timestamps + Bug E (ConnInfo displayName)</a><ul><li><a href="#ntp-time-sync" class="table-of-contents__link toc-highlight">NTP Time Sync</a></li><li><a href="#bug-e-fix-contact-name-from-conninfo-json" class="table-of-contents__link toc-highlight">Bug E Fix: Contact Name from ConnInfo JSON</a></li></ul></li><li><a href="#phase-2-hasis-autonomous-rebuild" class="table-of-contents__link toc-highlight">Phase 2: Hasi&#39;s Autonomous Rebuild</a></li><li><a href="#phase-3-task-36a----nvs-key-cleanup-bug-51" class="table-of-contents__link toc-highlight">Phase 3: Task 36a -- NVS Key Cleanup (Bug #51)</a><ul><li><a href="#problem" class="table-of-contents__link toc-highlight">Problem</a></li><li><a href="#initial-fix-hasi" class="table-of-contents__link toc-highlight">Initial Fix (Hasi)</a></li><li><a href="#mausi-correction" class="table-of-contents__link toc-highlight">Mausi Correction</a></li></ul></li><li><a href="#phase-4-task-36b----nvs-cleanup-completed--format-fix-bugs-52-53" class="table-of-contents__link toc-highlight">Phase 4: Task 36b -- NVS Cleanup Completed + Format Fix (Bugs #52, #53)</a><ul><li><a href="#4-key-cleanup-loop" class="table-of-contents__link toc-highlight">4-Key Cleanup Loop</a></li><li><a href="#bug-52-format-mismatch" class="table-of-contents__link toc-highlight">Bug #52: Format Mismatch</a></li><li><a href="#bug-53-parser-double-underscore" class="table-of-contents__link toc-highlight">Bug #53: Parser Double-Underscore</a></li><li><a href="#additional-fixes" class="table-of-contents__link toc-highlight">Additional Fixes</a></li></ul></li><li><a href="#security-discussion-nvs-keys-and-encryption" class="table-of-contents__link toc-highlight">Security Discussion: NVS Keys and Encryption</a><ul><li><a href="#prince-asked-is-this-a-security-feature" class="table-of-contents__link toc-highlight">Prince asked: &quot;Is this a security feature?&quot;</a></li><li><a href="#mausis-analysis-yes-critical" class="table-of-contents__link toc-highlight">Mausi&#39;s Analysis: Yes, critical.</a></li><li><a href="#critical-discovery" class="table-of-contents__link toc-highlight">Critical Discovery</a></li></ul></li><li><a href="#phase-5-task-36c----key-before-hello-race-condition-bug-54" class="table-of-contents__link toc-highlight">Phase 5: Task 36c -- KEY-before-HELLO Race Condition (Bug #54)</a><ul><li><a href="#the-smoking-gun" class="table-of-contents__link toc-highlight">The Smoking Gun</a></li><li><a href="#root-cause" class="table-of-contents__link toc-highlight">Root Cause</a></li><li><a href="#why-the-phone-stays-on-connecting" class="table-of-contents__link toc-highlight">Why the Phone Stays on &quot;connecting&quot;</a></li><li><a href="#fix-freertos-tasknotification" class="table-of-contents__link toc-highlight">Fix: FreeRTOS TaskNotification</a></li></ul></li><li><a href="#phase-6-task-36d----ui-cleanup-on-delete-bugs-55-56-57" class="table-of-contents__link toc-highlight">Phase 6: Task 36d -- UI Cleanup on Delete (Bugs #55, #56, #57)</a><ul><li><a href="#bug-55-chat-bubbles-survive-delete" class="table-of-contents__link toc-highlight">Bug #55: Chat Bubbles Survive Delete</a></li><li><a href="#bug-56-qr-code-flashes-after-delete" class="table-of-contents__link toc-highlight">Bug #56: QR Code Flashes After Delete</a></li><li><a href="#bug-57-stale-qr-on--new" class="table-of-contents__link toc-highlight">Bug #57: Stale QR on &quot;+ New&quot;</a></li></ul></li><li><a href="#complete-bug-list-session-36" class="table-of-contents__link toc-highlight">Complete Bug List (Session 36)</a></li><li><a href="#additional-fixes-non-bug" class="table-of-contents__link toc-highlight">Additional Fixes (Non-Bug)</a></li><li><a href="#all-lessons-learned-session-36" class="table-of-contents__link toc-highlight">All Lessons Learned (Session 36)</a></li><li><a href="#files-changed----session-36-overview" class="table-of-contents__link toc-highlight">Files Changed -- Session 36 Overview</a></li><li><a href="#git-commits-session-36" class="table-of-contents__link toc-highlight">Git Commits (Session 36)</a></li><li><a href="#open-bugs-after-session-36" class="table-of-contents__link toc-highlight">Open Bugs (after Session 36)</a></li><li><a href="#next-session-37" class="table-of-contents__link toc-highlight">Next Session: 37</a><ul><li><a href="#main-goals" class="table-of-contents__link toc-highlight">Main Goals</a></li><li><a href="#dependencies" class="table-of-contents__link toc-highlight">Dependencies</a></li></ul></li><li><a href="#architecture-insight-contact-lifecycle-pattern" class="table-of-contents__link toc-highlight">Architecture Insight: Contact Lifecycle Pattern</a></li><li><a href="#session-36-statistics" class="table-of-contents__link toc-highlight">Session 36 Statistics</a></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos.html">Terms of Service</a><a href="https://simplego.dev/legal/privacy.html">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer.html">Disclaimer</a><a href="https://simplego.dev/imprint.html">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup.html">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement.html">Law Enforcement</a><a href="https://simplego.dev/legal/transparency.html">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact.html">Partnership</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — S.D – IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>

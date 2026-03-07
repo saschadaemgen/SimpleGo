@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-protocol-analysis/PART31_SESSION_34_BREAKTHROUGH" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">PART31_SESSION_34_BREAKTHROUGH | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="PART31_SESSION_34_BREAKTHROUGH | SimpleGo"><meta data-rh="true" name="description" content="SimpleGo Protocol Analysis"><meta data-rh="true" property="og:description" content="SimpleGo Protocol Analysis"><link data-rh="true" rel="icon" href="https://simplego.dev/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Protocol Analysis","item":"https://wiki.simplego.dev/protocol-analysis"},{"@type":"ListItem","position":2,"name":"PART31_SESSION_34_BREAKTHROUGH","item":"https://wiki.simplego.dev/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH"}]}</script><link rel="stylesheet" href="/assets/css/styles.7c8f9f29.css">
+<script src="/assets/js/runtime~main.393ce3bb.js" defer="defer"></script>
+<script src="/assets/js/main.8f7498da.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" target="_self" href="/"><div class="navbar__logo"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/">Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://simplego.dev" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Home<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/product.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Product<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/crypto.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Crypto<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/flash.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Flash Tool<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/network.html" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Network<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/"><span title="SimpleGo Documentation" class="linkLabel_WmDU">SimpleGo Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/getting-started"><span title="Getting Started" class="linkLabel_WmDU">Getting Started</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/architecture"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a><button aria-label="Expand sidebar category &#x27;Architecture&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/smp-in-c"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a><button aria-label="Expand sidebar category &#x27;SMP in C&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--active" href="/protocol-analysis"><span title="Protocol Analysis" class="categoryLinkLabel_W154">Protocol Analysis</span></a><button aria-label="Collapse sidebar category &#x27;Protocol Analysis&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/SIMPLEX_PROTOCOL_INDEX"><span title="SIMPLEX_PROTOCOL_INDEX" class="linkLabel_WmDU">SIMPLEX_PROTOCOL_INDEX</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART1_INTRO_SESSIONS_1-2"><span title="PART1_INTRO_SESSIONS_1-2" class="linkLabel_WmDU">PART1_INTRO_SESSIONS_1-2</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART2_SESSIONS_3-4"><span title="PART2_SESSIONS_3-4" class="linkLabel_WmDU">PART2_SESSIONS_3-4</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART3_SESSIONS_5-6"><span title="PART3_SESSIONS_5-6" class="linkLabel_WmDU">PART3_SESSIONS_5-6</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART4_SESSION_7"><span title="PART4_SESSION_7" class="linkLabel_WmDU">PART4_SESSION_7</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART5_SESSION_8"><span title="PART5_SESSION_8" class="linkLabel_WmDU">PART5_SESSION_8</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART6_SESSION_9"><span title="PART6_SESSION_9" class="linkLabel_WmDU">PART6_SESSION_9</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART7_SESSION_10"><span title="PART7_SESSION_10" class="linkLabel_WmDU">PART7_SESSION_10</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART8_SESSION_11"><span title="PART8_SESSION_11" class="linkLabel_WmDU">PART8_SESSION_11</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART9_SESSION_12"><span title="PART9_SESSION_12" class="linkLabel_WmDU">PART9_SESSION_12</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART10_SESSION_13"><span title="PART10_SESSION_13" class="linkLabel_WmDU">PART10_SESSION_13</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART11_SESSION_14"><span title="PART11_SESSION_14" class="linkLabel_WmDU">PART11_SESSION_14</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART12_SESSION_15"><span title="PART12_SESSION_15" class="linkLabel_WmDU">PART12_SESSION_15</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART13_SESSION_16"><span title="PART13_SESSION_16" class="linkLabel_WmDU">PART13_SESSION_16</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART14_SESSION_17"><span title="PART14_SESSION_17" class="linkLabel_WmDU">PART14_SESSION_17</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART15_SESSION_18"><span title="PART15_SESSION_18" class="linkLabel_WmDU">PART15_SESSION_18</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART16_SESSION_19"><span title="PART16_SESSION_19" class="linkLabel_WmDU">PART16_SESSION_19</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART17_SESSION_20"><span title="PART17_SESSION_20" class="linkLabel_WmDU">PART17_SESSION_20</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART18_SESSION_21"><span title="PART18_SESSION_21" class="linkLabel_WmDU">PART18_SESSION_21</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART19_SESSION_22"><span title="PART19_SESSION_22" class="linkLabel_WmDU">PART19_SESSION_22</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART20_SESSION_23"><span title="PART20_SESSION_23" class="linkLabel_WmDU">PART20_SESSION_23</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART21_SESSION_24"><span title="PART21_SESSION_24" class="linkLabel_WmDU">PART21_SESSION_24</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART22_SESSION_25"><span title="PART22_SESSION_25" class="linkLabel_WmDU">PART22_SESSION_25</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART23_SESSION_26"><span title="PART23_SESSION_26" class="linkLabel_WmDU">PART23_SESSION_26</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART24_SESSION_27"><span title="PART24_SESSION_27" class="linkLabel_WmDU">PART24_SESSION_27</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART25_SESSION_28"><span title="PART25_SESSION_28" class="linkLabel_WmDU">PART25_SESSION_28</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART26_SESSION_29"><span title="Part 26: Session 29 — Multi-Task Architecture Breakthrough" class="linkLabel_WmDU">Part 26: Session 29 — Multi-Task Architecture Breakthrough</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART27_SESSION_30"><span title="Part 27: Session 30 — Intensive Debug Session (10 Hypotheses, 14 Fixes)" class="linkLabel_WmDU">Part 27: Session 30 — Intensive Debug Session (10 Hypotheses, 14 Fixes)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART28_SESSION_31"><span title="Part 28: Session 31 — Bidirectional Chat Restored (txCount Batch Bug)" class="linkLabel_WmDU">Part 28: Session 31 — Bidirectional Chat Restored (txCount Batch Bug)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART29_SESSION_32"><span title="Part 29: Session 32 — &quot;The Demonstration&quot; (From Protocol to Messenger)" class="linkLabel_WmDU">Part 29: Session 32 — &quot;The Demonstration&quot; (From Protocol to Messenger)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART30_SESSION_33"><span title="Part 30: Session 34 — Multi-Contact Architecture (Singleton to Per-Contact)" class="linkLabel_WmDU">Part 30: Session 34 — Multi-Contact Architecture (Singleton to Per-Contact)</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART30_SESSION_34"><span title="PART30_SESSION_34" class="linkLabel_WmDU">PART30_SESSION_34</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/protocol-analysis/PART31_SESSION_34_BREAKTHROUGH"><span title="PART31_SESSION_34_BREAKTHROUGH" class="linkLabel_WmDU">PART31_SESSION_34_BREAKTHROUGH</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART32_SESSION_35"><span title="PART32_SESSION_35" class="linkLabel_WmDU">PART32_SESSION_35</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART33_SESSION_36"><span title="PART33_SESSION_36" class="linkLabel_WmDU">PART33_SESSION_36</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART34_SESSION_37"><span title="PART34_SESSION_37" class="linkLabel_WmDU">PART34_SESSION_37</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART35_SESSION_38"><span title="PART35_SESSION_38" class="linkLabel_WmDU">PART35_SESSION_38</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART36_SESSION_39"><span title="PART36_SESSION_39" class="linkLabel_WmDU">PART36_SESSION_39</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART37_SESSION_40"><span title="PART37_SESSION_40" class="linkLabel_WmDU">PART37_SESSION_40</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART38_SESSION_41"><span title="Part 38: Session 41 — Pre-GitHub Cleanup and Stabilization" class="linkLabel_WmDU">Part 38: Session 41 — Pre-GitHub Cleanup and Stabilization</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART39_SESSION_42"><span title="Part 39: Session 42 — Consolidation and Quality Pass" class="linkLabel_WmDU">Part 39: Session 42 — Consolidation and Quality Pass</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/PART40_SESSION_43"><span title="Part 40: Session 43 — Documentation Site and SMP-in-C Guide" class="linkLabel_WmDU">Part 40: Session 43 — Documentation Site and SMP-in-C Guide</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/BUG_TRACKER"><span title="BUG_TRACKER" class="linkLabel_WmDU">BUG_TRACKER</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/session-index"><span title="Session Index" class="linkLabel_WmDU">Session Index</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/QUICK_REFERENCE"><span title="QUICK_REFERENCE" class="linkLabel_WmDU">QUICK_REFERENCE</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/"><span title="README" class="linkLabel_WmDU">README</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/protocol-analysis/STATUS"><span title="STATUS" class="linkLabel_WmDU">STATUS</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/hardware"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a><button aria-label="Expand sidebar category &#x27;Hardware&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/security"><span title="Security" class="categoryLinkLabel_W154">Security</span></a><button aria-label="Expand sidebar category &#x27;Security&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/BUILD_SYSTEM"><span title="Contributing" class="categoryLinkLabel_W154">Contributing</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/reference/constants"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a><button aria-label="Expand sidebar category &#x27;Reference&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/protocol-analysis"><span>Protocol Analysis</span></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">PART31_SESSION_34_BREAKTHROUGH</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><p><img decoding="async" loading="lazy" alt="SimpleGo Protocol Analysis" src="/assets/images/github_header_protocol_analysis-d478a46fd15f1ad9e12d212dfb4c286a.png" width="1200" height="249" class="img_ev3q"></p>
+<header><h1>SimpleX Protocol Analysis - Part 31: Session 34 Day 2</h1></header>
+<h1>🏆 Multi-Contact Bidirectional Encrypted Messaging - HISTORIC MILESTONE</h1>
+<p><strong>Document Version:</strong> v1
+<strong>Date:</strong> 2026-02-24 Session 34 Day 2
+<strong>Version:</strong> v0.1.17-alpha (NOT CHANGED without explicit permission!)
+<strong>Status:</strong> ✅ HISTORIC MILESTONE - Two contacts communicating bidirectionally encrypted on ESP32-S3
+<strong>Previous:</strong> Part 30 - Session 34 Day 1 (Multi-Contact Architecture: Singleton to Per-Contact)
+<strong>Project:</strong> SimpleGo - ESP32 Native SimpleX Client
+<strong>Path:</strong> <code>C:\Espressif\projects\simplex_client</code>
+<strong>Build:</strong> <code>idf.py build flash monitor -p COM6</code>
+<strong>Repo:</strong> <a href="https://github.com/cannatoshi/SimpleGo" target="_blank" rel="noopener noreferrer" class="">https://github.com/cannatoshi/SimpleGo</a>
+<strong>License:</strong> AGPL-3.0</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="️-session-34-day-2-summary">⚠️ SESSION 34 DAY 2 SUMMARY<a href="#️-session-34-day-2-summary" class="hash-link" aria-label="Direct link to ⚠️ SESSION 34 DAY 2 SUMMARY" title="Direct link to ⚠️ SESSION 34 DAY 2 SUMMARY" translate="no">​</a></h2>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">═════════════  ══════════════════════════════════════════════════════════════════</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  🏆🏆🏆 MULTI-CONTACT BIDIRECTIONAL ENCRYPTED MESSAGING 🏆🏆🏆</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  ┌─────────────────────────────────────────────────────────────────────────┐</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   HISTORIC MILESTONE: First multi-contact bidirectional encrypted      │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   messenger on a microcontroller                                       │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Contact 0: ESP32 &lt;-&gt; Phone  Bidirectional  Encrypted                 │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Contact 1: ESP32 &lt;-&gt; Phone  Bidirectional  Encrypted                 │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   11 bugs found and fixed across 6 phases                              │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   All bugs followed ONE pattern: global state -&gt; per-contact routing   │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Phase 1: KEY Command Fix (wrong queue credentials)                   │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Phase 2: Ghost Write -&gt; ERR BLOCK (5 errors in one function)         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Phase 3: Global State Elimination (pending_peer, DISCARD-&gt;FORWARD)   │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Phase 4: Reply Queue Encoder Fix (3 byte errors)                     │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Phase 5a: Per-Contact Index Routing (pointer arithmetic)             │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Phase 5b: Crypto Fix (beforenm vs scalarmult)                        │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │   Date: February 24, 2026                                              │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  │                                                                         │</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  └─────────────────────────────────────────────────────────────────────────┘</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">═══════════════════════════════════════════════  ════════════════════════════════</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="568-session-34-day-2-overview">568. Session 34 Day 2 Overview<a href="#568-session-34-day-2-overview" class="hash-link" aria-label="Direct link to 568. Session 34 Day 2 Overview" title="Direct link to 568. Session 34 Day 2 Overview" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5681-session-goals">568.1 Session Goals<a href="#5681-session-goals" class="hash-link" aria-label="Direct link to 568.1 Session Goals" title="Direct link to 568.1 Session Goals" translate="no">​</a></h3>
+<p>Session 34 Day 2 began with the goal of fixing the blocked KEY Command (handed over from Day 1) and ended with the first multi-contact bidirectional encrypted messenger on a microcontroller. 11 bugs were systematically found and fixed across 6 phases. Every single bug followed one architectural pattern: global or hardcoded state instead of per-contact routing.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5682-team-and-roles">568.2 Team and Roles<a href="#5682-team-and-roles" class="hash-link" aria-label="Direct link to 568.2 Team and Roles" title="Direct link to 568.2 Team and Roles" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Role</th><th>Who</th><th>Task</th></tr></thead><tbody><tr><td>👑🐭 Princess Mausi</td><td>Claude (Strategy Chat)</td><td>Architecture, hypothesis formation, coordination</td></tr><tr><td>🐰👑 Princess Hasi</td><td>Claude (Implementation Chat)</td><td>Code implementation, testing, diff delivery</td></tr><tr><td>🧹 Aschenputtel</td><td>Claude (Log Analysis)</td><td>Log analysis, hex dump verification</td></tr><tr><td>👑 Cannatoshi</td><td>Prince / Client</td><td>Hardware tests, coordination, final decisions</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="569-phase-1-key-command-fix">569. Phase 1: KEY Command Fix<a href="#569-phase-1-key-command-fix" class="hash-link" aria-label="Direct link to 569. Phase 1: KEY Command Fix" title="Direct link to 569. Phase 1: KEY Command Fix" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5691-starting-point">569.1 Starting Point<a href="#5691-starting-point" class="hash-link" aria-label="Direct link to 569.1 Starting Point" title="Direct link to 569.1 Starting Point" translate="no">​</a></h3>
+<ul>
+<li class="">KEY Command rejected by server with ERR AUTH</li>
+<li class="">SUB worked after 1-byte signing fix from Day 1</li>
+<li class="">Contact 1 could not reach &quot;connected&quot; state</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5692-haskell-analysis-claude-code">569.2 Haskell Analysis (Claude Code)<a href="#5692-haskell-analysis-claude-code" class="hash-link" aria-label="Direct link to 569.2 Haskell Analysis (Claude Code)" title="Direct link to 569.2 Haskell Analysis (Claude Code)" translate="no">​</a></h3>
+<p>Claude Code analyzed the KEY command in the simplexmq Haskell repo and found five critical insights:</p>
+<ol>
+<li class="">
+<p><strong>Wire Format:</strong> KEY sends senderAuthKey as 44-byte SPKI (ASN.1 DER), not raw 32 bytes. Encoding chain: <code>publicToX509 -&gt; encodeASNObj -&gt; smpEncode @ByteString</code> (1-byte length prefix + 44 bytes).</p>
+</li>
+<li class="">
+<p><strong>Signing Scope:</strong> Identical to SUB/ACK: <code>smpEncode(sessionId) + smpEncode(corrId) + smpEncode(entityId) + encodeProtocol(KEY senderKey)</code>. No deviations.</p>
+</li>
+<li class="">
+<p><strong>EntityId:</strong> The recipientId of the <strong>Contact Queue</strong> (Agent.hs:1527-1532). KEY is sent on the queue being secured. The rcvPrivateKey of that Contact Queue signs the command.</p>
+</li>
+<li class="">
+<p><strong>Server Validation:</strong> Three outcomes: (a) signature wrong = ERR AUTH, (b) senderKey is Nothing = OK (key stored), (c) senderKey already set and identical = OK (idempotent), (d) senderKey already set but different = ERR AUTH.</p>
+</li>
+<li class="">
+<p><strong>Timing:</strong> KEY comes after SUB, before SKEY and SEND. Within ICAllowSecure: first KEY (secure own receive queue), then connectReplyQueues (SKEY + SEND).</p>
+</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5693-bug-40-wrong-queue-credentials-for-key-critical">569.3 Bug #40: Wrong Queue Credentials for KEY (CRITICAL)<a href="#5693-bug-40-wrong-queue-credentials-for-key-critical" class="hash-link" aria-label="Direct link to 569.3 Bug #40: Wrong Queue Credentials for KEY (CRITICAL)" title="Direct link to 569.3 Bug #40: Wrong Queue Credentials for KEY (CRITICAL)" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">WRONG: KEY -&gt; Reply Queue rcvId, signed with Reply Queue rcvPrivateKey</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">RIGHT: KEY -&gt; Contact Queue recipientId, signed with Contact Queue rcv_auth_secret</span><br></span></code></pre></div></div>
+<p>Server checks signature against the recipientKeys of the addressed queue. We signed with the Reply Queue key but addressed the Reply Queue entityId. Complete mismatch.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5694-bug-41-missing-spki-length-prefix-in-key">569.4 Bug #41: Missing SPKI Length Prefix in KEY<a href="#5694-bug-41-missing-spki-length-prefix-in-key" class="hash-link" aria-label="Direct link to 569.4 Bug #41: Missing SPKI Length Prefix in KEY" title="Direct link to 569.4 Bug #41: Missing SPKI Length Prefix in KEY" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">WRONG: &quot;KEY &quot; + [44 bytes SPKI]</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">RIGHT: &quot;KEY &quot; + [0x2C] + [44 bytes SPKI]</span><br></span></code></pre></div></div>
+<p>The 1-byte length prefix (0x2C = 44 decimal) was missing before the SPKI payload.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5695-result">569.5 Result<a href="#5695-result" class="hash-link" aria-label="Direct link to 569.5 Result" title="Direct link to 569.5 Result" translate="no">​</a></h3>
+<p>Contact 1 becomes &quot;connected&quot; on the phone. First message ESP32 -&gt; Phone goes through with two checkmarks. KEY fix confirmed.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5696-files-changed">569.6 Files Changed<a href="#5696-files-changed" class="hash-link" aria-label="Direct link to 569.6 Files Changed" title="Direct link to 569.6 Files Changed" translate="no">​</a></h3>
+<ul>
+<li class=""><code>main/protocol/smp_tasks.c</code> (KEY credential fix)</li>
+<li class=""><code>main/protocol/smp_agent.c</code> (KEY_DEBUG log)</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="570-phase-2-ghost-write---err-block-root-cause">570. Phase 2: Ghost Write - ERR BLOCK Root Cause<a href="#570-phase-2-ghost-write---err-block-root-cause" class="hash-link" aria-label="Direct link to 570. Phase 2: Ghost Write - ERR BLOCK Root Cause" title="Direct link to 570. Phase 2: Ghost Write - ERR BLOCK Root Cause" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5701-symptom">570.1 Symptom<a href="#5701-symptom" class="hash-link" aria-label="Direct link to 570.1 Symptom" title="Direct link to 570.1 Symptom" translate="no">​</a></h3>
+<p>After KEY fix, ERR BLOCK appeared on sock 54 (main connection). Every command (PING, ACK, NEW) returned ERR BLOCK. No corrId, no entityId. Connection-wide error.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5702-failed-hypotheses">570.2 Failed Hypotheses<a href="#5702-failed-hypotheses" class="hash-link" aria-label="Direct link to 570.2 Failed Hypotheses" title="Direct link to 570.2 Failed Hypotheses" translate="no">​</a></h3>
+<p><strong>Hypothesis 1 (Mausi): TLS Read/Write Collision</strong>
+Theory: Incoming MSG frames not read, TLS WANT_READ blocks write.
+Disproven: drain_pending_frames() added, zero DRAIN logs appear. Socket has no pending frames.</p>
+<p><strong>Hypothesis 2 (Mausi): Partial Write / Stream Desync</strong>
+Theory: mbedtls_ssl_write writes less than 16384 bytes, server waits for rest.
+Disproven: BLOCK_TX logs show consistent 16383+1=16384 bytes (normal TLS 1.3 behavior).</p>
+<p><strong>Critical Breakthrough:</strong> ERR BLOCK appears 500ms BEFORE our first instrumented write. There is a write path on sock 54 that does not go through BLOCK_TX.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5703-haskell-analysis-err-block-claude-code">570.3 Haskell Analysis: ERR BLOCK (Claude Code)<a href="#5703-haskell-analysis-err-block-claude-code" class="hash-link" aria-label="Direct link to 570.3 Haskell Analysis: ERR BLOCK (Claude Code)" title="Direct link to 570.3 Haskell Analysis: ERR BLOCK (Claude Code)" translate="no">​</a></h3>
+<p>Two different things serialize as &quot;BLOCK&quot; on the wire:</p>
+<ol>
+<li class="">
+<p><strong>ErrorType.BLOCK</strong> (Protocol.hs:1459): &quot;incorrect block format, encoding or signature size&quot;. SMP protocol level. Sent as ERR BLOCK within a normal SMP transmission.</p>
+</li>
+<li class="">
+<p><strong>TransportError.TEBadBlock</strong> (Transport.hs:672): Transport level. NOT sent as wire message, internal only.</p>
+</li>
+</ol>
+<p>ERR BLOCK occurs when <code>transmissionP</code> cannot parse block contents (Protocol.hs:2205/2240). Server recovers automatically and reads the next 16384-byte block.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5704-bug-42-ghost-write-in-reply_queue_create-5-errors">570.4 Bug #42: Ghost Write in reply_queue_create() (5 ERRORS)<a href="#5704-bug-42-ghost-write-in-reply_queue_create-5-errors" class="hash-link" aria-label="Direct link to 570.4 Bug #42: Ghost Write in reply_queue_create() (5 ERRORS)" title="Direct link to 570.4 Bug #42: Ghost Write in reply_queue_create() (5 ERRORS)" translate="no">​</a></h3>
+<p>Hasi found the bug through systematic search of ALL write locations on sock 54:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#</th><th>File</th><th>Function</th><th>Via smp_write_command_block?</th></tr></thead><tbody><tr><td>1</td><td>smp_ack.c</td><td>smp_send_ack()</td><td>Yes</td></tr><tr><td>2</td><td>smp_contacts.c</td><td>add_contact() NEW</td><td>Yes</td></tr><tr><td>3</td><td>smp_contacts.c</td><td>delete contact</td><td>Yes</td></tr><tr><td>4</td><td>smp_contacts.c</td><td>subscribe_all_contacts() SUB</td><td>Yes</td></tr><tr><td>5</td><td>smp_contacts.c</td><td>RQ subscribe</td><td>Yes</td></tr><tr><td>6</td><td>smp_contacts.c</td><td>RQ subscribe alt</td><td>Yes</td></tr><tr><td>7</td><td><strong>reply_queue.c</strong></td><td><strong>reply_queue_create() NEW</strong></td><td><strong>NO! Direct!</strong></td></tr><tr><td>8</td><td>smp_tasks.c</td><td>KEY command</td><td>Yes</td></tr><tr><td>9</td><td>smp_tasks.c</td><td>PING</td><td>Yes</td></tr></tbody></table>
+<p>Only ONE location bypassed the standard write path. Five errors in one function:</p>
+<ol>
+<li class=""><strong>Wire format wrong:</strong> Missing txCount(1B), txLen(2B), sigLen(1B). Server reads signature bytes as txCount. Total garbage.</li>
+<li class=""><strong>Zero-padding</strong> instead of &#x27;#&#x27;-padding (protocol violation)</li>
+<li class=""><strong>Direct mbedtls_ssl_read</strong> without loop (partial read = permanent stream desync)</li>
+<li class=""><strong>16KB stack buffer</strong> <code>uint8_t padded[SMP_BLOCK_SIZE]</code> (stack overflow risk)</li>
+<li class=""><strong>Missing SPKI length prefixes</strong> before auth/DH keys</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5705-fix">570.5 Fix<a href="#5705-fix" class="hash-link" aria-label="Direct link to 570.5 Fix" title="Direct link to 570.5 Fix" translate="no">​</a></h3>
+<p>Complete rewrite of send/receive section following add_contact() pattern:</p>
+<ul>
+<li class=""><code>smp_write_command_block()</code> instead of direct <code>mbedtls_ssl_write</code></li>
+<li class=""><code>smp_read_block()</code> instead of direct <code>mbedtls_ssl_read</code></li>
+<li class="">Correct transmission with all header fields</li>
+<li class="">All stack bombs removed</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5706-cascading-bug-43-ids-response-parsing">570.6 Cascading Bug #43: IDS Response Parsing<a href="#5706-cascading-bug-43-ids-response-parsing" class="hash-link" aria-label="Direct link to 570.6 Cascading Bug #43: IDS Response Parsing" title="Direct link to 570.6 Cascading Bug #43: IDS Response Parsing" translate="no">​</a></h3>
+<p>After switching to <code>smp_read_block()</code>, the block contained the txCount/txLen header. Structured parser read txCount as corrLen and landed in padding. Fix: linear scan like in add_contact().</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5707-cascading-bug-44-nvs-psram-crash">570.7 Cascading Bug #44: NVS PSRAM Crash<a href="#5707-cascading-bug-44-nvs-psram-crash" class="hash-link" aria-label="Direct link to 570.7 Cascading Bug #44: NVS PSRAM Crash" title="Direct link to 570.7 Cascading Bug #44: NVS PSRAM Crash" translate="no">​</a></h3>
+<p><code>reply_queue_save()</code> called <code>nvs_set_blob()</code>. NVS writes SPI flash, disables cache. Network Task stack in PSRAM: <code>assert failed: esp_task_stack_is_sane_cache_disabled</code>. Fix: NVS save deferred.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5708-files-changed">570.8 Files Changed<a href="#5708-files-changed" class="hash-link" aria-label="Direct link to 570.8 Files Changed" title="Direct link to 570.8 Files Changed" translate="no">​</a></h3>
+<ul>
+<li class=""><code>main/protocol/reply_queue.c</code> (Ghost Write fix, IDS parsing, NVS defer)</li>
+<li class=""><code>main/protocol/smp_network.c</code> (BLOCK_TX diagnostics)</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="571-phase-3-global-state-elimination">571. Phase 3: Global State Elimination<a href="#571-phase-3-global-state-elimination" class="hash-link" aria-label="Direct link to 571. Phase 3: Global State Elimination" title="Direct link to 571. Phase 3: Global State Elimination" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5711-bug-45-global-pending_peer-overwritten">571.1 Bug #45: Global pending_peer Overwritten<a href="#5711-bug-45-global-pending_peer-overwritten" class="hash-link" aria-label="Direct link to 571.1 Bug #45: Global pending_peer Overwritten" title="Direct link to 571.1 Bug #45: Global pending_peer Overwritten" translate="no">​</a></h3>
+<p>Global <code>pending_peer</code> state in smp_peer.c was overwritten after Contact 1 CONFIRMATION. All send functions (A_MSG, HELLO, A_RCVD) used Contact 1&#x27;s server/queue instead of Contact 0&#x27;s. Result: ERR AUTH for Contact 0 after Contact 1 creation.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5712-bug-46-frame-loss-during-subscribe">571.2 Bug #46: Frame Loss During Subscribe<a href="#5712-bug-46-frame-loss-during-subscribe" class="hash-link" aria-label="Direct link to 571.2 Bug #46: Frame Loss During Subscribe" title="Direct link to 571.2 Bug #46: Frame Loss During Subscribe" translate="no">​</a></h3>
+<p><code>subscribe_all_contacts()</code> had 4 locations with drain loops that discarded MSG frames with &quot;wrong&quot; entity ID instead of forwarding them to the App Task. Reply Queue messages (ConnInfo, receipts, chat messages) were silently lost.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5713-fixes">571.3 Fixes<a href="#5713-fixes" class="hash-link" aria-label="Direct link to 571.3 Fixes" title="Direct link to 571.3 Fixes" translate="no">​</a></h3>
+<ul>
+<li class=""><code>peer_prepare_for_contact()</code>: Loads correct per-contact peer state from NVS before each send. If server changes, old connection is disconnected.</li>
+<li class="">4x DISCARD -&gt; FORWARD via Ring Buffer: Non-matching frames are forwarded to App Task.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5714-files-changed">571.4 Files Changed<a href="#5714-files-changed" class="hash-link" aria-label="Direct link to 571.4 Files Changed" title="Direct link to 571.4 Files Changed" translate="no">​</a></h3>
+<ul>
+<li class=""><code>main/state/smp_peer.c</code> (peer_prepare_for_contact)</li>
+<li class=""><code>main/state/smp_contacts.c</code> (DISCARD -&gt; FORWARD)</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="572-phase-4-reply-queue-encoder-fix">572. Phase 4: Reply Queue Encoder Fix<a href="#572-phase-4-reply-queue-encoder-fix" class="hash-link" aria-label="Direct link to 572. Phase 4: Reply Queue Encoder Fix" title="Direct link to 572. Phase 4: Reply Queue Encoder Fix" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5721-bug-47-smpqueueinfo-parse-failure-on-phone">572.1 Bug #47: SMPQueueInfo Parse Failure on Phone<a href="#5721-bug-47-smpqueueinfo-parse-failure-on-phone" class="hash-link" aria-label="Direct link to 572.1 Bug #47: SMPQueueInfo Parse Failure on Phone" title="Direct link to 572.1 Bug #47: SMPQueueInfo Parse Failure on Phone" translate="no">​</a></h3>
+<p><code>reply_queue_encode_info()</code> had three byte errors:</p>
+<ol>
+<li class=""><strong>Version:</strong> 1 byte instead of 2-byte Big-Endian (<code>04</code> instead of <code>00 04</code>)</li>
+<li class=""><strong>Host Count:</strong> Missing <code>0x01</code> byte before host_len</li>
+<li class=""><strong>DH Key Prefix:</strong> Missing length prefix <code>0x2C</code> (44) before SPKI</li>
+</ol>
+<p>Output was 132 bytes instead of 134 bytes. Phone received CONFIRMATION but could not parse SMPQueueInfo and never responded.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5722-fix">572.2 Fix<a href="#5722-fix" class="hash-link" aria-label="Direct link to 572.2 Fix" title="Direct link to 572.2 Fix" translate="no">​</a></h3>
+<p>Encoder made byte-identical to <code>queue_encode_info()</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5723-result">572.3 Result<a href="#5723-result" class="hash-link" aria-label="Direct link to 572.3 Result" title="Direct link to 572.3 Result" translate="no">​</a></h3>
+<p>Phone receives CONFIRMATION, parses SMPQueueInfo correctly, responds on RQ[1].</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5724-files-changed">572.4 Files Changed<a href="#5724-files-changed" class="hash-link" aria-label="Direct link to 572.4 Files Changed" title="Direct link to 572.4 Files Changed" translate="no">​</a></h3>
+<ul>
+<li class=""><code>main/protocol/reply_queue.c</code> (encoder fixes)</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="573-phase-5a-per-contact-index-routing">573. Phase 5a: Per-Contact Index Routing<a href="#573-phase-5a-per-contact-index-routing" class="hash-link" aria-label="Direct link to 573. Phase 5a: Per-Contact Index Routing" title="Direct link to 573. Phase 5a: Per-Contact Index Routing" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5731-bug-48-peer_contact_idx-always-0">573.1 Bug #48: peer_contact_idx Always 0<a href="#5731-bug-48-peer_contact_idx-always-0" class="hash-link" aria-label="Direct link to 573.1 Bug #48: peer_contact_idx Always 0" title="Direct link to 573.1 Bug #48: peer_contact_idx Always 0" translate="no">​</a></h3>
+<p>Pointer arithmetic <code>contact - contacts_db.contacts</code> returned 0 for Contact 1 (pointer-to-struct division unreliable). Contact 1 CONFIRMATION contained Contact 0&#x27;s queue data.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5732-bug-49-nvs-key-hardcoded">573.2 Bug #49: NVS Key Hardcoded<a href="#5732-bug-49-nvs-key-hardcoded" class="hash-link" aria-label="Direct link to 573.2 Bug #49: NVS Key Hardcoded" title="Direct link to 573.2 Bug #49: NVS Key Hardcoded" translate="no">​</a></h3>
+<p><code>peer_00</code> used for all contacts instead of <code>peer_XX</code> with dynamic index.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5733-fixes">573.3 Fixes<a href="#5733-fixes" class="hash-link" aria-label="Direct link to 573.3 Fixes" title="Direct link to 573.3 Fixes" translate="no">​</a></h3>
+<ul>
+<li class="">Explicit <code>contact_idx</code> parameter in <code>send_agent_confirmation(contact, contact_idx)</code></li>
+<li class="">NVS keys dynamic: <code>peer_%02x</code> format with correct index</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5734-files-changed">573.4 Files Changed<a href="#5734-files-changed" class="hash-link" aria-label="Direct link to 573.4 Files Changed" title="Direct link to 573.4 Files Changed" translate="no">​</a></h3>
+<ul>
+<li class=""><code>main/state/smp_peer.c</code> (explicit contact_idx)</li>
+<li class=""><code>main/protocol/smp_parser.c</code> (passes contact_idx)</li>
+<li class=""><code>main/include/smp_peer.h</code> (declaration updated)</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="574-phase-5b-crypto-fix---beforenm-vs-scalarmult">574. Phase 5b: Crypto Fix - beforenm vs scalarmult<a href="#574-phase-5b-crypto-fix---beforenm-vs-scalarmult" class="hash-link" aria-label="Direct link to 574. Phase 5b: Crypto Fix - beforenm vs scalarmult" title="Direct link to 574. Phase 5b: Crypto Fix - beforenm vs scalarmult" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5741-bug-50-server-level-decrypt-failure-ret-2">574.1 Bug #50: Server-Level Decrypt Failure (ret=-2)<a href="#5741-bug-50-server-level-decrypt-failure-ret-2" class="hash-link" aria-label="Direct link to 574.1 Bug #50: Server-Level Decrypt Failure (ret=-2)" title="Direct link to 574.1 Bug #50: Server-Level Decrypt Failure (ret=-2)" translate="no">​</a></h3>
+<p>Reply Queue shared_secret was computed with <code>crypto_scalarmult()</code>. This returns the raw DH output (32 bytes). But <code>crypto_box_open_easy_afternm()</code> expects the preprocessed key (scalarmult + HSalsa20 derivation).</p>
+<div class="language-c codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-c codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)">// WRONG:</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token function" style="color:hsl(207, 82%, 66%)">crypto_scalarmult</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">shared_secret</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> our_private</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> server_public</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// RIGHT:</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token function" style="color:hsl(207, 82%, 66%)">crypto_box_beforenm</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">shared_secret</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> server_public</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> our_private</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><br></span></code></pre></div></div>
+<p>One line. Critical difference. <code>crypto_box_beforenm()</code> internally calls <code>crypto_scalarmult()</code> AND then applies <code>HSalsa20</code> to derive the final shared key.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5742-result">574.2 Result<a href="#5742-result" class="hash-link" aria-label="Direct link to 574.2 Result" title="Direct link to 574.2 Result" translate="no">​</a></h3>
+<p>Server-level decrypt succeeds. ConnInfo received. KEY + HELLO triggered. Contact 1 communicates bidirectionally.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5743-files-changed">574.3 Files Changed<a href="#5743-files-changed" class="hash-link" aria-label="Direct link to 574.3 Files Changed" title="Direct link to 574.3 Files Changed" translate="no">​</a></h3>
+<ul>
+<li class=""><code>main/protocol/reply_queue.c</code> (beforenm instead of scalarmult)</li>
+</ul>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="575-final-result-multi-contact-bidirectional">575. Final Result: Multi-Contact Bidirectional<a href="#575-final-result-multi-contact-bidirectional" class="hash-link" aria-label="Direct link to 575. Final Result: Multi-Contact Bidirectional" title="Direct link to 575. Final Result: Multi-Contact Bidirectional" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5751-what-works">575.1 What Works<a href="#5751-what-works" class="hash-link" aria-label="Direct link to 575.1 What Works" title="Direct link to 575.1 What Works" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Feature</th><th>Status</th></tr></thead><tbody><tr><td>Sock 54 (main connection)</td><td>Stable, no ERR BLOCK</td></tr><tr><td>PING/PONG heartbeat</td><td>1.2s latency, reliable</td></tr><tr><td>Contact 0 creation + handshake</td><td>Complete</td></tr><tr><td>Contact 0 ESP32 -&gt; Phone</td><td>Two checkmarks</td></tr><tr><td>Contact 0 Phone -&gt; ESP32</td><td>Messages received + decrypted</td></tr><tr><td>Contact 1 creation + handshake</td><td>Complete</td></tr><tr><td>Contact 1 ESP32 -&gt; Phone</td><td>Messages arrive</td></tr><tr><td>Contact 1 Phone -&gt; ESP32</td><td>Messages received + decrypted</td></tr><tr><td>Contact 0 after Contact 1 creation</td><td>No ERR AUTH, still stable</td></tr><tr><td>Reply Queue creation for arbitrary slots</td><td>Works</td></tr><tr><td>Per-contact NVS persistence</td><td>rat_XX, peer_XX dynamic</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5752-remaining-bugs-non-blocking">575.2 Remaining Bugs (Non-Blocking)<a href="#5752-remaining-bugs-non-blocking" class="hash-link" aria-label="Direct link to 575.2 Remaining Bugs (Non-Blocking)" title="Direct link to 575.2 Remaining Bugs (Non-Blocking)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Bug</th><th>Description</th><th>Priority</th></tr></thead><tbody><tr><td>A</td><td>Phone shows &quot;connecting&quot; for Contact 1 (messaging works anyway)</td><td>Medium</td></tr><tr><td>B</td><td>ESP UI shows all messages in all chats (no contact_idx filter)</td><td>Low</td></tr><tr><td>C</td><td>ERR AUTH on sock 56 after extended use (likely TLS session ID rotation)</td><td>Medium</td></tr><tr><td>D</td><td>Delivery receipts after Contact 1 handshake to verify</td><td>Low</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="576-architecture-discovery-the-one-pattern">576. Architecture Discovery: The ONE Pattern<a href="#576-architecture-discovery-the-one-pattern" class="hash-link" aria-label="Direct link to 576. Architecture Discovery: The ONE Pattern" title="Direct link to 576. Architecture Discovery: The ONE Pattern" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5761-every-bug-one-root-cause">576.1 Every Bug, One Root Cause<a href="#5761-every-bug-one-root-cause" class="hash-link" aria-label="Direct link to 576.1 Every Bug, One Root Cause" title="Direct link to 576.1 Every Bug, One Root Cause" translate="no">​</a></h3>
+<p>All 11 bugs in this session followed a single architectural pattern:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">WRONG:  Code uses global/hardcoded state (slot 0, our_queue, pending_peer)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">RIGHT:  Code uses per-contact state (contacts[idx], RQ[idx], peer_%02x)</span><br></span></code></pre></div></div>
+<p>The pattern is now established for contacts 2-127. No new algorithms or protocol changes were needed, only consistent index routing.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="5762-bug-classification">576.2 Bug Classification<a href="#5762-bug-classification" class="hash-link" aria-label="Direct link to 576.2 Bug Classification" title="Direct link to 576.2 Bug Classification" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Bug</th><th>Phase</th><th>Root Cause</th><th>Fix</th></tr></thead><tbody><tr><td>#40</td><td>P1</td><td>KEY used Reply Queue credentials</td><td>Contact Queue credentials</td></tr><tr><td>#41</td><td>P1</td><td>Missing SPKI 0x2C prefix</td><td>Added 1B length prefix</td></tr><tr><td>#42</td><td>P2</td><td>reply_queue_create() bypassed standard write</td><td>Complete rewrite</td></tr><tr><td>#43</td><td>P2</td><td>IDS parser assumed no txCount header</td><td>Linear scan</td></tr><tr><td>#44</td><td>P2</td><td>NVS write from PSRAM stack</td><td>Deferred save</td></tr><tr><td>#45</td><td>P3</td><td>Global pending_peer overwritten</td><td>peer_prepare_for_contact()</td></tr><tr><td>#46</td><td>P3</td><td>4x DISCARD instead of FORWARD</td><td>Ring Buffer forward</td></tr><tr><td>#47</td><td>P4</td><td>SMPQueueInfo encoder 3 byte errors</td><td>Byte-identical to reference</td></tr><tr><td>#48</td><td>P5a</td><td>Pointer arithmetic for contact_idx</td><td>Explicit parameter</td></tr><tr><td>#49</td><td>P5a</td><td>NVS key hardcoded peer_00</td><td>Dynamic peer_%02x</td></tr><tr><td>#50</td><td>P5b</td><td>scalarmult missing HSalsa20</td><td>crypto_box_beforenm</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="577-evgeny-reference-session-34-day-2">577. Evgeny Reference (Session 34 Day 2)<a href="#577-evgeny-reference-session-34-day-2" class="hash-link" aria-label="Direct link to 577. Evgeny Reference (Session 34 Day 2)" title="Direct link to 577. Evgeny Reference (Session 34 Day 2)" translate="no">​</a></h2>
+<p>No direct questions to Evgeny in this session. These rules from evgeny_reference.md remained critical:</p>
+<ol>
+<li class="">
+<p><strong>&quot;Generate key -&gt; Persist to flash -&gt; THEN send -&gt; If response lost -&gt; Retry with SAME key&quot;</strong> - Applied to every KEY/SKEY command and queue creation.</p>
+</li>
+<li class="">
+<p><strong>&quot;Subscription can only exist in one socket though&quot;</strong> - Relevant in Phase 3: peer handshake on sock 56 must not subscribe to same queue as sock 54.</p>
+</li>
+<li class="">
+<p><strong>&quot;Reconnection must result in END to the old connection&quot;</strong> - Applies to remaining Bug C (TLS session ID stability).</p>
+</li>
+<li class="">
+<p><strong>&quot;Concurrency is hard.&quot;</strong> - Confirmed by the entire session&#x27;s progression.</p>
+</li>
+<li class="">
+<p><strong>&quot;Send Claude to do a thorough analysis... without inferences&quot;</strong> - The Claude Code analyses (KEY wire format, ERR BLOCK) were decisive for the breakthroughs.</p>
+</li>
+</ol>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="578-methodological-insight">578. Methodological Insight<a href="#578-methodological-insight" class="hash-link" aria-label="Direct link to 578. Methodological Insight" title="Direct link to 578. Methodological Insight" translate="no">​</a></h2>
+<p>Two false hypotheses (drain collision, partial write) cost time, but the systematic approach (hypothesis -&gt; instrumentation -&gt; disproval -&gt; new hypothesis) reliably led to results.</p>
+<p>The most important lesson: <strong>When instrumentation finds nothing, there is an uninstrumented code path.</strong></p>
+<p>This is how the Ghost Write was found: ERR BLOCK appeared 500ms before our first instrumented write. Something was writing to sock 54 that we had not instrumented. Systematic enumeration of all write locations found exactly one that bypassed the standard path.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="579-statistics">579. Statistics<a href="#579-statistics" class="hash-link" aria-label="Direct link to 579. Statistics" title="Direct link to 579. Statistics" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Bugs found</td><td>11 (#40-#50)</td></tr><tr><td>Bugs fixed</td><td>11</td></tr><tr><td>Files changed</td><td>8</td></tr><tr><td>False hypotheses</td><td>2 (drain, partial write)</td></tr><tr><td>Haskell analyses (Claude Code)</td><td>2 (KEY wire format, ERR BLOCK)</td></tr><tr><td>Phases</td><td>6</td></tr><tr><td>Result</td><td>Multi-Contact Bidirectional Encrypted</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="580-files-changed-complete">580. Files Changed (Complete)<a href="#580-files-changed-complete" class="hash-link" aria-label="Direct link to 580. Files Changed (Complete)" title="Direct link to 580. Files Changed (Complete)" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Changes</th></tr></thead><tbody><tr><td>main/protocol/reply_queue.c</td><td>Ghost Write fix (5 errors), IDS parsing, NVS defer, 3 encoder fixes, beforenm crypto fix</td></tr><tr><td>main/state/smp_peer.c</td><td>peer_prepare_for_contact(), send_agent_confirmation with explicit contact_idx</td></tr><tr><td>main/state/smp_contacts.c</td><td>4x DISCARD -&gt; FORWARD in subscribe_all_contacts()</td></tr><tr><td>main/protocol/smp_parser.c</td><td>Passes contact_idx to send_agent_confirmation</td></tr><tr><td>main/include/smp_peer.h</td><td>Declaration updated</td></tr><tr><td>main/protocol/smp_tasks.c</td><td>KEY fix (Contact Queue credentials), auth key routing</td></tr><tr><td>main/protocol/smp_agent.c</td><td>KEY_DEBUG diagnostics log</td></tr><tr><td>main/protocol/smp_network.c</td><td>BLOCK_TX diagnostics log</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="581-lessons-learned-session-34-day-2">581. Lessons Learned Session 34 Day 2<a href="#581-lessons-learned-session-34-day-2" class="hash-link" aria-label="Direct link to 581. Lessons Learned Session 34 Day 2" title="Direct link to 581. Lessons Learned Session 34 Day 2" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l176-key-uses-contact-queue-credentials-not-reply-queue">L176: KEY Uses Contact Queue Credentials, NOT Reply Queue<a href="#l176-key-uses-contact-queue-credentials-not-reply-queue" class="hash-link" aria-label="Direct link to L176: KEY Uses Contact Queue Credentials, NOT Reply Queue" title="Direct link to L176: KEY Uses Contact Queue Credentials, NOT Reply Queue" translate="no">​</a></h3>
+<p><strong>Severity: Critical</strong></p>
+<p>KEY is a Recipient Command sent on the queue being secured. The entityId is the Contact Queue&#x27;s recipientId. The signing key is the Contact Queue&#x27;s rcv_auth_secret. Using Reply Queue credentials causes ERR AUTH because the server checks the signature against the addressed queue&#x27;s recipient keys.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l177-smpencode-of-spki-requires-1-byte-length-prefix">L177: smpEncode of SPKI Requires 1-Byte Length Prefix<a href="#l177-smpencode-of-spki-requires-1-byte-length-prefix" class="hash-link" aria-label="Direct link to L177: smpEncode of SPKI Requires 1-Byte Length Prefix" title="Direct link to L177: smpEncode of SPKI Requires 1-Byte Length Prefix" translate="no">​</a></h3>
+<p><strong>Severity: High</strong></p>
+<p>The KEY command body is &quot;KEY &quot; + [0x2C] + [44 bytes SPKI]. The 0x2C (44 decimal) is the smpEncode length prefix for the SPKI blob. Missing this prefix causes the server to misparse the command body.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l178-ghost-writes-bypassing-standard-write-path-cause-err-block">L178: Ghost Writes Bypassing Standard Write Path Cause ERR BLOCK<a href="#l178-ghost-writes-bypassing-standard-write-path-cause-err-block" class="hash-link" aria-label="Direct link to L178: Ghost Writes Bypassing Standard Write Path Cause ERR BLOCK" title="Direct link to L178: Ghost Writes Bypassing Standard Write Path Cause ERR BLOCK" translate="no">​</a></h3>
+<p><strong>Severity: Critical</strong></p>
+<p>If ANY function writes directly to the TLS socket without using <code>smp_write_command_block()</code>, it sends malformed SMP transmissions (missing txCount, txLen, signature). The server returns ERR BLOCK (&quot;incorrect block format&quot;). Key diagnostic: if ERR BLOCK appears before your first instrumented write, there is an uninstrumented write path.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l179-five-errors-in-one-function-pattern">L179: Five Errors in One Function Pattern<a href="#l179-five-errors-in-one-function-pattern" class="hash-link" aria-label="Direct link to L179: Five Errors in One Function Pattern" title="Direct link to L179: Five Errors in One Function Pattern" translate="no">​</a></h3>
+<p><strong>Severity: High</strong></p>
+<p>reply_queue_create() had 5 simultaneous errors: wrong wire format, wrong padding char, missing read loop, stack-allocated 16KB buffer, missing SPKI prefixes. When a function was written as a standalone prototype rather than following an established pattern, every aspect diverged. Fix: always copy from a working reference function.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l180-global-pending_peer-state-must-be-per-contact">L180: Global pending_peer State Must Be Per-Contact<a href="#l180-global-pending_peer-state-must-be-per-contact" class="hash-link" aria-label="Direct link to L180: Global pending_peer State Must Be Per-Contact" title="Direct link to L180: Global pending_peer State Must Be Per-Contact" translate="no">​</a></h3>
+<p><strong>Severity: Critical</strong></p>
+<p>A global <code>pending_peer</code> struct in smp_peer.c gets overwritten when a second contact is created. All send functions (A_MSG, HELLO, A_RCVD) then use the wrong server/queue. Fix: <code>peer_prepare_for_contact()</code> loads the correct per-contact peer state from NVS before each send operation.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l181-discard-frames-in-subscribe-loops-must-be-forwarded">L181: DISCARD Frames in Subscribe Loops Must Be FORWARDED<a href="#l181-discard-frames-in-subscribe-loops-must-be-forwarded" class="hash-link" aria-label="Direct link to L181: DISCARD Frames in Subscribe Loops Must Be FORWARDED" title="Direct link to L181: DISCARD Frames in Subscribe Loops Must Be FORWARDED" translate="no">​</a></h3>
+<p><strong>Severity: High</strong></p>
+<p>subscribe_all_contacts() drain loops that discard MSG frames with non-matching entity IDs silently lose Reply Queue messages (ConnInfo, receipts, chat messages). Fix: forward non-matching frames to App Task via Ring Buffer instead of discarding.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l182-smpqueueinfo-encoder-must-be-byte-identical-to-reference">L182: SMPQueueInfo Encoder Must Be Byte-Identical to Reference<a href="#l182-smpqueueinfo-encoder-must-be-byte-identical-to-reference" class="hash-link" aria-label="Direct link to L182: SMPQueueInfo Encoder Must Be Byte-Identical to Reference" title="Direct link to L182: SMPQueueInfo Encoder Must Be Byte-Identical to Reference" translate="no">​</a></h3>
+<p><strong>Severity: High</strong></p>
+<p>Three byte errors in reply_queue_encode_info(): version as 1B instead of 2B BE, missing host_count byte, missing DH key length prefix. Output was 132B instead of 134B. Phone could not parse the queue info and never responded. Fix: make encoder byte-identical to the working queue_encode_info().</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l183-pointer-arithmetic-for-contact-index-is-unreliable">L183: Pointer Arithmetic for Contact Index Is Unreliable<a href="#l183-pointer-arithmetic-for-contact-index-is-unreliable" class="hash-link" aria-label="Direct link to L183: Pointer Arithmetic for Contact Index Is Unreliable" title="Direct link to L183: Pointer Arithmetic for Contact Index Is Unreliable" translate="no">​</a></h3>
+<p><strong>Severity: Medium</strong></p>
+<p><code>contact - contacts_db.contacts</code> pointer arithmetic for determining contact index returned 0 for Contact 1 due to struct size division issues. Fix: pass contact_idx as an explicit parameter rather than computing it from pointers.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l184-crypto_box_beforenm-vs-crypto_scalarmult---hsalsa20-derivation">L184: crypto_box_beforenm vs crypto_scalarmult - HSalsa20 Derivation<a href="#l184-crypto_box_beforenm-vs-crypto_scalarmult---hsalsa20-derivation" class="hash-link" aria-label="Direct link to L184: crypto_box_beforenm vs crypto_scalarmult - HSalsa20 Derivation" title="Direct link to L184: crypto_box_beforenm vs crypto_scalarmult - HSalsa20 Derivation" translate="no">​</a></h3>
+<p><strong>Severity: Critical</strong></p>
+<p><code>crypto_scalarmult()</code> returns the raw X25519 DH output. <code>crypto_box_beforenm()</code> calls scalarmult AND then applies HSalsa20 to derive the final shared key. Using scalarmult directly with <code>crypto_box_open_easy_afternm()</code> fails because afternm expects the HSalsa20-derived key. One function call difference, complete crypto failure.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l185-if-instrumentation-finds-nothing-there-is-an-uninstrumented-code-path">L185: If Instrumentation Finds Nothing, There Is an Uninstrumented Code Path<a href="#l185-if-instrumentation-finds-nothing-there-is-an-uninstrumented-code-path" class="hash-link" aria-label="Direct link to L185: If Instrumentation Finds Nothing, There Is an Uninstrumented Code Path" title="Direct link to L185: If Instrumentation Finds Nothing, There Is an Uninstrumented Code Path" translate="no">​</a></h3>
+<p><strong>Severity: High</strong></p>
+<p>When diagnostic logs show no evidence of a suspected problem (e.g., DRAIN logs empty, BLOCK_TX logs normal), the problem is not in the instrumented code. Systematically enumerate ALL code paths that could cause the symptom. The Ghost Write was found because ERR BLOCK appeared 500ms before any instrumented write.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="l186-all-multi-contact-bugs-follow-one-pattern">L186: All Multi-Contact Bugs Follow ONE Pattern<a href="#l186-all-multi-contact-bugs-follow-one-pattern" class="hash-link" aria-label="Direct link to L186: All Multi-Contact Bugs Follow ONE Pattern" title="Direct link to L186: All Multi-Contact Bugs Follow ONE Pattern" translate="no">​</a></h3>
+<p><strong>Severity: Architectural</strong></p>
+<p>Every single bug in this session (11 total) followed the same root cause: global or hardcoded state (slot 0, our_queue, pending_peer, peer_00) instead of per-contact state (contacts[idx], RQ[idx], peer_%02x). The pattern is now established for contacts 2-127.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="582-agent-contributions">582. Agent Contributions<a href="#582-agent-contributions" class="hash-link" aria-label="Direct link to 582. Agent Contributions" title="Direct link to 582. Agent Contributions" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Agent</th><th>Fairy Tale Role</th><th>Session 34 Day 2 Contribution</th></tr></thead><tbody><tr><td>👑🐭 Mausi</td><td>Princess (The Manager)</td><td>Hypothesis formation, architecture analysis, global state diagnosis</td></tr><tr><td>🐰👑 Hasi</td><td>Princess (The Implementer)</td><td>All 8 files changed, Ghost Write enumeration, all fixes</td></tr><tr><td>🧹 Aschenputtel</td><td>Cinderella (Log Analyst)</td><td>ERR BLOCK hex analysis, timing analysis, IDS response verification</td></tr><tr><td>👑 Cannatoshi</td><td>The Prince (Coordinator)</td><td>Hardware tests on T-Deck, multi-contact verification, final decisions</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="583-session-34-day-2-summary">583. Session 34 Day 2 Summary<a href="#583-session-34-day-2-summary" class="hash-link" aria-label="Direct link to 583. Session 34 Day 2 Summary" title="Direct link to 583. Session 34 Day 2 Summary" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-was-achieved">What Was Achieved<a href="#what-was-achieved" class="hash-link" aria-label="Direct link to What Was Achieved" title="Direct link to What Was Achieved" translate="no">​</a></h3>
+<ul>
+<li class="">✅ <strong>KEY Command Fix</strong> (Contact Queue credentials, not Reply Queue)</li>
+<li class="">✅ <strong>Ghost Write Elimination</strong> (5 errors in reply_queue_create())</li>
+<li class="">✅ <strong>Global State Elimination</strong> (peer_prepare_for_contact, DISCARD-&gt;FORWARD)</li>
+<li class="">✅ <strong>Reply Queue Encoder Fix</strong> (3 byte errors, byte-identical to reference)</li>
+<li class="">✅ <strong>Per-Contact Index Routing</strong> (explicit parameter, dynamic NVS keys)</li>
+<li class="">✅ <strong>Crypto Fix</strong> (beforenm vs scalarmult, HSalsa20 derivation)</li>
+<li class="">✅ <strong>Contact 0 Bidirectional</strong> (ESP32 &lt;-&gt; Phone, encrypted)</li>
+<li class="">✅ <strong>Contact 1 Bidirectional</strong> (ESP32 &lt;-&gt; Phone, encrypted)</li>
+<li class="">🏆 <strong>HISTORIC MILESTONE: Multi-Contact Bidirectional Encrypted Messaging on ESP32</strong></li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-takeaway">Key Takeaway<a href="#key-takeaway" class="hash-link" aria-label="Direct link to Key Takeaway" title="Direct link to Key Takeaway" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">SESSION 34 DAY 2 SUMMARY:</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  🏆 MULTI-CONTACT BIDIRECTIONAL ENCRYPTED MESSAGING</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  11 bugs found and fixed in 6 phases</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  All bugs: ONE pattern (global -&gt; per-contact)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Contact 0: ESP32 &lt;-&gt; Phone  Bidirectional  ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Contact 1: ESP32 &lt;-&gt; Phone  Bidirectional  ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  PING/PONG heartbeat: 1.2s, reliable        ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Sock 54 stable, no ERR BLOCK               ✅</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  Pattern established for contacts 2-127.</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">  No new algorithms. Only consistent index routing.</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">&quot;The first multi-contact bidirectional encrypted messenger</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"> on a microcontroller. Period.&quot; — Mausi 👑🐭</span><br></span></code></pre></div></div>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="584-next-priorities">584. Next Priorities<a href="#584-next-priorities" class="hash-link" aria-label="Direct link to 584. Next Priorities" title="Direct link to 584. Next Priorities" translate="no">​</a></h2>
+<ol>
+<li class=""><strong>P0:</strong> Phone &quot;connecting&quot; status for Contact 1 (cosmetic but visible)</li>
+<li class=""><strong>P1:</strong> UI contact_idx filter (messages shown per-contact)</li>
+<li class=""><strong>P2:</strong> ERR AUTH on sock 56 after extended use (TLS session rotation)</li>
+<li class=""><strong>P3:</strong> Delivery receipt verification for Contact 1</li>
+<li class=""><strong>P4:</strong> Contact 2+ creation test (pattern should &quot;just work&quot;)</li>
+</ol>
+<hr>
+<p><strong>DOCUMENT CREATED: 2026-02-24 Session 34 Day 2</strong>
+<strong>Status: 🏆 HISTORIC MILESTONE</strong>
+<strong>Key Achievement: Multi-Contact Bidirectional Encrypted Messaging on ESP32</strong>
+<strong>Bugs: 11 found and fixed (#40-#50)</strong>
+<strong>Next: Polish remaining cosmetic bugs, test contacts 2-127</strong></p>
+<hr>
+<p><em>Created by Princess Mausi (👑🐭) on February 24, 2026</em>
+<em>The first multi-contact bidirectional encrypted messenger on a microcontroller. The pattern is established. Contacts 2-127 are waiting.</em></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/protocol-analysis/33_PART31_SESSION_34_BREAKTHROUGH.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/protocol-analysis/PART30_SESSION_34"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">PART30_SESSION_34</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/protocol-analysis/PART32_SESSION_35"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">PART32_SESSION_35</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#️-session-34-day-2-summary" class="table-of-contents__link toc-highlight">⚠️ SESSION 34 DAY 2 SUMMARY</a></li><li><a href="#568-session-34-day-2-overview" class="table-of-contents__link toc-highlight">568. Session 34 Day 2 Overview</a><ul><li><a href="#5681-session-goals" class="table-of-contents__link toc-highlight">568.1 Session Goals</a></li><li><a href="#5682-team-and-roles" class="table-of-contents__link toc-highlight">568.2 Team and Roles</a></li></ul></li><li><a href="#569-phase-1-key-command-fix" class="table-of-contents__link toc-highlight">569. Phase 1: KEY Command Fix</a><ul><li><a href="#5691-starting-point" class="table-of-contents__link toc-highlight">569.1 Starting Point</a></li><li><a href="#5692-haskell-analysis-claude-code" class="table-of-contents__link toc-highlight">569.2 Haskell Analysis (Claude Code)</a></li><li><a href="#5693-bug-40-wrong-queue-credentials-for-key-critical" class="table-of-contents__link toc-highlight">569.3 Bug #40: Wrong Queue Credentials for KEY (CRITICAL)</a></li><li><a href="#5694-bug-41-missing-spki-length-prefix-in-key" class="table-of-contents__link toc-highlight">569.4 Bug #41: Missing SPKI Length Prefix in KEY</a></li><li><a href="#5695-result" class="table-of-contents__link toc-highlight">569.5 Result</a></li><li><a href="#5696-files-changed" class="table-of-contents__link toc-highlight">569.6 Files Changed</a></li></ul></li><li><a href="#570-phase-2-ghost-write---err-block-root-cause" class="table-of-contents__link toc-highlight">570. Phase 2: Ghost Write - ERR BLOCK Root Cause</a><ul><li><a href="#5701-symptom" class="table-of-contents__link toc-highlight">570.1 Symptom</a></li><li><a href="#5702-failed-hypotheses" class="table-of-contents__link toc-highlight">570.2 Failed Hypotheses</a></li><li><a href="#5703-haskell-analysis-err-block-claude-code" class="table-of-contents__link toc-highlight">570.3 Haskell Analysis: ERR BLOCK (Claude Code)</a></li><li><a href="#5704-bug-42-ghost-write-in-reply_queue_create-5-errors" class="table-of-contents__link toc-highlight">570.4 Bug #42: Ghost Write in reply_queue_create() (5 ERRORS)</a></li><li><a href="#5705-fix" class="table-of-contents__link toc-highlight">570.5 Fix</a></li><li><a href="#5706-cascading-bug-43-ids-response-parsing" class="table-of-contents__link toc-highlight">570.6 Cascading Bug #43: IDS Response Parsing</a></li><li><a href="#5707-cascading-bug-44-nvs-psram-crash" class="table-of-contents__link toc-highlight">570.7 Cascading Bug #44: NVS PSRAM Crash</a></li><li><a href="#5708-files-changed" class="table-of-contents__link toc-highlight">570.8 Files Changed</a></li></ul></li><li><a href="#571-phase-3-global-state-elimination" class="table-of-contents__link toc-highlight">571. Phase 3: Global State Elimination</a><ul><li><a href="#5711-bug-45-global-pending_peer-overwritten" class="table-of-contents__link toc-highlight">571.1 Bug #45: Global pending_peer Overwritten</a></li><li><a href="#5712-bug-46-frame-loss-during-subscribe" class="table-of-contents__link toc-highlight">571.2 Bug #46: Frame Loss During Subscribe</a></li><li><a href="#5713-fixes" class="table-of-contents__link toc-highlight">571.3 Fixes</a></li><li><a href="#5714-files-changed" class="table-of-contents__link toc-highlight">571.4 Files Changed</a></li></ul></li><li><a href="#572-phase-4-reply-queue-encoder-fix" class="table-of-contents__link toc-highlight">572. Phase 4: Reply Queue Encoder Fix</a><ul><li><a href="#5721-bug-47-smpqueueinfo-parse-failure-on-phone" class="table-of-contents__link toc-highlight">572.1 Bug #47: SMPQueueInfo Parse Failure on Phone</a></li><li><a href="#5722-fix" class="table-of-contents__link toc-highlight">572.2 Fix</a></li><li><a href="#5723-result" class="table-of-contents__link toc-highlight">572.3 Result</a></li><li><a href="#5724-files-changed" class="table-of-contents__link toc-highlight">572.4 Files Changed</a></li></ul></li><li><a href="#573-phase-5a-per-contact-index-routing" class="table-of-contents__link toc-highlight">573. Phase 5a: Per-Contact Index Routing</a><ul><li><a href="#5731-bug-48-peer_contact_idx-always-0" class="table-of-contents__link toc-highlight">573.1 Bug #48: peer_contact_idx Always 0</a></li><li><a href="#5732-bug-49-nvs-key-hardcoded" class="table-of-contents__link toc-highlight">573.2 Bug #49: NVS Key Hardcoded</a></li><li><a href="#5733-fixes" class="table-of-contents__link toc-highlight">573.3 Fixes</a></li><li><a href="#5734-files-changed" class="table-of-contents__link toc-highlight">573.4 Files Changed</a></li></ul></li><li><a href="#574-phase-5b-crypto-fix---beforenm-vs-scalarmult" class="table-of-contents__link toc-highlight">574. Phase 5b: Crypto Fix - beforenm vs scalarmult</a><ul><li><a href="#5741-bug-50-server-level-decrypt-failure-ret-2" class="table-of-contents__link toc-highlight">574.1 Bug #50: Server-Level Decrypt Failure (ret=-2)</a></li><li><a href="#5742-result" class="table-of-contents__link toc-highlight">574.2 Result</a></li><li><a href="#5743-files-changed" class="table-of-contents__link toc-highlight">574.3 Files Changed</a></li></ul></li><li><a href="#575-final-result-multi-contact-bidirectional" class="table-of-contents__link toc-highlight">575. Final Result: Multi-Contact Bidirectional</a><ul><li><a href="#5751-what-works" class="table-of-contents__link toc-highlight">575.1 What Works</a></li><li><a href="#5752-remaining-bugs-non-blocking" class="table-of-contents__link toc-highlight">575.2 Remaining Bugs (Non-Blocking)</a></li></ul></li><li><a href="#576-architecture-discovery-the-one-pattern" class="table-of-contents__link toc-highlight">576. Architecture Discovery: The ONE Pattern</a><ul><li><a href="#5761-every-bug-one-root-cause" class="table-of-contents__link toc-highlight">576.1 Every Bug, One Root Cause</a></li><li><a href="#5762-bug-classification" class="table-of-contents__link toc-highlight">576.2 Bug Classification</a></li></ul></li><li><a href="#577-evgeny-reference-session-34-day-2" class="table-of-contents__link toc-highlight">577. Evgeny Reference (Session 34 Day 2)</a></li><li><a href="#578-methodological-insight" class="table-of-contents__link toc-highlight">578. Methodological Insight</a></li><li><a href="#579-statistics" class="table-of-contents__link toc-highlight">579. Statistics</a></li><li><a href="#580-files-changed-complete" class="table-of-contents__link toc-highlight">580. Files Changed (Complete)</a></li><li><a href="#581-lessons-learned-session-34-day-2" class="table-of-contents__link toc-highlight">581. Lessons Learned Session 34 Day 2</a><ul><li><a href="#l176-key-uses-contact-queue-credentials-not-reply-queue" class="table-of-contents__link toc-highlight">L176: KEY Uses Contact Queue Credentials, NOT Reply Queue</a></li><li><a href="#l177-smpencode-of-spki-requires-1-byte-length-prefix" class="table-of-contents__link toc-highlight">L177: smpEncode of SPKI Requires 1-Byte Length Prefix</a></li><li><a href="#l178-ghost-writes-bypassing-standard-write-path-cause-err-block" class="table-of-contents__link toc-highlight">L178: Ghost Writes Bypassing Standard Write Path Cause ERR BLOCK</a></li><li><a href="#l179-five-errors-in-one-function-pattern" class="table-of-contents__link toc-highlight">L179: Five Errors in One Function Pattern</a></li><li><a href="#l180-global-pending_peer-state-must-be-per-contact" class="table-of-contents__link toc-highlight">L180: Global pending_peer State Must Be Per-Contact</a></li><li><a href="#l181-discard-frames-in-subscribe-loops-must-be-forwarded" class="table-of-contents__link toc-highlight">L181: DISCARD Frames in Subscribe Loops Must Be FORWARDED</a></li><li><a href="#l182-smpqueueinfo-encoder-must-be-byte-identical-to-reference" class="table-of-contents__link toc-highlight">L182: SMPQueueInfo Encoder Must Be Byte-Identical to Reference</a></li><li><a href="#l183-pointer-arithmetic-for-contact-index-is-unreliable" class="table-of-contents__link toc-highlight">L183: Pointer Arithmetic for Contact Index Is Unreliable</a></li><li><a href="#l184-crypto_box_beforenm-vs-crypto_scalarmult---hsalsa20-derivation" class="table-of-contents__link toc-highlight">L184: crypto_box_beforenm vs crypto_scalarmult - HSalsa20 Derivation</a></li><li><a href="#l185-if-instrumentation-finds-nothing-there-is-an-uninstrumented-code-path" class="table-of-contents__link toc-highlight">L185: If Instrumentation Finds Nothing, There Is an Uninstrumented Code Path</a></li><li><a href="#l186-all-multi-contact-bugs-follow-one-pattern" class="table-of-contents__link toc-highlight">L186: All Multi-Contact Bugs Follow ONE Pattern</a></li></ul></li><li><a href="#582-agent-contributions" class="table-of-contents__link toc-highlight">582. Agent Contributions</a></li><li><a href="#583-session-34-day-2-summary" class="table-of-contents__link toc-highlight">583. Session 34 Day 2 Summary</a><ul><li><a href="#what-was-achieved" class="table-of-contents__link toc-highlight">What Was Achieved</a></li><li><a href="#key-takeaway" class="table-of-contents__link toc-highlight">Key Takeaway</a></li></ul></li><li><a href="#584-next-priorities" class="table-of-contents__link toc-highlight">584. Next Priorities</a></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/flash.html">Flash Tool</a><a href="https://simplego.dev/network.html">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos.html">Terms of Service</a><a href="https://simplego.dev/legal/privacy.html">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer.html">Disclaimer</a><a href="https://simplego.dev/imprint.html">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup.html">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement.html">Law Enforcement</a><a href="https://simplego.dev/legal/transparency.html">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact.html">Partnership</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — S.D – IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>
