@@ -24,6 +24,7 @@ typedef enum {
     UI_SCREEN_CONNECT,
     UI_SCREEN_SETTINGS,
     UI_SCREEN_DEVELOPER,
+    UI_SCREEN_NAME_SETUP,
     UI_SCREEN_COUNT
 } ui_screen_t;
 
