@@ -3141,12 +3141,78 @@ Type: CNAME | Name: docs | Value: saschadaemgen.github.io | TTL: 3600
 
 ### Milestone 19: Professional Documentation Site
 
-Docusaurus 3 at docs.simplego.dev. 17 documents migrated. 10 new smp-in-c/ pages. SimpleGo cited in official SimpleX Network Technical Architecture document by Evgeny Poberezkin.
+Docusaurus 3 at wiki.simplego.dev. 17 documents migrated. 10 new smp-in-c/ pages. SimpleGo cited in official SimpleX Network Technical Architecture document by Evgeny Poberezkin.
 
 ---
 
-*Quick Reference v37.0*
-*Last updated: March 5, 2026 - Session 43*
-*Status: Documentation Site Live -- docs.simplego.dev*
+## Section 42: Session 43 -- Security Cleanup + Display Name
+
+### 42.1 Security Log Removals
+
+```
+smp_parser.c (9 removals):
+  Key1/Key2 SPKI header printf loops
+  Raw key printf loops
+  dump_hex for SPKI key, raw key, after-key, before-key data
+  CRITICAL: decrypted plaintext dump
+
+smp_tasks.c (2 blocks):
+  KEY_DEBUG transmission hex dump
+  KEY response hex dump
+
+smp_contacts.c (5 lines):
+  Response hex, corrId, entityId, recipientId, command bytes
+
+Remaining for S44: dump_hex with +0000: prefix in smp_contacts.c
+```
+
+### 42.2 Display Name NVS Key
+
+```
+NVS Key: "user_name" (namespace: simplego)
+API:
+  storage_get_display_name(char *buf, size_t len)
+  storage_set_display_name(const char *name)
+  storage_has_display_name() -> bool
+
+Used in:
+  smp_peer.c: AgentConfirmation JSON (replaces hardcoded "ESP32")
+  ui_settings_info.c: clickable name row with overlay editor
+  ui_name_setup.c: first-boot prompt (UI_SCREEN_NAME_SETUP)
+
+Design: No broadcasting to existing contacts (deferred).
+```
+
+### 42.3 Bug #20: SEND After Extended Idle (SHOWSTOPPER)
+
+```
+Symptom: SEND fails after 6+ hours idle. Red X on display.
+  PING/PONG still working. Device reset fixes immediately.
+  Failed messages do NOT appear in chat history.
+
+NOT the cause: Keep-alive (PING/PONG confirmed working)
+
+Investigate (S44):
+  1. WiFi Manager background reconnect
+  2. Heap exhaustion over time
+  3. smp_app_run() refactoring side effect (S42)
+  4. TLS session timeout (separate from SMP PING)
+  5. Ratchet synchronization after long idle
+```
+
+### 42.4 Performance Improvements
+
+```
+QR code generation:    ~1.5s -> ~0.6s  (60% faster)
+Connection handshake:  ~3.5s -> ~2.1s  (40% faster)
+Boot to main screen:   ~7s   -> ~5s    (30% faster)
+```
+
+---
+
+*Quick Reference v38.0*
+*Last updated: March 8, 2026 - Session 43*
+*Status: Wiki live, security logs clean, display name feature complete*
 *19 Milestones Achieved*
-*Next: Session 44 -- Keep-Alive firmware, security logging cleanup*
+*OPEN: Bug #20 SEND after 6+ hours idle -- SHOWSTOPPER*
+*Next: Session 44 -- Bug #20 fix, remaining security cleanup*

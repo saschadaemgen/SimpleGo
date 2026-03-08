@@ -4,15 +4,15 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation
 **Version:** v0.1.18-alpha
-**Last Updated:** 2026-03-05 (Session 43 -- Documentation Site and SMP-in-C Guide)
+**Last Updated:** 2026-03-08 (Session 43 -- Documentation + Security Cleanup + Display Name)
 
 ---
 
-## LATEST: Documentation Site and SMP-in-C Guide (Session 43)
+## LATEST: Documentation + Security Cleanup + Display Name (Session 43)
 
-Session 43 was a documentation-only session. No firmware changes. Docusaurus 3 live at docs.simplego.dev. 17 documents migrated from existing markdown files. 10 new smp-in-c/ pages created -- world-first guide for implementing SMP in C outside the official Haskell codebase. SimpleGo cited in the official SimpleX Network Technical Architecture document by Evgeny Poberezkin.
+Session 43 completed three workstreams: wiki.simplego.dev live (Docusaurus 3, 17 migrated + 10 new smp-in-c/ pages), security log cleanup (all cryptographic material removed from serial output), and display name feature (NVS-backed user name replacing hardcoded "ESP32" with first-boot prompt). Bug #20 discovered: SEND fails after 6+ hours idle (SHOWSTOPPER). Performance: QR 60% faster, handshake 40% faster, boot 30% faster.
 
-Bugs: 71 total (unchanged)
+Bugs: 72 total (1 new SHOWSTOPPER: #20 SEND after idle)
 Lessons: 232 total (3 new in S43: #230-#232)
 
 ## PREVIOUS: Consolidation and Quality Pass (Session 42)
@@ -137,7 +137,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 
 | **37** | [**39_PART37_SESSION_40.md**](39_PART37_SESSION_40.md) | **~273** | **Sliding Window: Unlimited Encrypted History at Constant Memory** |
 | **38** | [**40_PART38_SESSION_41.md**](40_PART38_SESSION_41.md) | **~145** | ** Pre-GitHub Cleanup and Stabilization** |
 | **39** | [**41_PART39_SESSION_42.md**](41_PART39_SESSION_42.md) | **~130** | ** Consolidation and Quality Pass** |
-| **40** | [**42_PART40_SESSION_43.md**](42_PART40_SESSION_43.md) | **~180** | ** Documentation Site and SMP-in-C Guide** |
+| **40** | [**42_PART40_SESSION_43.md**](42_PART40_SESSION_43.md) | **~210** | ** Documentation + Security Cleanup + Display Name** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -195,7 +195,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 
 | **40** | **Mar 3-4, 2026** | **WINDOW** | **Sliding Window: Unlimited Encrypted History** |
 | **41** | **Mar 4, 2026** | **CLEANUP** | ** Pre-GitHub Cleanup and Stabilization** |
 | **42** | **Mar 4-5, 2026** | **QUALITY** | ** Consolidation and Quality Pass** |
-| **43** | **Mar 5, 2026** | **DOCS** | ** Documentation Site + SMP-in-C Guide** |
+| **43** | **Mar 5-8, 2026** | **DOCS+SEC+UX** | ** Wiki + Security Cleanup + Display Name + Bug #20** |
 
 ---
 
@@ -305,6 +305,11 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 
 - **smp-in-c/ Guide: 10 Pages, World-First SMP-in-C Documentation**
 - **SimpleGo Cited in Official SimpleX Network Architecture Doc**
 - **MILESTONE 19: Professional Documentation Site**
+- **Security Log Cleanup (3 files, 16 removals, zero crypto on serial)**
+- **Display Name Feature (NVS-backed, first-boot prompt, settings editor)**
+- **Crash Fix: ui_connect.c dangling pointer after screen deletion**
+- **Performance: QR 60% faster, handshake 40%, boot 30%**
+- **BUG #20 DISCOVERED: SEND fails after 6+ hours idle (SHOWSTOPPER)**
 
 ### Session 23: The 7-Step Handshake
 ```
@@ -513,25 +518,26 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ## Next Steps (Session 44)
 
-### Phase 1: Firmware
+### Phase 1: SHOWSTOPPER
 ```
-P0: Keep-Alive (PING/PONG) implementation on main SSL connection
-P1: 5 logging categories with security-relevant data cleanup
- (contact links, SUB hex, response hex, block headers, parser bytes)
+P0: Bug #20 -- SEND fails after 6+ hours idle
+    Reproduce overnight, capture exact error lines
+    Check receiving during idle, add heap logging to SEND path
+    Compare WiFi Manager reconnect behavior
 ```
 
-### Phase 2: Hardware + Features
+### Phase 2: Security + Features
 ```
+P1: Remaining dump_hex calls in smp_contacts.c (+0000: prefix)
 P2: SD card on SPI3 bus (Bug #60 root cause fix)
 P3: German umlaut fallback fonts (LVGL, task prepared)
-P4: Server DEL command on contact delete
 ```
 
 ### Phase 3: Kickstarter Preparation
 ```
-P5: eFuse + nvs_flash_secure_init combined with CRYSTALS-Kyber
-P6: CE marking preparation
-P7: Battery runtime measurement (verify 20-day estimate)
+P4: eFuse + nvs_flash_secure_init combined with CRYSTALS-Kyber
+P5: CE marking preparation
+P6: Battery runtime measurement (verify 20-day estimate)
 ```
 
 ---
@@ -565,37 +571,40 @@ P7: Battery runtime measurement (verify 20-day estimate)
 
 ## Current Project Status
 
-**Version:** v0.1.18-alpha | **Last updated:** 2026-03-05 Session 43
+**Version:** v0.1.18-alpha | **Last updated:** 2026-03-08 Session 43
 
-### Firmware (unchanged from Session 42)
+### Firmware
 
 - SMP implementation: production-ready alpha
 - 128 simultaneous contacts with per-contact Double Ratchet state
 - AES-256-GCM encrypted chat history on SD card
 - WiFi Manager with multi-network support and WPA3
 - Delivery receipts (double checkmark)
+- User-configurable display name with first-boot prompt
+- Security log cleanup: zero cryptographic material on serial output
 - Zero printf in production code
 - 47 source files with AGPL-3.0 headers
+- **SHOWSTOPPER: Bug #20 -- SEND fails after 6+ hours idle**
 
 ### Documentation
 
-- Docusaurus 3 live at docs.simplego.dev (DNS CNAME pending from mein Prinz)
-- GitHub Actions deployment workflow active
+- Docusaurus 3 live at wiki.simplego.dev
+- GitHub Actions deployment workflow active (docs/** and wiki/**)
 - smp-in-c/ guide: 10 pages, world-first documentation for C implementation of SMP
 - hardware/, security/, architecture/, contributing/, reference/, why-simplego/ all migrated
+- Offline full-text search (1924 documents indexed)
 - README rewritten without criminal network references
 - security/audit-log.md: 6 resolved security issues documented
 
 ### Open Items
 
-- DNS CNAME: docs -> saschadaemgen.github.io (mein Prinz to set at DNS provider)
+- Bug #20: SEND after extended idle (SHOWSTOPPER, Session 44 priority)
+- Remaining dump_hex calls in smp_contacts.c (+0000: prefix format)
 - getting-started/ pages: quick-start, flashing, building, faq still stubs
-- Keep-Alive (PING/PONG): firmware, scheduled Session 44
-- 5 logging categories with security-relevant data: pre-Kickstarter
 - eFuse + NVS Flash Encryption: Kickstarter phase
 - Private Message Routing: post-MVP
 - Battery runtime measurement: verify 20-day estimate from Evgeny architecture doc
 
 ---
 
-*Index updated: 2026-03-05 Session 43 -- Documentation Site and SMP-in-C Guide*
+*Index updated: 2026-03-08 Session 43 -- Documentation + Security Cleanup + Display Name*

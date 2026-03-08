@@ -52,7 +52,7 @@ This document provides detailed documentation of all bugs discovered during Simp
 | **38** | **Receipt rcptInfo=Word32** | **25** | **FIXED** |
 | **39** | **NULL contact Reply Queue** | **25** | **FIXED** |
 
-**Total: 71 bugs documented, 69 FIXED, 1 identified (SPI3), 1 temp fix**
+**Total: 72 bugs documented, 69 FIXED, 1 identified (SPI3), 1 temp fix, 1 SHOWSTOPPER**
 
 ---
 
@@ -2777,9 +2777,69 @@ smp_utils.c: base64url_chars
 
 ---
 
-## Session 43 -- 2026-03-05 (Documentation and Web Session)
+## Session 43 -- 2026-03-05 to 2026-03-08 (Documentation + Security + UX)
 
-No new bugs. No firmware changes.
+### Bug #20: SEND Fails After Extended Idle (SHOWSTOPPER)
+
+```
+Symptom:
+  After 6+ hours idle (PING/PONG running, no messages sent),
+  SEND commands fail immediately. Red X on display.
+  2-3 red error lines in serial log.
+
+Key Observations:
+  PING/PONG working correctly (every ~30s, server responds)
+  Problem is NOT keep-alive -- subscription appears active
+  Device reset fixes immediately
+  Failed messages do NOT appear in chat history (failure before SD write)
+  Did not exist before Session 41/42 changes
+  Occurs reliably after overnight idle (6-8 hours)
+
+Possible Causes:
+  1. WiFi Manager background reconnect creates new socket without SMP recovery
+  2. Slow memory leak -- heap exhaustion for SEND buffer after hours
+  3. Session 42 refactoring: state variable lost scope in helper extraction
+  4. TLS session timeout despite SMP PING keeping SMP layer alive
+  5. Ratchet synchronization issue after long idle
+
+Status: SHOWSTOPPER -- Priority P0 for Session 44
+```
+
+### Security Log Cleanup (Workstream 2)
+
+```
+smp_parser.c (9 removals):
+  Key1/Key2 SPKI header printf loops, raw key printf loops,
+  dump_hex for SPKI key, raw key, after-key, before-key data.
+  CRITICAL: decrypted plaintext dump removed.
+
+smp_tasks.c (2 blocks):
+  KEY_DEBUG transmission hex dump, KEY response hex dump.
+
+smp_contacts.c (5 lines + cleanup):
+  Response hex dump, correlation ID, entity ID, recipient ID,
+  command bytes. Orphaned cmd_dump variable removed.
+
+Remaining: dump_hex calls in smp_contacts.c (+0000: prefix) for S44.
+```
+
+### Display Name Feature (Workstream 3)
+
+```
+Problem: Display name hardcoded "ESP32" in AgentConfirmation JSON.
+
+Fix (4 parts):
+  1. NVS: storage_get/set_display_name(), "user_name" key
+  2. Dynamic AgentConfirmation: NVS lookup replaces hardcoded "ESP32"
+  3. Settings: clickable name row in INFO tab, fullscreen overlay editor
+  4. First-boot: UI_SCREEN_NAME_SETUP, one-shot check before MAIN
+
+Crash fix: Guru Meditation LoadProhibited in ui_connect.c
+  (dangling pointers after screen deletion)
+
+Design decision: No broadcasting to existing contacts.
+  Deferred to future privacy settings architecture.
+```
 
 ### New Lessons Learned (Session 43)
 
@@ -2789,14 +2849,15 @@ No new bugs. No firmware changes.
 
 ### Open Security Items (carried forward)
 
-- [ ] 5 logging categories with security-relevant data (contact links, SUB hex, response hex, block headers, parser bytes)
+- [ ] Remaining dump_hex calls in smp_contacts.c (+0000: prefix format)
 - [ ] eFuse + nvs_flash_secure_init combined with CRYSTALS-Kyber (Kickstarter phase)
 - [ ] Private Message Routing (post-MVP)
 
 ---
 
-*Bug Tracker v38.0*
-*Last updated: March 5, 2026 - Session 43*
-*Total bugs documented: 71 (69 FIXED, 1 identified for SPI3, 1 temp fix) + Bug E*
+*Bug Tracker v39.0*
+*Last updated: March 8, 2026 - Session 43*
+*Total bugs documented: 72 (69 FIXED, 1 identified for SPI3, 1 temp fix, 1 SHOWSTOPPER) + Bug E*
 *232 lessons learned*
-*Session 43: Documentation Site and SMP-in-C Guide -- No firmware changes*
+*Session 43: Documentation + Security Cleanup + Display Name*
+*OPEN: Bug #20 SEND fails after 6+ hours idle -- SHOWSTOPPER*

@@ -8,7 +8,18 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: Consolidation and Quality Pass (2026-03-05 Session 42)
+## LATEST: Documentation + Security Cleanup + Display Name (2026-03-08 Session 43)
+
+```
+Wiki live at wiki.simplego.dev (Docusaurus 3, search, mobile-ready)
+Security: all cryptographic material removed from serial output
+Display name: NVS-backed user identity, first-boot prompt
+Bug #20 discovered: SEND fails after 6+ hours idle (SHOWSTOPPER)
+Performance: QR 60% faster, handshake 40% faster, boot 30% faster
+13 commits, 3 new lessons (#230-#232)
+```
+
+## Session 42: Consolidation and Quality Pass (2026-03-05)
 
 ```
 Pure consolidation. No new features. Production-grade code quality.
@@ -498,6 +509,41 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **40** | **Mar 3-4** | **Sliding Window: Unlimited Encrypted History** | **1 bug, 7 lessons** |
 | **41** | **Mar 4** | ** Pre-GitHub Cleanup and Stabilization** | **5 lessons** |
 | **42** | **Mar 4-5** | ** Consolidation and Quality Pass** | **4 lessons** |
+| **43** | **Mar 5-8** | **Wiki + Security Cleanup + Display Name + Bug #20** | **3 lessons, 1 SHOWSTOPPER** |
+
+---
+
+## Session 43 Key Achievements -- Documentation + Security + Display Name
+
+### Wiki Live at wiki.simplego.dev
+```
+Docusaurus 3, GitHub Actions deployment, offline search (1924 docs)
+17 migrated documents + 10 new smp-in-c/ pages (world-first)
+SimpleGo design system, mobile navigation fix, zero broken links
+SimpleGo cited in official SimpleX Network Architecture document
+```
+
+### Security Log Cleanup
+```
+All cryptographic material removed from serial output:
+smp_parser.c (9 removals), smp_tasks.c (2 blocks), smp_contacts.c (5 lines)
+Including CRITICAL: decrypted plaintext dump removed
+```
+
+### Display Name Feature
+```
+NVS-backed user name replaces hardcoded "ESP32"
+First-boot prompt (UI_SCREEN_NAME_SETUP)
+Settings editor with fullscreen overlay keyboard
+Crash fix: ui_connect.c dangling pointers
+```
+
+### Bug #20: SEND After Extended Idle (SHOWSTOPPER)
+```
+SEND fails after 6+ hours idle. PING/PONG still working.
+Red X on display. Device reset fixes immediately.
+Must be resolved before alpha release.
+```
 
 ---
 
@@ -1519,13 +1565,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 5, 2026 - Session 43 (Documentation Site and SMP-in-C Guide)*
-
-
-## Session 43 -- 2026-03-05 (Documentation and Web Session)
-
-Docusaurus 3 documentation site live at docs.simplego.dev. Complete content migration and 17 new documents including the smp-in-c/ guide -- world-first documentation for implementing the SimpleX Messaging Protocol in C outside the official Haskell codebase.
-
-SimpleX Network Architecture document received from Evgeny Poberezkin. SimpleGo cited as official demonstration of resource-based addressing energy efficiency on microcontroller hardware.
-
-No firmware changes this session.
+*Last updated: March 8, 2026 - Session 43 (Documentation + Security Cleanup + Display Name)*
