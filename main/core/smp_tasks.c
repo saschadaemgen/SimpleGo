@@ -455,13 +455,6 @@ static void network_task(void *arg)
                         memcpy(&key_trans[kt], key_body, key_body_len);
                         kt += key_body_len;
 
-                        // Sanity-Check: Hex dump of KEY transmission (compare with SUB!)
-                        ESP_LOGW("KEY_DEBUG", "KEY transmission (%d bytes):", kt);
-                        ESP_LOGW("KEY_DEBUG", "  sigLen=%d, corrIdLen=%d, entIdLen=%d, peerKeyLen=%d",
-                                 key_trans[0], key_body[0], key_body[25], cmd->peer_auth_key_len);
-                        int dump_len = kt < 96 ? kt : 96;
-                        ESP_LOG_BUFFER_HEX_LEVEL("KEY_DEBUG", key_trans, dump_len, ESP_LOG_WARN);
-
                         int ret = smp_write_command_block(s_ssl, block, key_trans, kt);
                         if (ret != 0) {
                             ESP_LOGE(TAG, "NET: KEY send failed for contact [%d]!", cmd->rq_slot);
@@ -487,9 +480,6 @@ static void network_task(void *arg)
                                         xTaskNotify(s_app_task_handle, NOTIFY_KEY_DONE, eSetBits);
                                     }
                                 } else {
-                                    ESP_LOGW(TAG, "NET: KEY response not OK for contact [%d]", cmd->rq_slot);
-                                    ESP_LOG_BUFFER_HEX_LEVEL("KEY_DEBUG", kr,
-                                        resp_len < 48 ? resp_len : 48, ESP_LOG_WARN);
                                     // Signal even on failure (App Task must not hang)
                                     if (s_app_task_handle) {
                                         xTaskNotify(s_app_task_handle, NOTIFY_KEY_DONE, eSetBits);

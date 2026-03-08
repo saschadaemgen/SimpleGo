@@ -712,7 +712,6 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
             // T6-Diag3: Hex dump first 64 bytes of response
             int dump_len = (content_len < 64) ? content_len : 64;
             ESP_LOGW(TAG, "       [attempt %d] resp %d bytes, first %d hex:", attempt, content_len, dump_len);
-            ESP_LOG_BUFFER_HEX_LEVEL(TAG, resp, dump_len, ESP_LOG_WARN);
             
             uint8_t tx_count = resp[rp];
             if (content_len > 10) {
@@ -725,7 +724,6 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
                 // T6-Diag3: Log corrId content
                 ESP_LOGW(TAG, "       [attempt %d] corrLen=%d, entLen after corr", attempt, rcorrLen);
                 if (rcorrLen > 0 && rcorrLen <= 24) {
-                    ESP_LOG_BUFFER_HEX_LEVEL(TAG, &resp[rp], rcorrLen, ESP_LOG_WARN);
                 }
                 rp += rcorrLen;
                 int rentLen = resp[rp++];
@@ -733,8 +731,6 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
                 // T6-Diag3: Log entity id
                 ESP_LOGW(TAG, "       [attempt %d] entLen=%d, our_rcpLen=%d", attempt, rentLen, c->recipient_id_len);
                 if (rentLen > 0 && rentLen <= 32) {
-                    ESP_LOG_BUFFER_HEX_LEVEL(TAG, &resp[rp], rentLen, ESP_LOG_WARN);
-                    ESP_LOG_BUFFER_HEX_LEVEL(TAG, c->recipient_id, c->recipient_id_len, ESP_LOG_WARN);
                 }
                 
                 // Check if this response is for our contact
@@ -746,11 +742,6 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
                 int cmd_bytes = content_len - rp;
                 ESP_LOGW(TAG, "       [attempt %d] ent_match=%d, cmd_offset=%d, cmd_bytes=%d", 
                          attempt, is_our_response, rp, cmd_bytes);
-                if (cmd_bytes > 0) {
-                    int cmd_dump = (cmd_bytes < 16) ? cmd_bytes : 16;
-                    ESP_LOG_BUFFER_HEX_LEVEL(TAG, &resp[rp], cmd_dump, ESP_LOG_WARN);
-                }
-                
                 if (is_our_response && rp + 1 < content_len && 
                     resp[rp] == 'O' && resp[rp+1] == 'K') {
                     ESP_LOGI(TAG, "       ✅ Subscribed! (attempt %d)", attempt);

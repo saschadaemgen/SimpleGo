@@ -115,12 +115,6 @@ static void parse_e2e_params(const char *uri) {
         if (key1_decoded > 0) {
             ESP_LOGI(TAG, "      Key1 decoded: %d bytes", key1_decoded);
             
-            printf("         Key1 SPKI header: ");
-            for (int i = 0; i < 12 && i < key1_decoded; i++) {
-                printf("%02x ", key1_spki[i]);
-            }
-            printf("\n");
-            
             // Verify X448 OID (1.3.101.111 = 2b 65 6f)
             if (key1_decoded >= 68 && 
                 key1_spki[0] == 0x30 && key1_spki[2] == 0x30 &&
@@ -131,11 +125,6 @@ static void parse_e2e_params(const char *uri) {
                 memcpy(pending_peer.e2e_key1, key1_spki + 12, 56);
                 pending_peer.has_e2e = 1;
                 
-                printf("         Key1 raw (first 16): ");
-                for (int i = 0; i < 16; i++) {
-                    printf("%02x ", pending_peer.e2e_key1[i]);
-                }
-                printf("...\n");
             } else {
                 ESP_LOGW(TAG, "      ⚠️ Key1 format unexpected (not X448 SPKI?)");
             }
@@ -170,12 +159,6 @@ static void parse_e2e_params(const char *uri) {
         if (key2_decoded > 0) {
             ESP_LOGI(TAG, "      Key2 decoded: %d bytes", key2_decoded);
             
-            printf("         Key2 SPKI header: ");
-            for (int i = 0; i < 12 && i < key2_decoded; i++) {
-                printf("%02x ", key2_spki[i]);
-            }
-            printf("\n");
-            
             // Verify X448 OID
             if (key2_decoded >= 68 && 
                 key2_spki[0] == 0x30 && key2_spki[2] == 0x30 &&
@@ -185,11 +168,6 @@ static void parse_e2e_params(const char *uri) {
                 ESP_LOGI(TAG, "      ✅ Key2 is X448 (OID 1.3.101.111)!");
                 memcpy(pending_peer.e2e_key2, key2_spki + 12, 56);
                 
-                printf("         Key2 raw (first 16): ");
-                for (int i = 0; i < 16; i++) {
-                    printf("%02x ", pending_peer.e2e_key2[i]);
-                }
-                printf("...\n");
             } else {
                 ESP_LOGW(TAG, "      ⚠️ Key2 format unexpected");
             }
@@ -251,10 +229,8 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
             sender_key_offset = i;
             ESP_LOGI(TAG, "");
             ESP_LOGI(TAG, "      🔑 Found X25519 SPKI at offset %d!", i);
-            dump_hex("SPKI key", &content[i], 44, 44);
             
             memcpy(sender_key_raw, &content[i + 12], 32);
-            dump_hex("Raw key", sender_key_raw, 32, 32);
             break;
         }
     }
@@ -270,7 +246,6 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "      📦 Data after SPKI key (%d bytes):", after_key_len);
     if (after_key_len > 0) {
-        dump_hex("After key", &content[after_key_offset], after_key_len, 64);
     }
     
     // Try DH decryption
@@ -287,7 +262,6 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
             
             if (dec_len > 0) {
                 ESP_LOGI(TAG, "      ✅ DH Decryption SUCCESS! (%d bytes)", dec_len);
-                dump_hex("Decrypted", decrypted, dec_len, 100);
                 
                 if (dec_len >= 6) {
                     int toff = -1;
@@ -523,7 +497,6 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
     if (sender_key_offset > 0) {
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "      📋 Data BEFORE SPKI key (%d bytes):", sender_key_offset);
-        dump_hex("Before key", content, sender_key_offset, 32);
         
         printf("         Text: \"");
         for (int i = 0; i < sender_key_offset; i++) {
