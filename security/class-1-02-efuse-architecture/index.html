@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-security/class-1-02-efuse-architecture" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">Class 1 - ESP32-S3 eFuse Architecture | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/security/class-1-02-efuse-architecture"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Class 1 - ESP32-S3 eFuse Architecture | SimpleGo"><meta data-rh="true" name="description" content="SimpleGo Security Architecture - Hardware Class 1"><meta data-rh="true" property="og:description" content="SimpleGo Security Architecture - Hardware Class 1"><link data-rh="true" rel="icon" href="https://simplego.dev/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/security/class-1-02-efuse-architecture"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/security/class-1-02-efuse-architecture" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/security/class-1-02-efuse-architecture" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Security","item":"https://wiki.simplego.dev/security"},{"@type":"ListItem","position":2,"name":"Class 1 - ESP32-S3 eFuse Architecture","item":"https://wiki.simplego.dev/security/class-1-02-efuse-architecture"}]}</script><link rel="stylesheet" href="/assets/css/styles.0f3882a8.css">
+<script src="/assets/js/runtime~main.30740e1d.js" defer="defer"></script>
+<script src="/assets/js/main.231f966f.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" target="_self" href="/"><div class="navbar__logo"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/">Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://simplego.dev" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Home<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/product" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Product<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/crypto" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Crypto<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/installer" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Flash Tool<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/network" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Network<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/pro" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Pro<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"><div class="dsla-search-wrapper"><div class="dsla-search-field" data-tags="default,docs-default-current"></div></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/"><span title="SimpleGo Documentation" class="linkLabel_WmDU">SimpleGo Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/getting-started"><span title="Getting Started" class="linkLabel_WmDU">Getting Started</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/architecture"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a><button aria-label="Expand sidebar category &#x27;Architecture&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/smp-in-c"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a><button aria-label="Expand sidebar category &#x27;SMP in C&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/protocol-analysis"><span title="Protocol Analysis" class="categoryLinkLabel_W154">Protocol Analysis</span></a><button aria-label="Expand sidebar category &#x27;Protocol Analysis&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/hardware"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a><button aria-label="Expand sidebar category &#x27;Hardware&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--active" href="/security"><span title="Security" class="categoryLinkLabel_W154">Security</span></a><button aria-label="Collapse sidebar category &#x27;Security&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-01-overview-and-threat-model"><span title="Class 1 - Overview and Threat Model" class="linkLabel_WmDU">Class 1 - Overview and Threat Model</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-2-01-overview"><span title="Hardware Class 2 - Overview and Architecture" class="linkLabel_WmDU">Hardware Class 2 - Overview and Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-3-01-overview"><span title="Hardware Class 3 - Overview and Architecture" class="linkLabel_WmDU">Hardware Class 3 - Overview and Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/security-overview"><span title="Security Overview" class="linkLabel_WmDU">Security Overview</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/security/class-1-02-efuse-architecture"><span title="Class 1 - ESP32-S3 eFuse Architecture" class="linkLabel_WmDU">Class 1 - ESP32-S3 eFuse Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-03-hmac-nvs-encryption"><span title="Class 1 - HMAC-Based NVS Encryption" class="linkLabel_WmDU">Class 1 - HMAC-Based NVS Encryption</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-04-known-vulnerabilities"><span title="Class 1 - Known Vulnerabilities and Attack Research" class="linkLabel_WmDU">Class 1 - Known Vulnerabilities and Attack Research</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-05-attack-equipment-economics"><span title="Class 1 - Attack Equipment Economics" class="linkLabel_WmDU">Class 1 - Attack Equipment Economics</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-06-runtime-memory-protection"><span title="Class 1 - Runtime Memory Protection" class="linkLabel_WmDU">Class 1 - Runtime Memory Protection</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-07-post-quantum-readiness"><span title="Class 1 - Post-Quantum Readiness" class="linkLabel_WmDU">Class 1 - Post-Quantum Readiness</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-08-flash-encryption"><span title="Class 1 - Flash Encryption Deep Dive" class="linkLabel_WmDU">Class 1 - Flash Encryption Deep Dive</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-09-secure-boot-v2"><span title="Class 1 - Secure Boot V2" class="linkLabel_WmDU">Class 1 - Secure Boot V2</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-10-four-security-modes"><span title="Class 1 - Four Security Modes" class="linkLabel_WmDU">Class 1 - Four Security Modes</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-11-esp32-p4-evolution"><span title="Class 1 - ESP32-P4 Evolution Path" class="linkLabel_WmDU">Class 1 - ESP32-P4 Evolution Path</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-12-implementation-plan"><span title="Class 1 - Implementation Plan" class="linkLabel_WmDU">Class 1 - Implementation Plan</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/BUILD_SYSTEM"><span title="Contributing" class="categoryLinkLabel_W154">Contributing</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/reference/constants"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a><button aria-label="Expand sidebar category &#x27;Reference&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/security"><span>Security</span></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Class 1 - ESP32-S3 eFuse Architecture</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><p><img decoding="async" loading="lazy" alt="SimpleGo Security Architecture - Hardware Class 1" src="/assets/images/github_header_security_architecture_class_1-4dc754be14f525bd446e620580c3c791.png" width="1200" height="250" class="img_ev3q"></p>
+<header><h1>ESP32-S3 eFuse Architecture</h1></header>
+<p><strong>Document version:</strong> Session 44 | March 2026
+<strong>Applies to:</strong> ESP32-S3 (LilyGo T-Deck Plus), with comparison notes for ESP32-P4
+<strong>Copyright:</strong> 2025-2026 Sascha Daemgen, IT and More Systems, Recklinghausen
+<strong>License:</strong> AGPL-3.0 (Software) | CERN-OHL-W-2.0 (Hardware)</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-are-efuses-and-why-they-matter">What are eFuses and Why They Matter<a href="#what-are-efuses-and-why-they-matter" class="hash-link" aria-label="Direct link to What are eFuses and Why They Matter" title="Direct link to What are eFuses and Why They Matter" translate="no">​</a></h2>
+<p>eFuses (electronic fuses) are one-time-programmable (OTP) memory bits physically embedded in the ESP32-S3 silicon. Each eFuse is a microscopic conductor that can be permanently &quot;blown&quot; by passing a high current through it, transitioning the bit from 0 to 1. Once blown, the transition is irreversible - no software, no hardware reset, no power cycle can restore a blown eFuse to 0. This is not encryption that could theoretically be broken. It is physics: a conductor that has been physically destroyed.</p>
+<p>The ESP32-S3 uses eFuses for three critical purposes in SimpleGo&#x27;s security architecture. First, they store cryptographic keys (HMAC keys for NVS encryption, AES keys for flash encryption, RSA key digests for Secure Boot) in a location that can be made permanently unreadable by software. Second, they store one-time configuration bits that permanently enable or disable security features (flash encryption enable, secure boot enable, JTAG disable, download mode disable). Third, they provide a hardware root of trust - because eFuse values are checked by the ROM bootloader (code burned into the chip at manufacturing that cannot be modified), the security chain starts from immutable silicon, not from software that could be tampered with.</p>
+<p>Understanding eFuses at the hardware level is essential for SimpleGo&#x27;s security architecture because every irreversible decision we make - burning an HMAC key, enabling Secure Boot, disabling JTAG - consumes eFuse resources that cannot be recovered. A mistake in eFuse provisioning cannot be undone. This document provides the complete reference for making those decisions correctly.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="block-layout-4096-bits-across-11-blocks">Block Layout: 4,096 Bits Across 11 Blocks<a href="#block-layout-4096-bits-across-11-blocks" class="hash-link" aria-label="Direct link to Block Layout: 4,096 Bits Across 11 Blocks" title="Direct link to Block Layout: 4,096 Bits Across 11 Blocks" translate="no">​</a></h2>
+<p>The ESP32-S3 contains exactly 4,096 eFuse bits organized into 11 blocks. Each block holds 256 bits (32 bytes). The blocks serve different purposes and have different encoding schemes, which affects how they can be written and how errors are handled.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="block0-system-configuration-256-bits-4x-redundancy">BLOCK0: System Configuration (256 bits, 4x Redundancy)<a href="#block0-system-configuration-256-bits-4x-redundancy" class="hash-link" aria-label="Direct link to BLOCK0: System Configuration (256 bits, 4x Redundancy)" title="Direct link to BLOCK0: System Configuration (256 bits, 4x Redundancy)" translate="no">​</a></h3>
+<p>BLOCK0 is fundamentally different from all other blocks. Its bits use simple 4x redundancy encoding - each logical bit is stored as four physical copies. A logical bit reads as 1 if any of the four copies is 1. This means BLOCK0 supports incremental writes: you can set individual bits in separate operations without corrupting previously written bits. This is critical because BLOCK0 contains the security configuration bits that are set at different stages of the provisioning process.</p>
+<p>Key fields in BLOCK0 for SimpleGo&#x27;s security:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Field</th><th>Bits</th><th>Purpose</th><th>SimpleGo Usage</th></tr></thead><tbody><tr><td>WR_DIS</td><td>32</td><td>Write-protect individual blocks and fields</td><td>Protect eFuse keys after provisioning</td></tr><tr><td>RD_DIS</td><td>7</td><td>Read-protect BLOCK4-BLOCK10 from software</td><td>Hide HMAC and flash encryption keys from firmware</td></tr><tr><td>DIS_DOWNLOAD_ICACHE</td><td>1</td><td>Disable instruction cache in download mode</td><td>Set by flash encryption</td></tr><tr><td>DIS_DOWNLOAD_DCACHE</td><td>1</td><td>Disable data cache in download mode</td><td>Set by flash encryption</td></tr><tr><td>DIS_DOWNLOAD_MANUAL_ENCRYPT</td><td>1</td><td>Disable manual encrypt in download mode</td><td>Set in Release mode</td></tr><tr><td>SOFT_DIS_JTAG</td><td>3</td><td>Soft-disable JTAG (re-enable via HMAC)</td><td>Development flexibility</td></tr><tr><td>DIS_PAD_JTAG</td><td>1</td><td>Permanently disable pad JTAG</td><td>Production devices</td></tr><tr><td>DIS_USB_JTAG</td><td>1</td><td>Permanently disable USB JTAG</td><td>Production devices</td></tr><tr><td>DIS_DIRECT_BOOT</td><td>1</td><td>Disable legacy SPI boot mode</td><td>Set by security features</td></tr><tr><td>SPI_BOOT_CRYPT_CNT</td><td>3</td><td>Flash encryption enable counter</td><td>Odd popcount = enabled</td></tr><tr><td>SECURE_BOOT_EN</td><td>1</td><td>Enable Secure Boot V2 permanently</td><td>Mode 4 (Bunker)</td></tr><tr><td>KEY_PURPOSE_0 through KEY_PURPOSE_5</td><td>4 each (24 total)</td><td>Assign purpose to each key block</td><td>Maps key blocks to functions</td></tr><tr><td>SECURE_BOOT_KEY_REVOKE0/1/2</td><td>3</td><td>Revoke individual Secure Boot key slots</td><td>Key rotation support</td></tr></tbody></table>
+<p>The SPI_BOOT_CRYPT_CNT field deserves special attention. It is a 3-bit counter where the encryption state depends on the popcount (number of 1-bits): odd popcount means encryption is enabled, even means disabled. The transitions are: 000 (off, factory default) to 001 (on, first enable) to 011 (off, first disable, development mode only) to 111 (permanently on, Release mode). In Release mode, the bootloader write-protects this field at 0b111, making flash encryption permanent.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="block1-block3-system-data-256-bits-each-rs-coding">BLOCK1-BLOCK3: System Data (256 bits each, RS Coding)<a href="#block1-block3-system-data-256-bits-each-rs-coding" class="hash-link" aria-label="Direct link to BLOCK1-BLOCK3: System Data (256 bits each, RS Coding)" title="Direct link to BLOCK1-BLOCK3: System Data (256 bits each, RS Coding)" translate="no">​</a></h3>
+<p>These blocks use Reed-Solomon RS(44,32) error-correction encoding: 32 bytes of data plus 12 bytes of RS check symbols. The RS coding can correct certain single-byte errors, but a second write to an RS-coded block corrupts the check symbols, degrading error correction capability. In practice, these blocks should be treated as write-once.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Block</th><th>Alias</th><th>Contents</th></tr></thead><tbody><tr><td>BLOCK1</td><td>MAC_SPI_8M_SYS</td><td>Factory MAC address (6 bytes), SPI pad configuration, 8 MHz oscillator calibration</td></tr><tr><td>BLOCK2</td><td>SYS_DATA_PART1</td><td>ADC calibration data</td></tr><tr><td>BLOCK3</td><td>USER_DATA</td><td>Custom MAC address, user-defined parameters</td></tr></tbody></table>
+<p>SimpleGo does not write to these blocks. The factory MAC address in BLOCK1 is used by the WiFi driver. The ADC calibration in BLOCK2 is used by the hardware RNG entropy source.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="block4-block9-cryptographic-key-storage-256-bits-each-rs-coding">BLOCK4-BLOCK9: Cryptographic Key Storage (256 bits each, RS Coding)<a href="#block4-block9-cryptographic-key-storage-256-bits-each-rs-coding" class="hash-link" aria-label="Direct link to BLOCK4-BLOCK9: Cryptographic Key Storage (256 bits each, RS Coding)" title="Direct link to BLOCK4-BLOCK9: Cryptographic Key Storage (256 bits each, RS Coding)" translate="no">​</a></h3>
+<p>These six blocks are the heart of SimpleGo&#x27;s hardware security. Each block stores one 256-bit cryptographic key and is independently controlled by read-protection, write-protection, and purpose assignment.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Block</th><th>Alias</th><th>ESP-IDF Enum</th><th>SimpleGo Allocation</th></tr></thead><tbody><tr><td>BLOCK4</td><td>BLOCK_KEY0</td><td>EFUSE_BLK_KEY0</td><td>Reserved for future use</td></tr><tr><td>BLOCK5</td><td>BLOCK_KEY1</td><td>EFUSE_BLK_KEY1</td><td><strong>HMAC key for NVS encryption (Mode 2+)</strong></td></tr><tr><td>BLOCK6</td><td>BLOCK_KEY2</td><td>EFUSE_BLK_KEY2</td><td>Flash encryption key (Mode 3+)</td></tr><tr><td>BLOCK7</td><td>BLOCK_KEY3</td><td>EFUSE_BLK_KEY3</td><td>Flash encryption key 2 (AES-256 mode) or Secure Boot digest 0</td></tr><tr><td>BLOCK8</td><td>BLOCK_KEY4</td><td>EFUSE_BLK_KEY4</td><td>Secure Boot digest 0 or 1</td></tr><tr><td>BLOCK9</td><td>BLOCK_KEY5</td><td>EFUSE_BLK_KEY5</td><td>Reserved (cannot be used for flash encryption XTS keys)</td></tr></tbody></table>
+<p><strong>Critical hardware limitation:</strong> BLOCK9 (BLOCK_KEY5) cannot be used for XTS-AES flash encryption keys on the ESP32-S3. This is documented in the ESP-IDF source but easy to miss. If you attempt to burn a flash encryption key to BLOCK_KEY5, the encryption will not work correctly.</p>
+<p>The allocation shown above is SimpleGo&#x27;s planned layout. BLOCK_KEY0 is deliberately left free as a reserve - if any provisioning step fails and consumes a block unexpectedly, we have a fallback. BLOCK_KEY1 is assigned to the HMAC key because it is the first key provisioned (Mode 2) and benefits from being in a predictable location.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="block10-additional-system-data-256-bits-rs-coding">BLOCK10: Additional System Data (256 bits, RS Coding)<a href="#block10-additional-system-data-256-bits-rs-coding" class="hash-link" aria-label="Direct link to BLOCK10: Additional System Data (256 bits, RS Coding)" title="Direct link to BLOCK10: Additional System Data (256 bits, RS Coding)" translate="no">​</a></h3>
+<p>Reserved for Espressif system parameters. SimpleGo does not use this block.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="read-protection-making-keys-invisible-to-software">Read Protection: Making Keys Invisible to Software<a href="#read-protection-making-keys-invisible-to-software" class="hash-link" aria-label="Direct link to Read Protection: Making Keys Invisible to Software" title="Direct link to Read Protection: Making Keys Invisible to Software" translate="no">​</a></h2>
+<p>Read protection is the mechanism that makes the HMAC vault possible. When a key block&#x27;s read-protection bit is set in the RD_DIS field of BLOCK0, any software attempt to read that block returns all zeros. But the hardware peripherals - specifically the HMAC accelerator, the AES-XTS engine, and the Digital Signature module - retain full access to the key through dedicated internal buses that bypass the software-readable register interface.</p>
+<p>This creates the security property we need: the HMAC key exists in the chip, the HMAC peripheral can use it to derive NVS encryption keys, but no software running on the device (including our own firmware) can ever read the raw key material. An attacker who gains code execution through a firmware vulnerability still cannot extract the HMAC key through software alone.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="how-read-protection-is-applied">How read protection is applied<a href="#how-read-protection-is-applied" class="hash-link" aria-label="Direct link to How read protection is applied" title="Direct link to How read protection is applied" translate="no">​</a></h3>
+<p>The RD_DIS field in BLOCK0 has 7 bits, controlling read access for BLOCK4 through BLOCK10:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>RD_DIS Bit</th><th>Protects</th></tr></thead><tbody><tr><td>Bit 0</td><td>BLOCK4 (BLOCK_KEY0)</td></tr><tr><td>Bit 1</td><td>BLOCK5 (BLOCK_KEY1)</td></tr><tr><td>Bit 2</td><td>BLOCK6 (BLOCK_KEY2)</td></tr><tr><td>Bit 3</td><td>BLOCK7 (BLOCK_KEY3)</td></tr><tr><td>Bit 4</td><td>BLOCK8 (BLOCK_KEY4)</td></tr><tr><td>Bit 5</td><td>BLOCK9 (BLOCK_KEY5)</td></tr><tr><td>Bit 6</td><td>BLOCK10 (SYS_DATA_PART2)</td></tr></tbody></table>
+<p>BLOCK0 through BLOCK3 cannot be read-protected. Their contents (MAC address, calibration data, security configuration bits) must remain readable by firmware.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="automatic-protection-during-key-burning">Automatic protection during key burning<a href="#automatic-protection-during-key-burning" class="hash-link" aria-label="Direct link to Automatic protection during key burning" title="Direct link to Automatic protection during key burning" translate="no">​</a></h3>
+<p>When using <code>esp_efuse_write_key()</code> or <code>espefuse.py burn_key</code>, the tooling automatically applies appropriate protection based on the key purpose:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Key Purpose</th><th>Read Protection</th><th>Write Protection</th></tr></thead><tbody><tr><td>HMAC_UP (NVS encryption)</td><td>Automatic</td><td>Automatic</td></tr><tr><td>XTS_AES_128_KEY (flash encryption)</td><td>Automatic</td><td>Automatic</td></tr><tr><td>XTS_AES_256_KEY_1/2</td><td>Automatic</td><td>Automatic</td></tr><tr><td>SECURE_BOOT_DIGEST0/1/2</td><td>NOT applied (must remain readable)</td><td>Automatic</td></tr><tr><td>USER</td><td>NOT applied</td><td>NOT applied</td></tr></tbody></table>
+<p>Secure Boot digest keys are deliberately NOT read-protected because the boot ROM needs to read the public key hash to verify firmware signatures. This is a design requirement, not a weakness - the digest is a SHA-256 hash of the public key, not the private key itself.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-rd_dis-write-protection-conflict">The RD_DIS write-protection conflict<a href="#the-rd_dis-write-protection-conflict" class="hash-link" aria-label="Direct link to The RD_DIS write-protection conflict" title="Direct link to The RD_DIS write-protection conflict" translate="no">​</a></h3>
+<p>This is the most critical eFuse ordering constraint in the entire provisioning process.</p>
+<p>When Secure Boot V2 is enabled, the bootloader write-protects the RD_DIS field in BLOCK0 (by setting WR_DIS bit for RD_DIS). This prevents an attacker from read-protecting the Secure Boot digest blocks, which would cause a denial-of-service (boot would fail if it cannot read the key digest).</p>
+<p>However, this write-protection of RD_DIS also means that no further read-protection can be applied to ANY key block. If the flash encryption key has not yet been burned and read-protected at this point, it can never be read-protected afterward - leaving the flash encryption key readable by software and defeating its purpose.</p>
+<p><strong>The mandatory provisioning order is therefore: Flash Encryption first, then Secure Boot.</strong> Specifically:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">1. Burn HMAC key to BLOCK_KEY1 (auto read-protected)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">2. Burn Flash Encryption key to BLOCK_KEY2 (auto read-protected)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">3. Enable Flash Encryption (burn SPI_BOOT_CRYPT_CNT)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">4. Burn Secure Boot digest to BLOCK_KEY4 (remains readable)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">5. Enable Secure Boot (burn SECURE_BOOT_EN)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">   --&gt; This write-protects RD_DIS, locking all read-protection state</span><br></span></code></pre></div></div>
+<p>If steps are performed out of order, keys may remain software-readable, fundamentally compromising the security model.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="write-protection-preventing-key-modification">Write Protection: Preventing Key Modification<a href="#write-protection-preventing-key-modification" class="hash-link" aria-label="Direct link to Write Protection: Preventing Key Modification" title="Direct link to Write Protection: Preventing Key Modification" translate="no">​</a></h2>
+<p>Write protection ensures that once a key is burned, it cannot be altered. The WR_DIS field in BLOCK0 contains 32 bits controlling write access to various eFuse fields and blocks.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>WR_DIS Bit</th><th>Protects</th></tr></thead><tbody><tr><td>Bit 0</td><td>RD_DIS field itself</td></tr><tr><td>Bit 1</td><td>DIS_ICACHE, DIS_USB_JTAG, other BLOCK0 fields</td></tr><tr><td>Bit 2</td><td>Various BLOCK0 configuration fields</td></tr><tr><td>Bit 18</td><td>SPI_BOOT_CRYPT_CNT</td></tr><tr><td>Bit 20</td><td>BLOCK_KEY0</td></tr><tr><td>Bit 21</td><td>BLOCK_KEY1</td></tr><tr><td>Bit 22</td><td>BLOCK_KEY2</td></tr><tr><td>Bit 23</td><td>BLOCK_KEY3</td></tr><tr><td>Bit 24</td><td>BLOCK_KEY4</td></tr><tr><td>Bit 25</td><td>BLOCK_KEY5</td></tr></tbody></table>
+<p>Write protection of key blocks happens automatically during <code>esp_efuse_write_key()</code>. The KEY_PURPOSE field for each block is always write-protected regardless of the <code>--no-write-protect</code> flag - this prevents an attacker from reassigning a key&#x27;s purpose after burning.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-random-number-generator">Hardware Random Number Generator<a href="#hardware-random-number-generator" class="hash-link" aria-label="Direct link to Hardware Random Number Generator" title="Direct link to Hardware Random Number Generator" translate="no">​</a></h2>
+<p>The quality of the eFuse-burned keys depends entirely on the quality of the random number generator used to create them. A predictable key is worse than no key at all.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="entropy-sources">Entropy sources<a href="#entropy-sources" class="hash-link" aria-label="Direct link to Entropy sources" title="Direct link to Entropy sources" translate="no">​</a></h3>
+<p>The ESP32-S3 TRNG is fed by two physical entropy sources:</p>
+<p><strong>Primary source: SAR ADC thermal noise.</strong> The Successive Approximation Register ADC samples thermal noise from the analog circuitry. This source requires that WiFi or Bluetooth be active (or that <code>bootloader_random_enable()</code> has been called explicitly) because the ADC&#x27;s noise properties depend on the RF subsystem being powered.</p>
+<p><strong>Secondary source: RC_FAST_CLK oscillator jitter.</strong> The internal ~8 MHz RC oscillator has inherent frequency jitter due to manufacturing variation and thermal effects. This source is always active when the chip is powered. Espressif&#x27;s testing has shown that the secondary source alone passes the Dieharder statistical test suite, but they recommend using both sources for cryptographic applications.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="api-usage-for-key-generation">API usage for key generation<a href="#api-usage-for-key-generation" class="hash-link" aria-label="Direct link to API usage for key generation" title="Direct link to API usage for key generation" translate="no">​</a></h3>
+<div class="language-c codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-c codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token macro property directive-hash" style="color:hsl(355, 65%, 65%)">#</span><span class="token macro property directive keyword" style="color:hsl(286, 60%, 67%)">include</span><span class="token macro property" style="color:hsl(355, 65%, 65%)"> </span><span class="token macro property string" style="color:hsl(95, 38%, 62%)">&quot;esp_random.h&quot;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// For cryptographic key generation, ensure WiFi/BT is active OR call:</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token function" style="color:hsl(207, 82%, 66%)">bootloader_random_enable</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint8_t</span><span class="token plain"> hmac_key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">[</span><span class="token number" style="color:hsl(29, 54%, 61%)">32</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">]</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token function" style="color:hsl(207, 82%, 66%)">esp_fill_random</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">hmac_key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">sizeof</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">hmac_key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain">  </span><span class="token comment" style="color:hsl(220, 10%, 40%)">// 256 bits of true random</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token function" style="color:hsl(207, 82%, 66%)">bootloader_random_disable</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain">  </span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Re-enable normal clocking</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// The esp_random() API internally throttles reads to 15-75 KHz</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// to ensure sufficient entropy accumulation between samples.</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// esp_fill_random() handles this automatically for buffer fills.</span><br></span></code></pre></div></div>
+<p><strong>Critical warning:</strong> If neither WiFi/BT nor <code>bootloader_random_enable()</code> is active, <code>esp_random()</code> degrades to a pseudo-random number generator (PRNG) seeded from the secondary source. For SimpleGo&#x27;s first-boot key generation, the firmware must ensure the primary entropy source is active before generating the HMAC key. The recommended approach is to call <code>bootloader_random_enable()</code> in the early boot code before NVS initialization.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="verification">Verification<a href="#verification" class="hash-link" aria-label="Direct link to Verification" title="Direct link to Verification" translate="no">​</a></h3>
+<p>After generating a key, there is no way to verify its randomness after the fact (this is a fundamental property of randomness). However, the firmware can verify that the entropy source was active by checking the return value of <code>bootloader_random_enable()</code> and by reading the <code>RNG_DATA_REG</code> register multiple times to confirm the values change.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="espefusepy-command-reference-for-simplego">espefuse.py Command Reference for SimpleGo<a href="#espefusepy-command-reference-for-simplego" class="hash-link" aria-label="Direct link to espefuse.py Command Reference for SimpleGo" title="Direct link to espefuse.py Command Reference for SimpleGo" translate="no">​</a></h2>
+<p>The <code>espefuse.py</code> tool (part of esptool) is the primary interface for eFuse operations during development and manufacturing. All commands require a physical USB connection to the device.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="reading-current-efuse-state">Reading current eFuse state<a href="#reading-current-efuse-state" class="hash-link" aria-label="Direct link to Reading current eFuse state" title="Direct link to Reading current eFuse state" translate="no">​</a></h3>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)"># Full eFuse summary (recommended first step before any burns)</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> esp32s3 </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> COM6 summary</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Check specific key block status</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> esp32s3 </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> COM6 get_custom_mac</span><br></span></code></pre></div></div>
+<p>The summary output shows every eFuse field, its current value, and whether it is read/write protected. Always run this before any burn operation to verify the current state.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="burning-an-hmac-key-for-nvs-encryption">Burning an HMAC key for NVS encryption<a href="#burning-an-hmac-key-for-nvs-encryption" class="hash-link" aria-label="Direct link to Burning an HMAC key for NVS encryption" title="Direct link to Burning an HMAC key for NVS encryption" translate="no">​</a></h3>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)"># Generate a random key file (32 bytes = 256 bits)</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Use a secure system with quality entropy for production keys</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">python </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> </span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;import os; open(&#x27;hmac_key.bin&#x27;,&#x27;wb&#x27;).write(os.urandom(32))&quot;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Burn to BLOCK_KEY1 with HMAC_UP purpose</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># This automatically: sets KEY_PURPOSE_1 = HMAC_UP,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># write-protects BLOCK_KEY1, read-protects BLOCK_KEY1</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> esp32s3 </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> COM6 burn_key BLOCK_KEY1 hmac_key.bin HMAC_UP</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Verify the burn (key value will show as all zeros due to read protection)</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> esp32s3 </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> COM6 summary</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="burning-a-flash-encryption-key">Burning a flash encryption key<a href="#burning-a-flash-encryption-key" class="hash-link" aria-label="Direct link to Burning a flash encryption key" title="Direct link to Burning a flash encryption key" translate="no">​</a></h3>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)"># For AES-128 (uses 1 key block):</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> esp32s3 </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> COM6 burn_key BLOCK_KEY2 fe_key.bin XTS_AES_128_KEY</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># For AES-256 (uses 2 key blocks, virtual purpose handles the split):</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> esp32s3 </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-p</span><span class="token plain"> COM6 burn_key BLOCK_KEY2 fe_key_512.bin XTS_AES_256_KEY</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># This automatically splits the 512-bit key across BLOCK_KEY2 and BLOCK_KEY3</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="virtual-dry-run-mode-for-testing">Virtual (dry-run) mode for testing<a href="#virtual-dry-run-mode-for-testing" class="hash-link" aria-label="Direct link to Virtual (dry-run) mode for testing" title="Direct link to Virtual (dry-run) mode for testing" translate="no">​</a></h3>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token comment" style="color:hsl(220, 10%, 40%)"># Simulate eFuse operations without touching hardware</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">-c</span><span class="token plain"> esp32s3 </span><span class="token parameter variable" style="color:hsl(207, 82%, 66%)">--virt</span><span class="token plain"> burn_key BLOCK_KEY1 hmac_key.bin HMAC_UP</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># Virtual mode is essential for testing provisioning scripts</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)"># before running them on real hardware where mistakes are permanent</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="confirmation-safety">Confirmation safety<a href="#confirmation-safety" class="hash-link" aria-label="Direct link to Confirmation safety" title="Direct link to Confirmation safety" translate="no">​</a></h3>
+<p>Every destructive operation requires typing &quot;BURN&quot; to confirm:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">espefuse.py -c esp32s3 -p COM6 burn_key BLOCK_KEY1 hmac_key.bin HMAC_UP</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">=== Run &quot;burn_key&quot; command ===</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Burn keys to blocks:</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">- BLOCK_KEY1 -&gt; [key data] (HMAC_UP)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Attention! This operation is irreversible.</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Type &#x27;BURN&#x27; (all capitals) to continue:</span><br></span></code></pre></div></div>
+<p>For automated manufacturing scripts, <code>--do-not-confirm</code> bypasses this prompt. Use with extreme caution - there is no undo.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="programmatic-efuse-operations-from-firmware">Programmatic eFuse operations from firmware<a href="#programmatic-efuse-operations-from-firmware" class="hash-link" aria-label="Direct link to Programmatic eFuse operations from firmware" title="Direct link to Programmatic eFuse operations from firmware" translate="no">​</a></h3>
+<p>For SimpleGo&#x27;s first-boot provisioning (Mode 2), the HMAC key is burned from the running firmware rather than from the host PC:</p>
+<div class="language-c codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-c codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token macro property directive-hash" style="color:hsl(355, 65%, 65%)">#</span><span class="token macro property directive keyword" style="color:hsl(286, 60%, 67%)">include</span><span class="token macro property" style="color:hsl(355, 65%, 65%)"> </span><span class="token macro property string" style="color:hsl(95, 38%, 62%)">&quot;esp_efuse.h&quot;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token macro property directive-hash" style="color:hsl(355, 65%, 65%)">#</span><span class="token macro property directive keyword" style="color:hsl(286, 60%, 67%)">include</span><span class="token macro property" style="color:hsl(355, 65%, 65%)"> </span><span class="token macro property string" style="color:hsl(95, 38%, 62%)">&quot;esp_efuse_table.h&quot;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Check if BLOCK_KEY1 is available</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token keyword" style="color:hsl(286, 60%, 67%)">if</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token function" style="color:hsl(207, 82%, 66%)">esp_efuse_key_block_unused</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">EFUSE_BLK_KEY1</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Generate key from hardware RNG</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">uint8_t</span><span class="token plain"> key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">[</span><span class="token number" style="color:hsl(29, 54%, 61%)">32</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">]</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token function" style="color:hsl(207, 82%, 66%)">bootloader_random_enable</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token function" style="color:hsl(207, 82%, 66%)">esp_fill_random</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">sizeof</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token function" style="color:hsl(207, 82%, 66%)">bootloader_random_disable</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Burn key with purpose and protection</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token class-name" style="color:hsl(29, 54%, 61%)">esp_err_t</span><span class="token plain"> err </span><span class="token operator" style="color:hsl(207, 82%, 66%)">=</span><span class="token plain"> </span><span class="token function" style="color:hsl(207, 82%, 66%)">esp_efuse_write_key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        EFUSE_BLK_KEY1</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        ESP_EFUSE_KEY_PURPOSE_HMAC_UP</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">sizeof</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Securely zero the key from RAM immediately after burning</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token function" style="color:hsl(207, 82%, 66%)">memset</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token number" style="color:hsl(29, 54%, 61%)">0</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">sizeof</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">key</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain">  </span><span class="token comment" style="color:hsl(220, 10%, 40%)">// Use mbedtls_platform_zeroize() in production</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">if</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">err </span><span class="token operator" style="color:hsl(207, 82%, 66%)">==</span><span class="token plain"> ESP_OK</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        </span><span class="token function" style="color:hsl(207, 82%, 66%)">ESP_LOGI</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">TAG</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;HMAC key provisioned successfully&quot;</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">else</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">        </span><span class="token function" style="color:hsl(207, 82%, 66%)">ESP_LOGE</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">TAG</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;HMAC key provisioning failed: %s&quot;</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token function" style="color:hsl(207, 82%, 66%)">esp_err_to_name</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">err</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><span class="token plain"> </span><span class="token keyword" style="color:hsl(286, 60%, 67%)">else</span><span class="token plain"> </span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    </span><span class="token function" style="color:hsl(207, 82%, 66%)">ESP_LOGI</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">(</span><span class="token plain">TAG</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">,</span><span class="token plain"> </span><span class="token string" style="color:hsl(95, 38%, 62%)">&quot;HMAC key already provisioned&quot;</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">)</span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain"></span><span class="token punctuation" style="color:hsl(220, 14%, 71%)">}</span><br></span></code></pre></div></div>
+<p><strong>Known issue (GitHub #13909):</strong> When Secure Boot is already enabled, <code>esp_efuse_write_key()</code> may fail because writing the KEY_PURPOSE bits to BLOCK0 conflicts with Secure Boot&#x27;s write protection of certain BLOCK0 regions. Resolution: Always burn the HMAC key before enabling Secure Boot, or provision the key from the host via espefuse.py during manufacturing.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="efuse-budget-planning-for-simplego">eFuse Budget Planning for SimpleGo<a href="#efuse-budget-planning-for-simplego" class="hash-link" aria-label="Direct link to eFuse Budget Planning for SimpleGo" title="Direct link to eFuse Budget Planning for SimpleGo" translate="no">​</a></h2>
+<p>With six key blocks and multiple security features competing for them, careful allocation is essential. Each security mode uses a different number of blocks, and the allocation must be planned to support upgrades from lower to higher modes.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="mode-1-open-0-blocks-used">Mode 1: Open (0 blocks used)<a href="#mode-1-open-0-blocks-used" class="hash-link" aria-label="Direct link to Mode 1: Open (0 blocks used)" title="Direct link to Mode 1: Open (0 blocks used)" translate="no">​</a></h3>
+<p>No eFuse blocks consumed. All six blocks remain available for future use. The device can transition to any other mode at any time.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="mode-2-nvs-vault-1-block-used">Mode 2: NVS Vault (1 block used)<a href="#mode-2-nvs-vault-1-block-used" class="hash-link" aria-label="Direct link to Mode 2: NVS Vault (1 block used)" title="Direct link to Mode 2: NVS Vault (1 block used)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Block</th><th>Purpose</th><th>Status</th></tr></thead><tbody><tr><td>BLOCK_KEY0</td><td>Free</td><td>Reserved as safety spare</td></tr><tr><td>BLOCK_KEY1</td><td>HMAC_UP (NVS encryption)</td><td><strong>Burned at first boot</strong></td></tr><tr><td>BLOCK_KEY2</td><td>Free</td><td>Available for Mode 3 upgrade</td></tr><tr><td>BLOCK_KEY3</td><td>Free</td><td>Available for Mode 3/4</td></tr><tr><td>BLOCK_KEY4</td><td>Free</td><td>Available for Mode 4</td></tr><tr><td>BLOCK_KEY5</td><td>Free</td><td>Available (but not for flash encryption)</td></tr></tbody></table>
+<p>The device can still transition to Mode 3 or 4 because the remaining blocks are available for flash encryption and Secure Boot keys.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="mode-3-fortress-with-aes-128-2-blocks-used">Mode 3: Fortress with AES-128 (2 blocks used)<a href="#mode-3-fortress-with-aes-128-2-blocks-used" class="hash-link" aria-label="Direct link to Mode 3: Fortress with AES-128 (2 blocks used)" title="Direct link to Mode 3: Fortress with AES-128 (2 blocks used)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Block</th><th>Purpose</th><th>Status</th></tr></thead><tbody><tr><td>BLOCK_KEY0</td><td>Free</td><td>Reserved as safety spare</td></tr><tr><td>BLOCK_KEY1</td><td>HMAC_UP (NVS encryption)</td><td>Burned</td></tr><tr><td>BLOCK_KEY2</td><td>XTS_AES_128_KEY (flash encryption)</td><td><strong>Burned</strong></td></tr><tr><td>BLOCK_KEY3</td><td>Free</td><td>Available for Mode 4</td></tr><tr><td>BLOCK_KEY4</td><td>Free</td><td>Available for Mode 4</td></tr><tr><td>BLOCK_KEY5</td><td>Free</td><td>Available</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="mode-3-fortress-with-aes-256-3-blocks-used">Mode 3: Fortress with AES-256 (3 blocks used)<a href="#mode-3-fortress-with-aes-256-3-blocks-used" class="hash-link" aria-label="Direct link to Mode 3: Fortress with AES-256 (3 blocks used)" title="Direct link to Mode 3: Fortress with AES-256 (3 blocks used)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Block</th><th>Purpose</th><th>Status</th></tr></thead><tbody><tr><td>BLOCK_KEY0</td><td>Free</td><td>Reserved as safety spare</td></tr><tr><td>BLOCK_KEY1</td><td>HMAC_UP (NVS encryption)</td><td>Burned</td></tr><tr><td>BLOCK_KEY2</td><td>XTS_AES_256_KEY_1 (flash encryption, first half)</td><td><strong>Burned</strong></td></tr><tr><td>BLOCK_KEY3</td><td>XTS_AES_256_KEY_2 (flash encryption, second half)</td><td><strong>Burned</strong></td></tr><tr><td>BLOCK_KEY4</td><td>Free</td><td>Available for Mode 4</td></tr><tr><td>BLOCK_KEY5</td><td>Free</td><td>Available</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="mode-4-bunker-3-4-blocks-used-for-aes-128-4-5-for-aes-256">Mode 4: Bunker (3-4 blocks used for AES-128, 4-5 for AES-256)<a href="#mode-4-bunker-3-4-blocks-used-for-aes-128-4-5-for-aes-256" class="hash-link" aria-label="Direct link to Mode 4: Bunker (3-4 blocks used for AES-128, 4-5 for AES-256)" title="Direct link to Mode 4: Bunker (3-4 blocks used for AES-128, 4-5 for AES-256)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Block</th><th>Purpose (AES-128 variant)</th><th>Purpose (AES-256 variant)</th></tr></thead><tbody><tr><td>BLOCK_KEY0</td><td>Free (spare)</td><td>Free (spare)</td></tr><tr><td>BLOCK_KEY1</td><td>HMAC_UP</td><td>HMAC_UP</td></tr><tr><td>BLOCK_KEY2</td><td>XTS_AES_128_KEY</td><td>XTS_AES_256_KEY_1</td></tr><tr><td>BLOCK_KEY3</td><td>SECURE_BOOT_DIGEST0</td><td>XTS_AES_256_KEY_2</td></tr><tr><td>BLOCK_KEY4</td><td>Free or SECURE_BOOT_DIGEST1</td><td>SECURE_BOOT_DIGEST0</td></tr><tr><td>BLOCK_KEY5</td><td>Free</td><td>Free or SECURE_BOOT_DIGEST1</td></tr></tbody></table>
+<p>The AES-128 variant of Mode 4 is recommended for SimpleGo Class 1 because it leaves more key blocks available for future use (additional Secure Boot key slots for key rotation, or the JTAG re-enable key for field debugging). AES-128-XTS provides more than sufficient security for NVS and firmware encryption - the published side-channel attacks extract the key regardless of key length, so AES-256 does not provide meaningful additional protection against the primary Class 1 threat.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="comparison-esp32-s3-vs-esp32-p4-efuse-systems">Comparison: ESP32-S3 vs ESP32-P4 eFuse Systems<a href="#comparison-esp32-s3-vs-esp32-p4-efuse-systems" class="hash-link" aria-label="Direct link to Comparison: ESP32-S3 vs ESP32-P4 eFuse Systems" title="Direct link to Comparison: ESP32-S3 vs ESP32-P4 eFuse Systems" translate="no">​</a></h2>
+<p>The ESP32-P4 maintains the same fundamental eFuse architecture (11 blocks, 6 key blocks, RS coding) but adds critical security features that are not available on the ESP32-S3:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Feature</th><th>ESP32-S3</th><th>ESP32-P4</th></tr></thead><tbody><tr><td>eFuse blocks total</td><td>11</td><td>11</td></tr><tr><td>Key blocks</td><td>6 (BLOCK_KEY0-KEY5)</td><td>6 (BLOCK_KEY0-KEY5)</td></tr><tr><td>Bits per block</td><td>256</td><td>256</td></tr><tr><td>RS error correction</td><td>Yes</td><td>Yes</td></tr><tr><td>Read/write protection</td><td>Yes</td><td>Yes</td></tr><tr><td>Key purpose assignment</td><td>Yes</td><td>Yes</td></tr><tr><td>HMAC peripheral</td><td>Yes</td><td>Yes</td></tr><tr><td>Digital Signature peripheral</td><td>No</td><td><strong>Yes</strong></td></tr><tr><td>Key Management Unit</td><td>No</td><td><strong>Yes</strong></td></tr><tr><td>Anti-DPA pseudo-rounds</td><td>No</td><td><strong>Yes (XTS_DPA_PSEUDO_LEVEL eFuse)</strong></td></tr><tr><td>Power Glitch Detector</td><td>No</td><td><strong>Yes</strong></td></tr><tr><td>ECDSA Secure Boot</td><td>No (RSA-3072 only)</td><td><strong>Yes (RSA-3072 + ECDSA-256/384)</strong></td></tr><tr><td>BLOCK_KEY5 flash enc. restriction</td><td>Cannot use for XTS keys</td><td>To be verified</td></tr></tbody></table>
+<p>The Key Management Unit (KMU) in the ESP32-P4 is the most significant difference. On the ESP32-S3, the HMAC-derived NVS encryption keys exist in application RAM after derivation - malicious firmware (without Secure Boot) could read them. On the ESP32-P4, the KMU can manage key material entirely within the hardware security perimeter, ensuring keys used for cryptographic operations are never exposed to software in plaintext. This eliminates the &quot;Secure Boot is required to protect derived keys&quot; constraint that exists on the ESP32-S3.</p>
+<p>The anti-DPA pseudo-rounds (controlled by the XTS_DPA_PSEUDO_LEVEL eFuse) add random dummy AES rounds before and after real operations, randomizing the power consumption profile. This directly addresses the Ledger Donjon CPA attack methodology. However, the ESP32-C6 had similar countermeasures that were proven ineffective by researcher Courk in 2024, so the P4&#x27;s implementation remains unproven until independently tested.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="failure-modes-and-recovery">Failure Modes and Recovery<a href="#failure-modes-and-recovery" class="hash-link" aria-label="Direct link to Failure Modes and Recovery" title="Direct link to Failure Modes and Recovery" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="recoverable-situations">Recoverable situations<a href="#recoverable-situations" class="hash-link" aria-label="Direct link to Recoverable situations" title="Direct link to Recoverable situations" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Situation</th><th>Recovery</th></tr></thead><tbody><tr><td>Wrong key burned to a block</td><td>Use a different block (the wrong block is permanently consumed)</td></tr><tr><td>Flash encryption enabled in Development mode</td><td>Disable by burning SPI_BOOT_CRYPT_CNT to next even popcount (limited attempts)</td></tr><tr><td>NVS data corrupted after enabling HMAC encryption</td><td><code>idf.py erase-flash</code> clears NVS; eFuse key persists, new encrypted NVS created on next boot</td></tr><tr><td>Firmware crashes after enabling flash encryption</td><td>Reflash via UART in Development mode (counts against SPI_BOOT_CRYPT_CNT limit)</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="unrecoverable-situations-device-permanently-affected">Unrecoverable situations (device permanently affected)<a href="#unrecoverable-situations-device-permanently-affected" class="hash-link" aria-label="Direct link to Unrecoverable situations (device permanently affected)" title="Direct link to Unrecoverable situations (device permanently affected)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Situation</th><th>Consequence</th></tr></thead><tbody><tr><td>SECURE_BOOT_EN burned without valid signed firmware</td><td>Device will not boot. No recovery possible.</td></tr><tr><td>SPI_BOOT_CRYPT_CNT at 0b111 (permanent) with lost encryption key</td><td>Flash is permanently encrypted with unknown key. Device is a paperweight.</td></tr><tr><td>All Secure Boot key slots burned and revoked</td><td>No firmware can pass signature verification. Device will not boot.</td></tr><tr><td>JTAG disabled (DIS_PAD_JTAG=1 or DIS_USB_JTAG=1)</td><td>JTAG permanently unavailable. No hardware debugging possible.</td></tr><tr><td>DIS_DOWNLOAD_MODE burned with broken firmware</td><td>No UART recovery possible. Must have working OTA or device is bricked.</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="simplegos-mitigation-strategy">SimpleGo&#x27;s mitigation strategy<a href="#simplegos-mitigation-strategy" class="hash-link" aria-label="Direct link to SimpleGo&#x27;s mitigation strategy" title="Direct link to SimpleGo&#x27;s mitigation strategy" translate="no">​</a></h3>
+<p>For the Alpha release (Mode 2), the risk is minimal: only one eFuse block is consumed (HMAC key), and the worst case is consuming a second block if the first attempt fails. The firmware remains flashable via USB, JTAG remains available for debugging, and the device can always be recovered by reflashing.</p>
+<p>For production devices (Mode 3/4), provisioning should be performed on a sacrificial test unit first, with the complete eFuse state verified via <code>espefuse.py summary</code> after each step. The provisioning script should run in virtual mode (<code>--virt</code>) before execution on real hardware. A second T-Deck should be available as backup in case the first device is bricked during provisioning development.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="references">References<a href="#references" class="hash-link" aria-label="Direct link to References" title="Direct link to References" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Source</th><th>Description</th></tr></thead><tbody><tr><td>ESP-IDF v5.5.3 eFuse Manager docs</td><td>Complete API reference for esp_efuse functions</td></tr><tr><td>ESP32-S3 Technical Reference Manual, Chapter 4</td><td>eFuse controller hardware specification</td></tr><tr><td>espefuse.py burn_key docs</td><td>Command-line reference for key burning</td></tr><tr><td>GitHub espressif/esp-idf esp_efuse_table.csv</td><td>Raw eFuse field definitions for ESP32-S3</td></tr><tr><td>ESP-IDF Security Features Enablement Workflows</td><td>Step-by-step provisioning guides with eFuse ordering</td></tr><tr><td>GitHub Issue #13909</td><td>Known bug: HMAC key burn fails when Secure Boot already enabled</td></tr><tr><td>GitHub Issue #17052</td><td>Upcoming IDF v6.0 breaking changes affecting NVS encryption defaults</td></tr></tbody></table>
+<hr>
+<p><em>SimpleGo - IT and More Systems, Recklinghausen</em>
+<em>First native C implementation of the SimpleX Messaging Protocol</em>
+<em>AGPL-3.0 (Software) | CERN-OHL-W-2.0 (Hardware)</em></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/security/class-1-02-efuse-architecture.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/security/security-overview"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Security Overview</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/security/class-1-03-hmac-nvs-encryption"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Class 1 - HMAC-Based NVS Encryption</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#what-are-efuses-and-why-they-matter" class="table-of-contents__link toc-highlight">What are eFuses and Why They Matter</a></li><li><a href="#block-layout-4096-bits-across-11-blocks" class="table-of-contents__link toc-highlight">Block Layout: 4,096 Bits Across 11 Blocks</a><ul><li><a href="#block0-system-configuration-256-bits-4x-redundancy" class="table-of-contents__link toc-highlight">BLOCK0: System Configuration (256 bits, 4x Redundancy)</a></li><li><a href="#block1-block3-system-data-256-bits-each-rs-coding" class="table-of-contents__link toc-highlight">BLOCK1-BLOCK3: System Data (256 bits each, RS Coding)</a></li><li><a href="#block4-block9-cryptographic-key-storage-256-bits-each-rs-coding" class="table-of-contents__link toc-highlight">BLOCK4-BLOCK9: Cryptographic Key Storage (256 bits each, RS Coding)</a></li><li><a href="#block10-additional-system-data-256-bits-rs-coding" class="table-of-contents__link toc-highlight">BLOCK10: Additional System Data (256 bits, RS Coding)</a></li></ul></li><li><a href="#read-protection-making-keys-invisible-to-software" class="table-of-contents__link toc-highlight">Read Protection: Making Keys Invisible to Software</a><ul><li><a href="#how-read-protection-is-applied" class="table-of-contents__link toc-highlight">How read protection is applied</a></li><li><a href="#automatic-protection-during-key-burning" class="table-of-contents__link toc-highlight">Automatic protection during key burning</a></li><li><a href="#the-rd_dis-write-protection-conflict" class="table-of-contents__link toc-highlight">The RD_DIS write-protection conflict</a></li></ul></li><li><a href="#write-protection-preventing-key-modification" class="table-of-contents__link toc-highlight">Write Protection: Preventing Key Modification</a></li><li><a href="#hardware-random-number-generator" class="table-of-contents__link toc-highlight">Hardware Random Number Generator</a><ul><li><a href="#entropy-sources" class="table-of-contents__link toc-highlight">Entropy sources</a></li><li><a href="#api-usage-for-key-generation" class="table-of-contents__link toc-highlight">API usage for key generation</a></li><li><a href="#verification" class="table-of-contents__link toc-highlight">Verification</a></li></ul></li><li><a href="#espefusepy-command-reference-for-simplego" class="table-of-contents__link toc-highlight">espefuse.py Command Reference for SimpleGo</a><ul><li><a href="#reading-current-efuse-state" class="table-of-contents__link toc-highlight">Reading current eFuse state</a></li><li><a href="#burning-an-hmac-key-for-nvs-encryption" class="table-of-contents__link toc-highlight">Burning an HMAC key for NVS encryption</a></li><li><a href="#burning-a-flash-encryption-key" class="table-of-contents__link toc-highlight">Burning a flash encryption key</a></li><li><a href="#virtual-dry-run-mode-for-testing" class="table-of-contents__link toc-highlight">Virtual (dry-run) mode for testing</a></li><li><a href="#confirmation-safety" class="table-of-contents__link toc-highlight">Confirmation safety</a></li><li><a href="#programmatic-efuse-operations-from-firmware" class="table-of-contents__link toc-highlight">Programmatic eFuse operations from firmware</a></li></ul></li><li><a href="#efuse-budget-planning-for-simplego" class="table-of-contents__link toc-highlight">eFuse Budget Planning for SimpleGo</a><ul><li><a href="#mode-1-open-0-blocks-used" class="table-of-contents__link toc-highlight">Mode 1: Open (0 blocks used)</a></li><li><a href="#mode-2-nvs-vault-1-block-used" class="table-of-contents__link toc-highlight">Mode 2: NVS Vault (1 block used)</a></li><li><a href="#mode-3-fortress-with-aes-128-2-blocks-used" class="table-of-contents__link toc-highlight">Mode 3: Fortress with AES-128 (2 blocks used)</a></li><li><a href="#mode-3-fortress-with-aes-256-3-blocks-used" class="table-of-contents__link toc-highlight">Mode 3: Fortress with AES-256 (3 blocks used)</a></li><li><a href="#mode-4-bunker-3-4-blocks-used-for-aes-128-4-5-for-aes-256" class="table-of-contents__link toc-highlight">Mode 4: Bunker (3-4 blocks used for AES-128, 4-5 for AES-256)</a></li></ul></li><li><a href="#comparison-esp32-s3-vs-esp32-p4-efuse-systems" class="table-of-contents__link toc-highlight">Comparison: ESP32-S3 vs ESP32-P4 eFuse Systems</a></li><li><a href="#failure-modes-and-recovery" class="table-of-contents__link toc-highlight">Failure Modes and Recovery</a><ul><li><a href="#recoverable-situations" class="table-of-contents__link toc-highlight">Recoverable situations</a></li><li><a href="#unrecoverable-situations-device-permanently-affected" class="table-of-contents__link toc-highlight">Unrecoverable situations (device permanently affected)</a></li><li><a href="#simplegos-mitigation-strategy" class="table-of-contents__link toc-highlight">SimpleGo&#39;s mitigation strategy</a></li></ul></li><li><a href="#references" class="table-of-contents__link toc-highlight">References</a></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/installer">Flash Tool</a><a href="https://simplego.dev/network">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos">Terms of Service</a><a href="https://simplego.dev/legal/privacy">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer">Disclaimer</a><a href="https://simplego.dev/imprint">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement">Law Enforcement</a><a href="https://simplego.dev/legal/transparency">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact">Partnership</a><a href="https://simplego.dev/ost">Soundtrack</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>

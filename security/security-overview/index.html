@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-security/security-overview" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">Security Overview | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/security/security-overview"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Security Overview | SimpleGo"><meta data-rh="true" name="description" content="SimpleGo Security Architecture"><meta data-rh="true" property="og:description" content="SimpleGo Security Architecture"><link data-rh="true" rel="icon" href="https://simplego.dev/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/security/security-overview"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/security/security-overview" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/security/security-overview" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Security","item":"https://wiki.simplego.dev/security"},{"@type":"ListItem","position":2,"name":"Security Overview","item":"https://wiki.simplego.dev/security/security-overview"}]}</script><link rel="stylesheet" href="/assets/css/styles.0f3882a8.css">
+<script src="/assets/js/runtime~main.30740e1d.js" defer="defer"></script>
+<script src="/assets/js/main.231f966f.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" target="_self" href="/"><div class="navbar__logo"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/">Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://simplego.dev" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Home<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/product" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Product<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/crypto" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Crypto<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/installer" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Flash Tool<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/network" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Network<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/pro" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Pro<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"><div class="dsla-search-wrapper"><div class="dsla-search-field" data-tags="default,docs-default-current"></div></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/"><span title="SimpleGo Documentation" class="linkLabel_WmDU">SimpleGo Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/getting-started"><span title="Getting Started" class="linkLabel_WmDU">Getting Started</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/architecture"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a><button aria-label="Expand sidebar category &#x27;Architecture&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/smp-in-c"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a><button aria-label="Expand sidebar category &#x27;SMP in C&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/protocol-analysis"><span title="Protocol Analysis" class="categoryLinkLabel_W154">Protocol Analysis</span></a><button aria-label="Expand sidebar category &#x27;Protocol Analysis&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/hardware"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a><button aria-label="Expand sidebar category &#x27;Hardware&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--active" href="/security"><span title="Security" class="categoryLinkLabel_W154">Security</span></a><button aria-label="Collapse sidebar category &#x27;Security&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-01-overview-and-threat-model"><span title="Class 1 - Overview and Threat Model" class="linkLabel_WmDU">Class 1 - Overview and Threat Model</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-2-01-overview"><span title="Hardware Class 2 - Overview and Architecture" class="linkLabel_WmDU">Hardware Class 2 - Overview and Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-3-01-overview"><span title="Hardware Class 3 - Overview and Architecture" class="linkLabel_WmDU">Hardware Class 3 - Overview and Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/security/security-overview"><span title="Security Overview" class="linkLabel_WmDU">Security Overview</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-02-efuse-architecture"><span title="Class 1 - ESP32-S3 eFuse Architecture" class="linkLabel_WmDU">Class 1 - ESP32-S3 eFuse Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-03-hmac-nvs-encryption"><span title="Class 1 - HMAC-Based NVS Encryption" class="linkLabel_WmDU">Class 1 - HMAC-Based NVS Encryption</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-04-known-vulnerabilities"><span title="Class 1 - Known Vulnerabilities and Attack Research" class="linkLabel_WmDU">Class 1 - Known Vulnerabilities and Attack Research</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-05-attack-equipment-economics"><span title="Class 1 - Attack Equipment Economics" class="linkLabel_WmDU">Class 1 - Attack Equipment Economics</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-06-runtime-memory-protection"><span title="Class 1 - Runtime Memory Protection" class="linkLabel_WmDU">Class 1 - Runtime Memory Protection</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-07-post-quantum-readiness"><span title="Class 1 - Post-Quantum Readiness" class="linkLabel_WmDU">Class 1 - Post-Quantum Readiness</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-08-flash-encryption"><span title="Class 1 - Flash Encryption Deep Dive" class="linkLabel_WmDU">Class 1 - Flash Encryption Deep Dive</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-09-secure-boot-v2"><span title="Class 1 - Secure Boot V2" class="linkLabel_WmDU">Class 1 - Secure Boot V2</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-10-four-security-modes"><span title="Class 1 - Four Security Modes" class="linkLabel_WmDU">Class 1 - Four Security Modes</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-11-esp32-p4-evolution"><span title="Class 1 - ESP32-P4 Evolution Path" class="linkLabel_WmDU">Class 1 - ESP32-P4 Evolution Path</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-12-implementation-plan"><span title="Class 1 - Implementation Plan" class="linkLabel_WmDU">Class 1 - Implementation Plan</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/BUILD_SYSTEM"><span title="Contributing" class="categoryLinkLabel_W154">Contributing</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/reference/constants"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a><button aria-label="Expand sidebar category &#x27;Reference&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/security"><span>Security</span></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Security Overview</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><p><img decoding="async" loading="lazy" alt="SimpleGo Security Architecture" src="/assets/images/github_header_security_architecture-dc06d14b6b5ff42f9e1457246760d2bf.png" width="1200" height="250" class="img_ev3q"></p>
+<header><h1>Security Overview</h1></header>
+<p>SimpleGo&#x27;s security architecture spans three hardware classes, from off-the-shelf development boards to high-security devices with triple-vendor secure elements. This document provides the high-level overview. For technical depth on any specific topic, the detailed documentation is linked at the bottom.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-smartphone-problem">The Smartphone Problem<a href="#the-smartphone-problem" class="hash-link" aria-label="Direct link to The Smartphone Problem" title="Direct link to The Smartphone Problem" translate="no">​</a></h2>
+<p>Modern smartphones present fundamental security challenges that cannot be fully mitigated through software alone.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Aspect</th><th>Typical Smartphone</th></tr></thead><tbody><tr><td>Lines of Code</td><td>~50 million (Android/iOS)</td></tr><tr><td>Running Processes</td><td>Hundreds at any time</td></tr><tr><td>Network Connections</td><td>Dozens in background</td></tr><tr><td>Trusted Parties</td><td>OS vendor, carrier, app developers, ad networks</td></tr><tr><td>Update Control</td><td>Vendor-controlled, can be forced</td></tr><tr><td>Baseband Processor</td><td>Closed-source firmware, direct memory access, always active</td></tr><tr><td>Telemetry</td><td>Continuous data collection by multiple parties</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-baseband-problem">The Baseband Problem<a href="#the-baseband-problem" class="hash-link" aria-label="Direct link to The Baseband Problem" title="Direct link to The Baseband Problem" translate="no">​</a></h3>
+<p>Every smartphone contains a baseband processor - a separate computer running closed-source firmware that handles cellular communication. This processor runs proprietary firmware that cannot be audited, has direct memory access (DMA) on many devices, remains active whenever the device has cellular signal, and contains known vulnerability classes (29 bugs found by BASECOMP, USENIX Security 2023). It cannot be disabled without losing cellular functionality and operates independently of the main operating system.</p>
+<p>Even hardened mobile operating systems like GrapheneOS, while significantly improving security posture, cannot eliminate this architectural limitation. GrapheneOS provides excellent sandboxing, verified boot, and hardened memory allocation - but it still runs on hardware with a closed-source baseband processor.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-dedicated-hardware-approach">The Dedicated Hardware Approach<a href="#the-dedicated-hardware-approach" class="hash-link" aria-label="Direct link to The Dedicated Hardware Approach" title="Direct link to The Dedicated Hardware Approach" translate="no">​</a></h2>
+<p>SimpleGo takes a fundamentally different approach: minimize the trusted computing base (TCB) and eliminate the baseband processor entirely.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="attack-surface-comparison">Attack Surface Comparison<a href="#attack-surface-comparison" class="hash-link" aria-label="Direct link to Attack Surface Comparison" title="Direct link to Attack Surface Comparison" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-background-color:hsl(220, 13%, 18%);--prism-color:hsl(220, 14%, 71%)"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="background-color:hsl(220, 13%, 18%);color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">Smartphone (Android/iOS):             SimpleGo (ESP32-S3):</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- Operating System (~20M lines)     |-- FreeRTOS Kernel (~10K lines)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- System Services (~10M lines)      |-- Network Stack (~20K lines)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- Browser Engine (~5M lines)        |-- Crypto Libraries (~15K lines)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- JavaScript Runtime                +-- SimpleGo Application (~22K lines)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- App Framework                         Total: ~67K lines</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- Hundreds of Apps</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- Google/Apple Services                 Reduction: ~750x smaller</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- Baseband Processor (closed)</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- Bluetooth Stack</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">|-- NFC Stack</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">+-- Telemetry Services</span><br></span><span class="token-line" style="color:hsl(220, 14%, 71%);text-shadow:0 1px rgba(0, 0, 0, 0.3)"><span class="token plain">    Total: ~50M lines</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-this-eliminates">What This Eliminates<a href="#what-this-eliminates" class="hash-link" aria-label="Direct link to What This Eliminates" title="Direct link to What This Eliminates" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Threat Vector</th><th>Smartphone</th><th>SimpleGo</th></tr></thead><tbody><tr><td>Remote Code Execution</td><td>Large attack surface</td><td>Minimal (WiFi + TLS only)</td></tr><tr><td>Supply Chain Attacks</td><td>Hundreds of dependencies</td><td>Few, auditable dependencies</td></tr><tr><td>Malicious Applications</td><td>Always possible</td><td>No app installation</td></tr><tr><td>Browser Exploits</td><td>Major risk vector</td><td>No browser</td></tr><tr><td>JavaScript Attacks</td><td>Ubiquitous</td><td>No JavaScript engine</td></tr><tr><td>Telemetry and Tracking</td><td>Built into OS</td><td>None</td></tr><tr><td>Forced Updates</td><td>Vendor-controlled</td><td>User-controlled</td></tr><tr><td>Baseband Attacks</td><td>Always possible</td><td>No baseband processor</td></tr><tr><td>Identity Tracking</td><td>IMEI, phone number, SIM</td><td>No persistent identity (SimpleX Protocol)</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="three-hardware-classes">Three Hardware Classes<a href="#three-hardware-classes" class="hash-link" aria-label="Direct link to Three Hardware Classes" title="Direct link to Three Hardware Classes" translate="no">​</a></h2>
+<p>SimpleGo implements a tiered security model, allowing users to select hardware appropriate to their threat model.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-class-comparison">Hardware Class Comparison<a href="#hardware-class-comparison" class="hash-link" aria-label="Direct link to Hardware Class Comparison" title="Direct link to Hardware Class Comparison" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Feature</th><th>Class 1</th><th>Class 2</th><th>Class 3</th></tr></thead><tbody><tr><td><strong>MCU</strong></td><td>ESP32-S3 / ESP32-P4</td><td>STM32U585</td><td>STM32U5A9</td></tr><tr><td><strong>TrustZone</strong></td><td>No (P4: partial via PMS)</td><td>Yes</td><td>Yes</td></tr><tr><td><strong>Secure Elements</strong></td><td>None (eFuse + HMAC)</td><td>1 (ATECC608B)</td><td>3 (ATECC608B + OPTIGA Trust M + SE050)</td></tr><tr><td><strong>Secure Boot</strong></td><td>V2 (RSA-3072)</td><td>STM32 + SE verification</td><td>Multi-stage with triple SE</td></tr><tr><td><strong>Flash Encryption</strong></td><td>AES-XTS (128 or 256)</td><td>AES-XTS + SE key wrap</td><td>AES-XTS + triple SE</td></tr><tr><td><strong>Key Storage</strong></td><td>eFuse HMAC-derived</td><td>Secure Element (EAL5+)</td><td>Triple SE (EAL5+/6+)</td></tr><tr><td><strong>NVS Encryption</strong></td><td>HMAC-based (runtime derived)</td><td>SE-backed</td><td>Triple SE-backed</td></tr><tr><td><strong>Tamper Detection</strong></td><td>None (P4: Power Glitch Detect)</td><td>Light sensor, PCB mesh</td><td>Full environmental suite</td></tr><tr><td><strong>Tamper Response</strong></td><td>None</td><td>Key zeroization</td><td>Supercapacitor-backed wipe</td></tr><tr><td><strong>JTAG Protection</strong></td><td>Disable via eFuse</td><td>Hardware disabled</td><td>Physically removed</td></tr><tr><td><strong>Security Modes</strong></td><td>4 (Open/Vault/Fortress/Bunker)</td><td>2 (Standard/Locked)</td><td>1 (Always maximum)</td></tr><tr><td><strong>Duress PIN</strong></td><td>No (planned for P4)</td><td>Yes</td><td>Yes</td></tr><tr><td><strong>Dead Man&#x27;s Switch</strong></td><td>No</td><td>Yes</td><td>Yes</td></tr><tr><td><strong>Post-Quantum Ready</strong></td><td>Verified feasible</td><td>Planned</td><td>Planned</td></tr><tr><td><strong>Target Users</strong></td><td>Developers, alpha testers, Kickstarter</td><td>Journalists, activists</td><td>High-risk individuals, organizations</td></tr><tr><td><strong>Estimated Price</strong></td><td>EUR 50-100</td><td>EUR 400-600</td><td>EUR 1,000-1,500</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="cost-to-extract-keys-physical-attack">Cost to Extract Keys (Physical Attack)<a href="#cost-to-extract-keys-physical-attack" class="hash-link" aria-label="Direct link to Cost to Extract Keys (Physical Attack)" title="Direct link to Cost to Extract Keys (Physical Attack)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Attack Method</th><th>Class 1 (no vault)</th><th>Class 1 (with vault)</th><th>Class 2</th><th>Class 3</th></tr></thead><tbody><tr><td>Flash chip readout ($15 reader)</td><td>All keys exposed</td><td>Encrypted (blocked)</td><td>Encrypted + SE</td><td>Encrypted + triple SE</td></tr><tr><td>Side-channel analysis ($2,000+)</td><td>N/A (flash is easier)</td><td>Days to weeks, 1 device</td><td>Weeks to months</td><td>Requires breaking 3 independent SEs</td></tr><tr><td>EM fault injection ($30,000+)</td><td>N/A</td><td>Hours once tuned, 1 device</td><td>SE-specific research needed</td><td>Must defeat 3 vendors independently</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-class-1-four-security-modes">Hardware Class 1: Four Security Modes<a href="#hardware-class-1-four-security-modes" class="hash-link" aria-label="Direct link to Hardware Class 1: Four Security Modes" title="Direct link to Hardware Class 1: Four Security Modes" translate="no">​</a></h2>
+<p>Class 1 is unique in offering four progressive security modes on the same hardware. Each mode activates additional eFuse-based protections. Transitions are one-way (lower to higher only) because eFuse burns are permanent.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Mode</th><th>Name</th><th>Key Protection</th><th>Firmware Protection</th><th>Update Method</th><th>Provisioned By</th></tr></thead><tbody><tr><td>1</td><td>Open</td><td>None (plaintext in flash)</td><td>None</td><td>USB, Web Flash, OTA</td><td>Nobody</td></tr><tr><td>2</td><td>NVS Vault</td><td>HMAC-encrypted (eFuse-derived)</td><td>None (open source anyway)</td><td>USB, Web Flash, OTA</td><td>Device (automatic at first boot)</td></tr><tr><td>3</td><td>Fortress</td><td>HMAC-encrypted</td><td>AES-XTS flash encryption</td><td>OTA only</td><td>Manufacturer</td></tr><tr><td>4</td><td>Bunker</td><td>HMAC-encrypted</td><td>AES-XTS + RSA-3072 Secure Boot</td><td>Signed OTA only</td><td>Manufacturer</td></tr></tbody></table>
+<p>Mode 2 (NVS Vault) is the planned default for the Alpha release and Kickstarter devices. Every device generates its own unique 256-bit HMAC key at first boot, burns it into a one-time-programmable eFuse block, and uses the hardware HMAC peripheral to derive NVS encryption keys at runtime. The raw key is hardware-protected and invisible to software. No master key exists. Not even the manufacturer can decrypt a device&#x27;s stored keys.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="cryptographic-architecture">Cryptographic Architecture<a href="#cryptographic-architecture" class="hash-link" aria-label="Direct link to Cryptographic Architecture" title="Direct link to Cryptographic Architecture" translate="no">​</a></h2>
+<p>Every message passes through four cryptographically independent encryption layers. They are nested envelopes, not sequential stages.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Layer</th><th>Algorithm</th><th>Library</th><th>Protects Against</th></tr></thead><tbody><tr><td>1. Double Ratchet (E2E)</td><td>X3DH (X448) + AES-256-GCM + HKDF-SHA512</td><td>wolfSSL + mbedTLS</td><td>End-to-end interception. Perfect Forward Secrecy + Post-Compromise Security.</td></tr><tr><td>2. Per-Queue NaCl</td><td>X25519 + XSalsa20 + Poly1305</td><td>libsodium</td><td>Traffic correlation between queues if TLS compromised.</td></tr><tr><td>3. Server-to-Recipient NaCl</td><td>X25519 + XSalsa20 + Poly1305</td><td>libsodium</td><td>Correlation of incoming/outgoing server traffic.</td></tr><tr><td>4. TLS 1.3 Transport</td><td>TLS 1.3, ALPN smp/1</td><td>mbedTLS</td><td>Network-level interception. Transport only.</td></tr></tbody></table>
+<p>Content padding to fixed 16 KB blocks is applied at every layer. A network observer sees only identical-sized packets regardless of actual message length.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-storage-hierarchy">Key Storage Hierarchy<a href="#key-storage-hierarchy" class="hash-link" aria-label="Direct link to Key Storage Hierarchy" title="Direct link to Key Storage Hierarchy" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Key Type</th><th>Storage Location</th><th>Protection</th></tr></thead><tbody><tr><td>Ratchet keys (X448 DH, chain keys)</td><td>NVS flash</td><td>HMAC-encrypted (Class 1 Mode 2+), SE (Class 2+)</td></tr><tr><td>Per-queue NaCl keypairs (X25519)</td><td>NVS flash</td><td>HMAC-encrypted (Class 1 Mode 2+), SE (Class 2+)</td></tr><tr><td>Chat history encryption (AES-256-GCM)</td><td>Derived via HKDF</td><td>Device-bound (eFuse HMAC binding)</td></tr><tr><td>TLS session keys</td><td>RAM only</td><td>Cleared after session by mbedTLS</td></tr><tr><td>Decrypted messages</td><td>PSRAM cache (30 msgs)</td><td>sodium_memzero on exit/switch/timeout</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="comparison-with-alternatives">Comparison with Alternatives<a href="#comparison-with-alternatives" class="hash-link" aria-label="Direct link to Comparison with Alternatives" title="Direct link to Comparison with Alternatives" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="simplego-vs-grapheneos">SimpleGo vs GrapheneOS<a href="#simplego-vs-grapheneos" class="hash-link" aria-label="Direct link to SimpleGo vs GrapheneOS" title="Direct link to SimpleGo vs GrapheneOS" translate="no">​</a></h3>
+<p>GrapheneOS is the most secure smartphone operating system available. SimpleGo is not a competitor - it is a complementary security layer for communications that require architectural isolation from general-purpose computing.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Aspect</th><th>GrapheneOS (Pixel)</th><th>SimpleGo Class 1</th><th>SimpleGo Class 3</th></tr></thead><tbody><tr><td>TCB Size</td><td>~50M lines</td><td>~67K lines</td><td>~67K lines</td></tr><tr><td>Baseband</td><td>Yes (IOMMU isolated)</td><td>None</td><td>None</td></tr><tr><td>Secure Element</td><td>Titan M2 (dedicated, SCA-hardened)</td><td>eFuse + HMAC</td><td>Triple SE (3 vendors, 3 countries)</td></tr><tr><td>Persistent Identity</td><td>IMEI, phone number</td><td>None (SimpleX Protocol)</td><td>None</td></tr><tr><td>Encryption Layers</td><td>2 (Signal: DR + TLS)</td><td>4 (DR + 2x NaCl + TLS)</td><td>4</td></tr><tr><td>Remote Attack Surface</td><td>Large (browser, BT, NFC, USB, baseband)</td><td>Minimal (WiFi + TLS only)</td><td>Minimal</td></tr><tr><td>Physical Attack (Lab)</td><td>Titan M2 resists well</td><td>ESP32 eFuse breakable in hours</td><td>Triple SE, months+</td></tr><tr><td>Daily Use</td><td>Full smartphone</td><td>Messaging only</td><td>Messaging only</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="simplego-vs-criminal-encrypted-phone-networks">SimpleGo vs Criminal Encrypted Phone Networks<a href="#simplego-vs-criminal-encrypted-phone-networks" class="hash-link" aria-label="Direct link to SimpleGo vs Criminal Encrypted Phone Networks" title="Direct link to SimpleGo vs Criminal Encrypted Phone Networks" translate="no">​</a></h3>
+<p>Every criminal encrypted phone network shut down to date (EncroChat 2020, Sky ECC 2021, ANOM 2021, Phantom Secure 2018, Ghost 2024) shared the same fatal architecture: modified Android smartphones with centralized server infrastructure. They were compromised through server-side attacks, not by breaking encryption. SimpleX Protocol eliminates the centralized infrastructure. SimpleGo adds hardware key protection that none of these services implemented.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="simplego-vs-lora-mesh-devices-meshtastic-reticulum">SimpleGo vs LoRa Mesh Devices (Meshtastic, Reticulum)<a href="#simplego-vs-lora-mesh-devices-meshtastic-reticulum" class="hash-link" aria-label="Direct link to SimpleGo vs LoRa Mesh Devices (Meshtastic, Reticulum)" title="Direct link to SimpleGo vs LoRa Mesh Devices (Meshtastic, Reticulum)" translate="no">​</a></h3>
+<p>LoRa mesh messengers achieve three of SimpleGo&#x27;s target security features: bare-metal firmware, no baseband, and open source. They lack multi-layer encryption (max 2 layers vs 4), have no key protection (keys in unprotected flash), use persistent node identities, and provide no forward secrecy for group messages.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="simplego-vs-military-devices-sectra-tiger-sectéra-viper">SimpleGo vs Military Devices (Sectra Tiger, Sectéra vIPer)<a href="#simplego-vs-military-devices-sectra-tiger-sectéra-viper" class="hash-link" aria-label="Direct link to SimpleGo vs Military Devices (Sectra Tiger, Sectéra vIPer)" title="Direct link to SimpleGo vs Military Devices (Sectra Tiger, Sectéra vIPer)" translate="no">​</a></h3>
+<p>Military Type 1 devices use classified algorithms, TEMPEST shielding, and tamper detection. They are also proprietary, closed-source, extremely expensive, and bound to military identity systems. SimpleGo is open-source, identity-free, and commercially available.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="known-limitations-honest-assessment">Known Limitations (Honest Assessment)<a href="#known-limitations-honest-assessment" class="hash-link" aria-label="Direct link to Known Limitations (Honest Assessment)" title="Direct link to Known Limitations (Honest Assessment)" translate="no">​</a></h2>
+<p>No security finding is downplayed. This is an honest inventory.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Limitation</th><th>Applies To</th><th>Impact</th><th>Mitigation</th></tr></thead><tbody><tr><td>ESP32-S3 AES hardware vulnerable to CPA side-channel</td><td>Class 1</td><td>Flash encryption key extractable with $2,000+ equipment, physical access, hours of work</td><td>HMAC uses SHA-256 (different attack surface), per-device unique keys, Class 2+ for higher protection</td></tr><tr><td>Derived NVS keys in RAM without Secure Boot</td><td>Class 1 Mode 2</td><td>Malicious firmware could read keys from RAM</td><td>Mode 4 (Secure Boot) prevents unauthorized firmware</td></tr><tr><td>No DPA countermeasures on ESP32-S3</td><td>Class 1 (S3)</td><td>No hardware protection against power analysis</td><td>ESP32-P4 adds anti-DPA pseudo-rounds (unproven effectiveness)</td></tr><tr><td>LVGL pool cannot be securely zeroed</td><td>All Classes</td><td>Message fragments may persist in UI memory pool</td><td>Label clearing + screen destruction, full pool zeroing in Class 3</td></tr><tr><td>Post-quantum not yet active</td><td>All Classes</td><td>X448/X25519 vulnerable to future quantum computers</td><td>Verified feasible on hardware, implementation planned</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="detailed-documentation">Detailed Documentation<a href="#detailed-documentation" class="hash-link" aria-label="Direct link to Detailed Documentation" title="Direct link to Detailed Documentation" translate="no">​</a></h2>
+<p>For technical depth on any specific topic, see the Security Architecture documents:</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-class-1-esp32-s3--esp32-p4">Hardware Class 1 (ESP32-S3 / ESP32-P4)<a href="#hardware-class-1-esp32-s3--esp32-p4" class="hash-link" aria-label="Direct link to Hardware Class 1 (ESP32-S3 / ESP32-P4)" title="Direct link to Hardware Class 1 (ESP32-S3 / ESP32-P4)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#</th><th>Document</th><th>Description</th></tr></thead><tbody><tr><td>01</td><td><a class="" href="/security/class-1-01-overview-and-threat-model">Overview and Threat Model</a></td><td>Three security pillars, honest limitations, device comparisons</td></tr><tr><td>02</td><td><a class="" href="/security/class-1-02-efuse-architecture">ESP32-S3 eFuse Architecture</a></td><td>11 blocks, 6 key blocks, read/write protection, espefuse.py reference</td></tr><tr><td>03</td><td><a class="" href="/security/class-1-03-hmac-nvs-encryption">HMAC-Based NVS Encryption</a></td><td>The vault mechanism, first-boot provisioning, migration, SEC-05 resolution</td></tr><tr><td>04</td><td><a class="" href="/security/class-1-04-known-vulnerabilities">Known Vulnerabilities and Attack Research</a></td><td>8 CVEs/attacks cataloged, ESP32-S3 applicability matrix</td></tr><tr><td>05</td><td><a class="" href="/security/class-1-05-attack-equipment-economics">Attack Equipment Economics</a></td><td>Four equipment tiers ($400 to $400K), tool names and prices</td></tr><tr><td>06</td><td><a class="" href="/security/class-1-06-runtime-memory-protection">Runtime Memory Protection</a></td><td>sodium_memzero, screen lock, Duress PIN and Dead Man&#x27;s Switch concepts</td></tr><tr><td>07</td><td><a class="" href="/security/class-1-07-post-quantum-readiness">Post-Quantum Readiness</a></td><td>sntrup761 vs ML-KEM, ESP32 benchmarks, SimpleX compatibility</td></tr><tr><td>08</td><td><a class="" href="/security/class-1-08-flash-encryption">Flash Encryption Deep Dive</a></td><td>XTS-AES, Dev/Release modes, OTA updates, PSRAM encryption</td></tr><tr><td>09</td><td><a class="" href="/security/class-1-09-secure-boot-v2">Secure Boot V2</a></td><td>RSA-3072 chain of trust, key management, anti-rollback</td></tr><tr><td>10</td><td><a class="" href="/security/class-1-10-four-security-modes">Four Security Modes</a></td><td>Open/Vault/Fortress/Bunker complete reference</td></tr><tr><td>11</td><td><a class="" href="/security/class-1-11-esp32-p4-evolution">ESP32-P4 Evolution Path</a></td><td>Key Management Unit, anti-DPA, dual-chip architecture</td></tr><tr><td>12</td><td><a class="" href="/security/class-1-12-implementation-plan">Implementation Plan</a></td><td>Concrete tasks, code examples, test procedures</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-class-2-stm32u585--single-secure-element">Hardware Class 2 (STM32U585 + Single Secure Element)<a href="#hardware-class-2-stm32u585--single-secure-element" class="hash-link" aria-label="Direct link to Hardware Class 2 (STM32U585 + Single Secure Element)" title="Direct link to Hardware Class 2 (STM32U585 + Single Secure Element)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#</th><th>Document</th><th>Description</th></tr></thead><tbody><tr><td>01</td><td><a class="" href="/security/class-2-01-overview">Overview and Architecture</a></td><td>Coming soon - ATECC608B integration, TrustZone, key lifecycle</td></tr></tbody></table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="hardware-class-3-vault-stm32u5a9--triple-secure-elements">Hardware Class 3 &quot;Vault&quot; (STM32U5A9 + Triple Secure Elements)<a href="#hardware-class-3-vault-stm32u5a9--triple-secure-elements" class="hash-link" aria-label="Direct link to Hardware Class 3 &quot;Vault&quot; (STM32U5A9 + Triple Secure Elements)" title="Direct link to Hardware Class 3 &quot;Vault&quot; (STM32U5A9 + Triple Secure Elements)" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#</th><th>Document</th><th>Description</th></tr></thead><tbody><tr><td>01</td><td><a class="" href="/security/class-3-01-overview">Overview and Architecture</a></td><td>Coming soon - Triple-vendor SE, tamper detection, zeroization</td></tr></tbody></table>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-fundamental-advantage">The Fundamental Advantage<a href="#the-fundamental-advantage" class="hash-link" aria-label="Direct link to The Fundamental Advantage" title="Direct link to The Fundamental Advantage" translate="no">​</a></h2>
+<p>The security advantage of a dedicated messaging device is not about having better encryption than a smartphone - Signal&#x27;s Double Ratchet on GrapheneOS is excellent. The advantage is architectural: 67,000 lines of auditable code instead of 50 million. No baseband processor. No browser engine. No app ecosystem. No persistent identity. Four independent encryption layers that protect against different attacker models simultaneously.</p>
+<p>The most secure system is the simplest one that does its job correctly.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="document-history">Document History<a href="#document-history" class="hash-link" aria-label="Direct link to Document History" title="Direct link to Document History" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Version</th><th>Date</th><th>Changes</th></tr></thead><tbody><tr><td>3.0</td><td>March 2026</td><td>Complete restructure: terminology updated to Hardware Class 1/2/3, four security modes added, CVE research integrated, honest limitations section added, detailed documentation linked (12 Class 1 documents)</td></tr><tr><td>2.0</td><td>January 2026</td><td>Complete rewrite for three-tier architecture</td></tr><tr><td>1.0</td><td>January 2026</td><td>Initial security model documentation</td></tr></tbody></table>
+<hr>
+<p><em>SimpleGo - IT and More Systems, Recklinghausen</em>
+<em>First native C implementation of the SimpleX Messaging Protocol</em>
+<em>AGPL-3.0 (Software) | CERN-OHL-W-2.0 (Hardware)</em></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/security/security-overview.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/security/class-3-01-overview"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Hardware Class 3 - Overview and Architecture</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/security/class-1-02-efuse-architecture"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Class 1 - ESP32-S3 eFuse Architecture</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#the-smartphone-problem" class="table-of-contents__link toc-highlight">The Smartphone Problem</a><ul><li><a href="#the-baseband-problem" class="table-of-contents__link toc-highlight">The Baseband Problem</a></li></ul></li><li><a href="#the-dedicated-hardware-approach" class="table-of-contents__link toc-highlight">The Dedicated Hardware Approach</a><ul><li><a href="#attack-surface-comparison" class="table-of-contents__link toc-highlight">Attack Surface Comparison</a></li><li><a href="#what-this-eliminates" class="table-of-contents__link toc-highlight">What This Eliminates</a></li></ul></li><li><a href="#three-hardware-classes" class="table-of-contents__link toc-highlight">Three Hardware Classes</a><ul><li><a href="#hardware-class-comparison" class="table-of-contents__link toc-highlight">Hardware Class Comparison</a></li><li><a href="#cost-to-extract-keys-physical-attack" class="table-of-contents__link toc-highlight">Cost to Extract Keys (Physical Attack)</a></li></ul></li><li><a href="#hardware-class-1-four-security-modes" class="table-of-contents__link toc-highlight">Hardware Class 1: Four Security Modes</a></li><li><a href="#cryptographic-architecture" class="table-of-contents__link toc-highlight">Cryptographic Architecture</a><ul><li><a href="#key-storage-hierarchy" class="table-of-contents__link toc-highlight">Key Storage Hierarchy</a></li></ul></li><li><a href="#comparison-with-alternatives" class="table-of-contents__link toc-highlight">Comparison with Alternatives</a><ul><li><a href="#simplego-vs-grapheneos" class="table-of-contents__link toc-highlight">SimpleGo vs GrapheneOS</a></li><li><a href="#simplego-vs-criminal-encrypted-phone-networks" class="table-of-contents__link toc-highlight">SimpleGo vs Criminal Encrypted Phone Networks</a></li><li><a href="#simplego-vs-lora-mesh-devices-meshtastic-reticulum" class="table-of-contents__link toc-highlight">SimpleGo vs LoRa Mesh Devices (Meshtastic, Reticulum)</a></li><li><a href="#simplego-vs-military-devices-sectra-tiger-sectéra-viper" class="table-of-contents__link toc-highlight">SimpleGo vs Military Devices (Sectra Tiger, Sectéra vIPer)</a></li></ul></li><li><a href="#known-limitations-honest-assessment" class="table-of-contents__link toc-highlight">Known Limitations (Honest Assessment)</a></li><li><a href="#detailed-documentation" class="table-of-contents__link toc-highlight">Detailed Documentation</a><ul><li><a href="#hardware-class-1-esp32-s3--esp32-p4" class="table-of-contents__link toc-highlight">Hardware Class 1 (ESP32-S3 / ESP32-P4)</a></li><li><a href="#hardware-class-2-stm32u585--single-secure-element" class="table-of-contents__link toc-highlight">Hardware Class 2 (STM32U585 + Single Secure Element)</a></li><li><a href="#hardware-class-3-vault-stm32u5a9--triple-secure-elements" class="table-of-contents__link toc-highlight">Hardware Class 3 &quot;Vault&quot; (STM32U5A9 + Triple Secure Elements)</a></li></ul></li><li><a href="#the-fundamental-advantage" class="table-of-contents__link toc-highlight">The Fundamental Advantage</a></li><li><a href="#document-history" class="table-of-contents__link toc-highlight">Document History</a></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/installer">Flash Tool</a><a href="https://simplego.dev/network">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos">Terms of Service</a><a href="https://simplego.dev/legal/privacy">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer">Disclaimer</a><a href="https://simplego.dev/imprint">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement">Law Enforcement</a><a href="https://simplego.dev/legal/transparency">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact">Partnership</a><a href="https://simplego.dev/ost">Soundtrack</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>

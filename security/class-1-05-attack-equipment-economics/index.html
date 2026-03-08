@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-security/class-1-05-attack-equipment-economics" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">Class 1 - Attack Equipment Economics | SimpleGo</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://wiki.simplego.dev/security/class-1-05-attack-equipment-economics"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Class 1 - Attack Equipment Economics | SimpleGo"><meta data-rh="true" name="description" content="SimpleGo Security Architecture - Hardware Class 1"><meta data-rh="true" property="og:description" content="SimpleGo Security Architecture - Hardware Class 1"><link data-rh="true" rel="icon" href="https://simplego.dev/favicon-32.png"><link data-rh="true" rel="canonical" href="https://wiki.simplego.dev/security/class-1-05-attack-equipment-economics"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/security/class-1-05-attack-equipment-economics" hreflang="en"><link data-rh="true" rel="alternate" href="https://wiki.simplego.dev/security/class-1-05-attack-equipment-economics" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Security","item":"https://wiki.simplego.dev/security"},{"@type":"ListItem","position":2,"name":"Class 1 - Attack Equipment Economics","item":"https://wiki.simplego.dev/security/class-1-05-attack-equipment-economics"}]}</script><link rel="stylesheet" href="/assets/css/styles.0f3882a8.css">
+<script src="/assets/js/runtime~main.30740e1d.js" defer="defer"></script>
+<script src="/assets/js/main.231f966f.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>document.documentElement.setAttribute("data-theme","dark"),document.documentElement.setAttribute("data-theme-choice","dark"),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" target="_self" href="/"><div class="navbar__logo"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/logo.svg" alt="SimpleGo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/">Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://simplego.dev" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Home<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/product" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Product<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/crypto" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Crypto<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/installer" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Flash Tool<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/network" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Network<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://simplego.dev/pro" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Pro<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="navbarSearchContainer_Bca1"><div class="dsla-search-wrapper"><div class="dsla-search-field" data-tags="default,docs-default-current"></div></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/"><span title="SimpleGo Documentation" class="linkLabel_WmDU">SimpleGo Documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/getting-started"><span title="Getting Started" class="linkLabel_WmDU">Getting Started</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/architecture"><span title="Architecture" class="categoryLinkLabel_W154">Architecture</span></a><button aria-label="Expand sidebar category &#x27;Architecture&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/smp-in-c"><span title="SMP in C" class="categoryLinkLabel_W154">SMP in C</span></a><button aria-label="Expand sidebar category &#x27;SMP in C&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/protocol-analysis"><span title="Protocol Analysis" class="categoryLinkLabel_W154">Protocol Analysis</span></a><button aria-label="Expand sidebar category &#x27;Protocol Analysis&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/hardware"><span title="Hardware" class="categoryLinkLabel_W154">Hardware</span></a><button aria-label="Expand sidebar category &#x27;Hardware&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--active" href="/security"><span title="Security" class="categoryLinkLabel_W154">Security</span></a><button aria-label="Collapse sidebar category &#x27;Security&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-01-overview-and-threat-model"><span title="Class 1 - Overview and Threat Model" class="linkLabel_WmDU">Class 1 - Overview and Threat Model</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-2-01-overview"><span title="Hardware Class 2 - Overview and Architecture" class="linkLabel_WmDU">Hardware Class 2 - Overview and Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-3-01-overview"><span title="Hardware Class 3 - Overview and Architecture" class="linkLabel_WmDU">Hardware Class 3 - Overview and Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/security-overview"><span title="Security Overview" class="linkLabel_WmDU">Security Overview</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-02-efuse-architecture"><span title="Class 1 - ESP32-S3 eFuse Architecture" class="linkLabel_WmDU">Class 1 - ESP32-S3 eFuse Architecture</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-03-hmac-nvs-encryption"><span title="Class 1 - HMAC-Based NVS Encryption" class="linkLabel_WmDU">Class 1 - HMAC-Based NVS Encryption</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-04-known-vulnerabilities"><span title="Class 1 - Known Vulnerabilities and Attack Research" class="linkLabel_WmDU">Class 1 - Known Vulnerabilities and Attack Research</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/security/class-1-05-attack-equipment-economics"><span title="Class 1 - Attack Equipment Economics" class="linkLabel_WmDU">Class 1 - Attack Equipment Economics</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-06-runtime-memory-protection"><span title="Class 1 - Runtime Memory Protection" class="linkLabel_WmDU">Class 1 - Runtime Memory Protection</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-07-post-quantum-readiness"><span title="Class 1 - Post-Quantum Readiness" class="linkLabel_WmDU">Class 1 - Post-Quantum Readiness</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-08-flash-encryption"><span title="Class 1 - Flash Encryption Deep Dive" class="linkLabel_WmDU">Class 1 - Flash Encryption Deep Dive</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-09-secure-boot-v2"><span title="Class 1 - Secure Boot V2" class="linkLabel_WmDU">Class 1 - Secure Boot V2</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-10-four-security-modes"><span title="Class 1 - Four Security Modes" class="linkLabel_WmDU">Class 1 - Four Security Modes</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-11-esp32-p4-evolution"><span title="Class 1 - ESP32-P4 Evolution Path" class="linkLabel_WmDU">Class 1 - ESP32-P4 Evolution Path</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/security/class-1-12-implementation-plan"><span title="Class 1 - Implementation Plan" class="linkLabel_WmDU">Class 1 - Implementation Plan</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/SIMPLEGO_VS_GRAPHENEOS"><span title="Why SimpleGo" class="categoryLinkLabel_W154">Why SimpleGo</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/BUILD_SYSTEM"><span title="Contributing" class="categoryLinkLabel_W154">Contributing</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist" href="/reference/constants"><span title="Reference" class="categoryLinkLabel_W154">Reference</span></a><button aria-label="Expand sidebar category &#x27;Reference&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li></ul></nav><button type="button" title="Collapse sidebar" aria-label="Collapse sidebar" class="button button--secondary button--outline collapseSidebarButton_PEFL"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_kv0_"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/security"><span>Security</span></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Class 1 - Attack Equipment Economics</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><p><img decoding="async" loading="lazy" alt="SimpleGo Security Architecture - Hardware Class 1" src="/assets/images/github_header_security_architecture_class_1-4dc754be14f525bd446e620580c3c791.png" width="1200" height="250" class="img_ev3q"></p>
+<header><h1>Attack Equipment Economics</h1></header>
+<p><strong>Document version:</strong> Session 44 | March 2026
+<strong>Copyright:</strong> 2025-2026 Sascha Daemgen, IT and More Systems, Recklinghausen
+<strong>License:</strong> AGPL-3.0 (Software) | CERN-OHL-W-2.0 (Hardware)</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="why-this-document-exists">Why This Document Exists<a href="#why-this-document-exists" class="hash-link" aria-label="Direct link to Why This Document Exists" title="Direct link to Why This Document Exists" translate="no">​</a></h2>
+<p>Security claims without cost context are meaningless. Saying &quot;requires physical access and laboratory equipment&quot; could mean anything from a $15 SPI reader to a $400,000 certification lab. This document provides concrete, verifiable price points for every tool referenced in SimpleGo&#x27;s threat model, enabling users, investors, and security researchers to make their own informed assessment of SimpleGo Class 1&#x27;s practical security level.</p>
+<p>All prices are based on publicly available retail listings, published research papers, and manufacturer product pages as of early 2026. Where exact prices are unavailable, ranges are given with sources noted.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-baseline-attacking-simplego-without-the-vault">The Baseline: Attacking SimpleGo WITHOUT the Vault<a href="#the-baseline-attacking-simplego-without-the-vault" class="hash-link" aria-label="Direct link to The Baseline: Attacking SimpleGo WITHOUT the Vault" title="Direct link to The Baseline: Attacking SimpleGo WITHOUT the Vault" translate="no">​</a></h2>
+<p>Before the HMAC vault is enabled (Mode 1, current Alpha state), attacking SimpleGo&#x27;s stored keys requires:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Item</th><th>Price</th><th>Source</th></tr></thead><tbody><tr><td>CH341A USB SPI flash programmer</td><td>$5-15</td><td>AliExpress, Amazon</td></tr><tr><td>SOIC-8 test clip (no desoldering needed)</td><td>$3-8</td><td>AliExpress</td></tr><tr><td>flashrom or esptool.py software</td><td>Free</td><td>Open source</td></tr></tbody></table>
+<p><strong>Total: $8-23. Time: 5 minutes. Skill: Beginner.</strong></p>
+<p>The attacker clips onto the SPI flash chip, runs <code>esptool.py read_flash</code>, and dumps the entire NVS partition in plaintext. All ratchet keys, queue keys, handshake state, and WiFi credentials are immediately readable. No specialized knowledge required - there are YouTube tutorials.</p>
+<p>This is the attack that the HMAC vault (Mode 2) is specifically designed to prevent.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="attacking-simplego-with-the-vault-four-tiers-of-equipment">Attacking SimpleGo WITH the Vault: Four Tiers of Equipment<a href="#attacking-simplego-with-the-vault-four-tiers-of-equipment" class="hash-link" aria-label="Direct link to Attacking SimpleGo WITH the Vault: Four Tiers of Equipment" title="Direct link to Attacking SimpleGo WITH the Vault: Four Tiers of Equipment" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="tier-1-hobbyist--student-400-600">Tier 1: Hobbyist / Student ($400-600)<a href="#tier-1-hobbyist--student-400-600" class="hash-link" aria-label="Direct link to Tier 1: Hobbyist / Student ($400-600)" title="Direct link to Tier 1: Hobbyist / Student ($400-600)" translate="no">​</a></h3>
+<p>The minimum viable setup for electromagnetic fault injection experiments. Not sufficient for reliable key extraction from ESP32-S3, but capable of learning the techniques and potentially achieving results with significant time investment.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Item</th><th>Model</th><th>Price</th><th>Purpose</th></tr></thead><tbody><tr><td>EMFI tool</td><td>PicoEMP (DIY from open-source design)</td><td>$50-60</td><td>EM pulse generation, 310V fixed</td></tr><tr><td>EMFI tool (alt)</td><td>Electronic Cats Faulty Cat v2.1</td><td>$120</td><td>EMFI + voltage glitch + SWD/JTAG detect</td></tr><tr><td>Capture board</td><td>ChipWhisperer-Nano</td><td>$250</td><td>Basic power analysis, 10-bit ADC</td></tr><tr><td>Target boards</td><td>5x ESP32-S3-DevKitC</td><td>$50</td><td>Practice and parameter tuning</td></tr><tr><td>Accessories</td><td>Probes, wires, clips</td><td>$30-50</td><td>Physical connections</td></tr></tbody></table>
+<p><strong>Total: $400-530</strong></p>
+<p><strong>Capabilities:</strong> Basic EMFI experiments. Simple Power Analysis (SPA) to observe gross power patterns. Cannot perform high-resolution CPA needed for AES key extraction (ADC resolution and sample rate too low). Suitable for learning, not for production attacks against ESP32 security features.</p>
+<p><strong>Time to extract ESP32-S3 HMAC key:</strong> Unknown. Likely impossible with this equipment due to insufficient measurement resolution. PicoEMP has demonstrated successful fault injection against simpler targets but published ESP32 attacks used more capable equipment.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="tier-2-security-researcher-1600-5000">Tier 2: Security Researcher ($1,600-5,000)<a href="#tier-2-security-researcher-1600-5000" class="hash-link" aria-label="Direct link to Tier 2: Security Researcher ($1,600-5,000)" title="Direct link to Tier 2: Security Researcher ($1,600-5,000)" translate="no">​</a></h3>
+<p>The setup that could realistically reproduce the Ledger Donjon CPA attack against ESP32 AES hardware, with patience.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Item</th><th>Model</th><th>Price</th><th>Purpose</th></tr></thead><tbody><tr><td>Capture + glitch</td><td>ChipWhisperer-Husky</td><td>$500-700</td><td>12-bit ADC, 200 MS/s, clock glitching</td></tr><tr><td>Oscilloscope</td><td>PicoScope 3206D (200 MHz)</td><td>$700-900</td><td>Timing analysis, trigger setup</td></tr><tr><td>EMFI injector</td><td>PicoEMP or SiliconToaster (DIY)</td><td>$50-150</td><td>EM pulse generation</td></tr><tr><td>Positioning</td><td>CNC 3018 Pro (modified for probe)</td><td>$200-300</td><td>XYZ automated probe positioning</td></tr><tr><td>Target boards</td><td>10x ESP32-S3-DevKitC</td><td>$100</td><td>Parameter optimization</td></tr><tr><td>Analysis software</td><td>ChipWhisperer + Lascar (open source)</td><td>Free</td><td>CPA computation, trace analysis</td></tr><tr><td>EM probe set</td><td>Custom ferrite-core probes, 0.5-2mm</td><td>$50-100</td><td>Focused EM injection/measurement</td></tr><tr><td>Accessories</td><td>Shunt resistors, amplifiers, connectors</td><td>$100-200</td><td>Measurement chain</td></tr></tbody></table>
+<p><strong>Total: $1,700-2,550 (basic) to $5,000 (with better oscilloscope)</strong></p>
+<p><strong>Capabilities:</strong> Full Correlation Power Analysis (CPA) against AES operations. ChipWhisperer-Husky&#x27;s 12-bit ADC at 200 MS/s is sufficient for AES S-box leakage detection. The CNC 3018 enables automated probe positioning for systematic chip surface scanning. Lascar (Ledger Donjon&#x27;s open-source SCA library) processes 100,000 traces with 10,000 samples each in approximately 25 seconds.</p>
+<p><strong>Time to extract ESP32-S3 flash encryption key:</strong> If the published Ledger Donjon methodology transfers directly (which is expected per Espressif&#x27;s advisory), approximately 300,000 traces at maybe 5-10 traces per second means 8-17 hours of measurement collection, plus analysis time. With parameter optimization on practice chips, total project time is days to weeks.</p>
+<p><strong>Time to extract ESP32-S3 HMAC key:</strong> Unknown. The HMAC peripheral uses SHA-256, not AES. CPA methodology would need adaptation. No published work exists. Estimated: significantly harder, possibly weeks to months if feasible at all with this equipment.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="tier-3-professional-lab-10000-30000">Tier 3: Professional Lab ($10,000-30,000)<a href="#tier-3-professional-lab-10000-30000" class="hash-link" aria-label="Direct link to Tier 3: Professional Lab ($10,000-30,000)" title="Direct link to Tier 3: Professional Lab ($10,000-30,000)" translate="no">​</a></h3>
+<p>The setup used in published ESP32 research papers and by professional hardware security assessment firms.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Item</th><th>Model</th><th>Price</th><th>Purpose</th></tr></thead><tbody><tr><td>EMFI platform</td><td>NewAE ChipSHOUTER (CW520)</td><td>$3,300-4,000</td><td>Programmable 0-500V EM injection</td></tr><tr><td>Oscilloscope</td><td>Keysight DSOX3054T (500 MHz, 5 GS/s)</td><td>$5,000-7,000</td><td>High-bandwidth power measurement</td></tr><tr><td>Positioning</td><td>ChipShover (XYZ with 10um precision)</td><td>$500-1,000</td><td>Automated scanning</td></tr><tr><td>Positioning (alt)</td><td>Thorlabs XYZ stage</td><td>$2,000-10,000</td><td>Sub-micron precision</td></tr><tr><td>Current probe</td><td>Keysight N2893A or Tektronix CT1</td><td>$1,000-2,000</td><td>Low-noise current measurement</td></tr><tr><td>Analysis platform</td><td>ChipWhisperer-Pro or custom</td><td>$1,000-3,000</td><td>High-speed capture and streaming</td></tr><tr><td>Target boards</td><td>50x ESP32-S3-DevKitC</td><td>$500</td><td>Extensive parameter exploration</td></tr><tr><td>Software</td><td>ChipWhisperer Pro + custom scripts</td><td>$0-1,000</td><td>Full SCA toolchain</td></tr></tbody></table>
+<p><strong>Total: $13,300-28,000</strong></p>
+<p><strong>Capabilities:</strong> Everything in Tier 2, plus: higher measurement bandwidth allows capturing faster transients, programmable EM pulse voltage enables fine-tuning for specific chip specimens, higher trace collection rate (hundreds per second with streaming), and the ability to characterize the HMAC peripheral&#x27;s power signature with sufficient resolution to develop novel SHA-256 CPA attacks.</p>
+<p>This is the equipment class used by Ledger Donjon (Tektronix MSO54 oscilloscope), Raelize (Riscure EM-FI probe), and Delvaux/TII (Teledyne LeCroy WavePro 804HD) in their published ESP32 research.</p>
+<p><strong>Time to extract ESP32-S3 flash encryption key:</strong> Hours (established methodology).
+<strong>Time to extract ESP32-S3 HMAC key:</strong> Days to weeks (novel research required, but equipment is sufficient).</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="tier-4-certification-lab-100000-400000">Tier 4: Certification Lab ($100,000-400,000+)<a href="#tier-4-certification-lab-100000-400000" class="hash-link" aria-label="Direct link to Tier 4: Certification Lab ($100,000-400,000+)" title="Direct link to Tier 4: Certification Lab ($100,000-400,000+)" translate="no">​</a></h3>
+<p>Equipment used for Common Criteria, EMVCo, and FIPS certification testing. This is what evaluates the Secure Elements planned for Hardware Class 2 and 3.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Item</th><th>Model</th><th>Price</th><th>Purpose</th></tr></thead><tbody><tr><td>SCA platform</td><td>Keysight Inspector SC4 (ex-Riscure)</td><td>$20,000-100,000+</td><td>Industry-standard evaluation</td></tr><tr><td>Laser FI</td><td>AlphaNov/esDynamic LFI station</td><td>$50,000-200,000</td><td>Transistor-level fault injection</td></tr><tr><td>Oscilloscope</td><td>Keysight UXR (110 GHz) or similar</td><td>$15,000-40,000</td><td>Maximum bandwidth capture</td></tr><tr><td>EM probe station</td><td>Custom with shielded chamber</td><td>$5,000-20,000</td><td>Controlled EM environment</td></tr><tr><td>Decapsulation</td><td>Chemical + plasma etcher</td><td>$10,000-30,000</td><td>Die exposure for laser/probing</td></tr><tr><td>Microprobe station</td><td>Cascade or similar</td><td>$50,000-100,000+</td><td>Direct die contact probing</td></tr></tbody></table>
+<p><strong>Total: $150,000-490,000+</strong></p>
+<p><strong>Capabilities:</strong> Everything above, plus: laser fault injection at individual transistor level, die-level probing after chemical decapsulation, thermal analysis, photon emission analysis. This is the equipment needed to attack dedicated Secure Elements like the ATECC608B, OPTIGA Trust M, and SE050 planned for SimpleGo Hardware Class 2 and 3.</p>
+<p><strong>Relevance to SimpleGo Class 1:</strong> Massive overkill. A Tier 2 or 3 setup is sufficient to attack ESP32-S3 eFuse-based security. This tier is relevant only as context for understanding what it takes to attack the dedicated Secure Elements in higher hardware classes.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-most-important-number-cost-ratio">The Most Important Number: Cost Ratio<a href="#the-most-important-number-cost-ratio" class="hash-link" aria-label="Direct link to The Most Important Number: Cost Ratio" title="Direct link to The Most Important Number: Cost Ratio" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Attack Target</th><th>Equipment Cost</th><th>What You Get</th></tr></thead><tbody><tr><td>SimpleGo Mode 1 (no vault)</td><td>$15</td><td>ALL keys from ALL contacts, plaintext</td></tr><tr><td>SimpleGo Mode 2 (HMAC vault)</td><td>$2,000-5,000</td><td>Keys from ONE device only, days of work</td></tr><tr><td>SimpleGo Mode 3 (+ Flash Enc.)</td><td>$2,000-5,000</td><td>Keys + firmware from ONE device, days of work</td></tr><tr><td>SimpleGo Mode 4 (+ Secure Boot)</td><td>$10,000-30,000</td><td>Keys from ONE device, needs novel EMFI to bypass boot</td></tr><tr><td>SimpleGo Class 2 (single SE)</td><td>$30,000-100,000</td><td>Requires SE-specific research, weeks to months</td></tr><tr><td>SimpleGo Class 3 (triple SE)</td><td>$200,000+</td><td>Must break 3 independent SEs from 3 vendors</td></tr></tbody></table>
+<p><strong>The vault (Mode 2) raises the cost of attack by a factor of 130-330x and limits the blast radius from &quot;all contacts&quot; to &quot;one device.&quot;</strong> This is the core value proposition of Hardware Class 1 security: transforming a trivial $15 attack into a multi-thousand-dollar research project that yields information about exactly one device.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="practice-requirements-the-hidden-cost">Practice Requirements: The Hidden Cost<a href="#practice-requirements-the-hidden-cost" class="hash-link" aria-label="Direct link to Practice Requirements: The Hidden Cost" title="Direct link to Practice Requirements: The Hidden Cost" translate="no">​</a></h2>
+<p>Published papers do not emphasize the skill development time, but it is substantial. Side-channel analysis and fault injection are not plug-and-play tools. The attacker must:</p>
+<p><strong>Learn the theory.</strong> CPA requires understanding of statistical correlation, Hamming weight models, and AES internals. This is graduate-level cryptography and electrical engineering. Textbooks, courses, and months of study for someone starting from zero.</p>
+<p><strong>Practice on known targets.</strong> The ChipWhisperer ecosystem provides tutorial targets (CW308 boards) for practicing CPA against known AES implementations with known keys. Getting a first successful key extraction on a tutorial target typically takes days of setup and experimentation. Progressing from tutorial targets to real-world ESP32 targets requires adapting probing techniques, trigger timing, and analysis parameters.</p>
+<p><strong>Optimize for the specific target.</strong> Every individual chip specimen has slightly different characteristics (manufacturing variation, board layout, bypass capacitor placement). Parameters that work on one ESP32 board may need adjustment for another. The published papers report &quot;optimized&quot; results - they do not report the hours of parameter tuning that preceded the successful extraction.</p>
+<p><strong>A realistic estimate for a skilled hardware security researcher attacking a SimpleGo Mode 2 device for the first time:</strong> 1-2 weeks including equipment setup, parameter optimization on practice chips, trace collection, and analysis. For a graduate student learning the techniques from scratch: months.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="open-source-attack-tools">Open-Source Attack Tools<a href="#open-source-attack-tools" class="hash-link" aria-label="Direct link to Open-Source Attack Tools" title="Direct link to Open-Source Attack Tools" translate="no">​</a></h2>
+<p>The democratization of hardware security research means the knowledge barrier is lowering over time. All major tools have open-source implementations:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Tool</th><th>Developer</th><th>License</th><th>Purpose</th></tr></thead><tbody><tr><td>ChipWhisperer</td><td>NewAE Technology</td><td>GPLv3</td><td>Full SCA/FI platform with Jupyter notebooks</td></tr><tr><td>PicoEMP</td><td>NewAE Technology</td><td>BSD-3</td><td>Low-cost EMFI tool, Raspberry Pi Pico based</td></tr><tr><td>SiliconToaster</td><td>Ledger Donjon</td><td>LGPLv3</td><td>Programmable 0-1000V EM injector</td></tr><tr><td>Faulty Cat</td><td>Electronic Cats</td><td>Open hardware</td><td>EMFI + voltage glitch + debug detection</td></tr><tr><td>Lascar</td><td>Ledger Donjon</td><td>LGPLv3</td><td>CPA/DPA/template attacks, Python library</td></tr><tr><td>SCALib</td><td>SIMPLE-Crypto (UCLouvain)</td><td>AGPLv3</td><td>State-of-art evaluation: LDA, SNR, belief propagation</td></tr><tr><td>Rainbow</td><td>Ledger Donjon</td><td>LGPLv3</td><td>Fault injection simulation via Unicorn emulation</td></tr><tr><td>findus</td><td>SySS GmbH</td><td>Open source</td><td>EMFI experiment management</td></tr></tbody></table>
+<p>The availability of these tools means that the cost barrier is primarily in the measurement hardware (oscilloscopes, probes, positioning), not in the software or methodology. A motivated researcher with $2,000 in hardware and access to published papers has a credible path to attacking ESP32-S3 eFuse security.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="conclusion-honest-positioning">Conclusion: Honest Positioning<a href="#conclusion-honest-positioning" class="hash-link" aria-label="Direct link to Conclusion: Honest Positioning" title="Direct link to Conclusion: Honest Positioning" translate="no">​</a></h2>
+<p>SimpleGo Hardware Class 1 with the HMAC vault provides strong protection against the most common and accessible attack vector (flash readout) at zero additional hardware cost. It does not provide protection against a determined attacker with $2,000+ in equipment, physical access, and weeks of dedicated effort.</p>
+<p>This is the honest truth, and it should be communicated clearly to users. The comparison point is not &quot;is this unbreakable?&quot; (nothing is) but &quot;how much does it cost to break, and what does the attacker get?&quot; For a $50-70 device using a $10 microcontroller, raising the attack cost from $15 to $2,000+ while limiting the result to a single device is a remarkable value proposition. And for users who need more, Hardware Class 2 and 3 exist.</p>
+<hr>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="references">References<a href="#references" class="hash-link" aria-label="Direct link to References" title="Direct link to References" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Source</th><th>Description</th></tr></thead><tbody><tr><td>newae.com/products</td><td>ChipSHOUTER, ChipWhisperer-Husky, PicoEMP pricing</td></tr><tr><td>electroniccats.com/store</td><td>Faulty Cat v2.1 pricing</td></tr><tr><td>github.com/newaetech/chipshouter-picoemp</td><td>PicoEMP open-source design files</td></tr><tr><td>github.com/Ledger-Donjon/silicon-toaster</td><td>SiliconToaster design files</td></tr><tr><td>github.com/Ledger-Donjon/lascar</td><td>Lascar SCA library</td></tr><tr><td>ledger.com/blog/compact-em</td><td>Ledger Donjon EMFI setup description with CNC pricing</td></tr><tr><td>IACR 2022/301</td><td>&quot;How Practical are Fault Injection Attacks, Really?&quot; (cost survey)</td></tr><tr><td>eprint.iacr.org/2023/090</td><td>Ledger Donjon ESP32-V3 attack equipment description</td></tr><tr><td>usenix.org WOOT 2024</td><td>Delvaux et al. equipment description</td></tr><tr><td>courk.cc</td><td>Courdesses ESP32-C3/C6 attack setup</td></tr></tbody></table>
+<hr>
+<p><em>SimpleGo - IT and More Systems, Recklinghausen</em>
+<em>First native C implementation of the SimpleX Messaging Protocol</em>
+<em>AGPL-3.0 (Software) | CERN-OHL-W-2.0 (Hardware)</em></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/saschadaemgen/SimpleGo/edit/main/docs/../docs/security/class-1-05-attack-equipment-economics.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/security/class-1-04-known-vulnerabilities"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Class 1 - Known Vulnerabilities and Attack Research</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/security/class-1-06-runtime-memory-protection"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Class 1 - Runtime Memory Protection</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#why-this-document-exists" class="table-of-contents__link toc-highlight">Why This Document Exists</a></li><li><a href="#the-baseline-attacking-simplego-without-the-vault" class="table-of-contents__link toc-highlight">The Baseline: Attacking SimpleGo WITHOUT the Vault</a></li><li><a href="#attacking-simplego-with-the-vault-four-tiers-of-equipment" class="table-of-contents__link toc-highlight">Attacking SimpleGo WITH the Vault: Four Tiers of Equipment</a><ul><li><a href="#tier-1-hobbyist--student-400-600" class="table-of-contents__link toc-highlight">Tier 1: Hobbyist / Student ($400-600)</a></li><li><a href="#tier-2-security-researcher-1600-5000" class="table-of-contents__link toc-highlight">Tier 2: Security Researcher ($1,600-5,000)</a></li><li><a href="#tier-3-professional-lab-10000-30000" class="table-of-contents__link toc-highlight">Tier 3: Professional Lab ($10,000-30,000)</a></li><li><a href="#tier-4-certification-lab-100000-400000" class="table-of-contents__link toc-highlight">Tier 4: Certification Lab ($100,000-400,000+)</a></li></ul></li><li><a href="#the-most-important-number-cost-ratio" class="table-of-contents__link toc-highlight">The Most Important Number: Cost Ratio</a></li><li><a href="#practice-requirements-the-hidden-cost" class="table-of-contents__link toc-highlight">Practice Requirements: The Hidden Cost</a></li><li><a href="#open-source-attack-tools" class="table-of-contents__link toc-highlight">Open-Source Attack Tools</a></li><li><a href="#conclusion-honest-positioning" class="table-of-contents__link toc-highlight">Conclusion: Honest Positioning</a></li><li><a href="#references" class="table-of-contents__link toc-highlight">References</a></li></ul></div></div></div></div></main></div></div></div><footer id="site-footer" class="footer_xBL4"><div class="container_pcGX"><div class="footerInner_znUb"><div class="footerCol_ao_k"><div class="footerBrand_gBTp"><svg viewBox="0 0 458 118" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" style="height:26px;width:auto;opacity:0.9"><g><path d="M12.04,84.92l5.6-6.42c5.29,5.49,12.64,9.11,20.28,9.11c9.65,0,15.36-4.8,15.36-11.95c0-7.51-5.32-9.9-12.26-12.93l-10.56-4.66c-6.85-2.92-14.88-8.12-14.88-18.92c0-11.23,9.78-19.51,23.14-19.51c8.71,0,16.48,3.77,21.64,9.11l-4.96,6.01c-4.5-4.25-9.89-6.89-16.68-6.89c-8.24,0-13.7,4.16-13.7,10.73c0,7.08,6.41,9.73,12.17,12.16l10.47,4.53c8.5,3.65,15.14,8.72,15.14,19.65c0,11.61-9.59,20.89-25.05,20.89C27.44,95.83,18.47,91.62,12.04,84.92z"></path><path d="M74.63,22.91c0-3.62,2.78-5.95,6.36-5.95c3.58,0,6.36,2.33,6.36,5.95c0,3.48-2.78,5.95-6.36,5.95C77.41,28.86,74.63,26.39,74.63,22.91z M76.31,40.05h9.21v54.44h-9.21V40.05z"></path><path d="M103.86,40.05h7.61l0.78,7.89h0.31c4.76-5.15,10.46-9.24,16.94-9.24c8.32,0,12.78,3.99,15.03,10.38c5.65-6.12,11.33-10.38,17.95-10.38c11.19,0,16.56,7.4,16.56,21.29v34.49h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.22,0-8.61,2.76-13.64,8.36v39.42h-9.21v-33.3c0-10.14-3.21-14.48-10.13-14.48c-4.08,0-8.61,2.76-13.64,8.36v39.42h-9.21V40.05z"></path><path d="M196.7,40.05h7.61l0.78,6.28h0.31c4.92-4.09,11.05-7.63,17.35-7.63c14.06,0,21.58,10.92,21.58,27.74c0,18.55-11.14,29.39-23.58,29.39c-4.99,0-10.09-2.3-15.09-6.31l0.25,9.5v18.43h-9.21V40.05z M234.81,66.53c0-12.01-4.1-20.07-14.35-20.07c-4.61,0-9.26,2.54-14.55,7.43v28.53c4.93,4.14,9.66,5.66,13.25,5.66C228.18,88.08,234.81,79.97,234.81,66.53z"></path><path d="M258.41,83.56V14.71h9.21v69.52c0,2.82,1.23,3.94,2.57,3.94c0.53,0,0.98,0,2.02-0.22l1.25,7.03c-1.31,0.47-2.89,0.86-5.3,0.86C261.25,95.83,258.41,91.43,258.41,83.56z"></path><path d="M282.92,67.34c0-17.72,11.94-28.63,24.47-28.63c13.88,0,21.72,9.97,21.72,25.54c0,1.94-0.16,3.89-0.43,5.23h-36.66c0.66,11.53,7.71,19.01,18.09,19.01c5.22,0,9.51-1.69,13.55-4.35l3.3,6.04c-4.77,3.12-10.57,5.65-17.97,5.65C294.47,95.83,282.92,85.22,282.92,67.34z M320.97,62.89c0-10.91-4.91-16.84-13.42-16.84c-7.65,0-14.49,6.14-15.61,16.84H320.97z"></path><path fill="#45BDD1" d="M339.1,57.8c0-23.7,14.25-38.16,33.74-38.16c10.18,0,16.89,4.62,21.19,9.06l-5.12,6.09c-3.73-3.84-8.44-6.93-15.82-6.93c-14.81,0-24.32,11.38-24.32,29.69c0,18.47,8.74,30.05,24.42,30.05c5.27,0,10.34-1.58,13.24-4.32V64.16h-15.56v-7.75h24.09V87.3c-4.73,4.93-12.78,8.53-22.65,8.53C352.9,95.83,339.1,81.67,339.1,57.8z"></path><path fill="#45BDD1" d="M407.56,67.34c0-18.17,11.88-28.63,25.22-28.63c13.34,0,25.22,10.47,25.22,28.63c0,18.02-11.88,28.49-25.22,28.49C419.44,95.83,407.56,85.37,407.56,67.34z M448.49,67.34c0-12.47-6.34-20.96-15.71-20.96c-9.36,0-15.71,8.49-15.71,20.96c0,12.47,6.34,20.82,15.71,20.82C442.15,88.16,448.49,79.82,448.49,67.34z"></path><circle fill="#41BCCF" cx="80.72" cy="23.8" r="7.59"></circle></g></svg></div><p class="footerTagline_DT9f">Secure messaging without smartphones.</p><p class="footerNote_c6fT">Independent project. Not affiliated with SimpleX Chat Ltd.<br>The SimpleX name and protocol are used for interoperability purposes only.</p></div><div class="footerCol_ao_k"><h4>Project</h4><a href="https://github.com/saschadaemgen/SimpleGo" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://simplego.dev/installer">Flash Tool</a><a href="https://simplego.dev/network">Network</a><a href="https://x.com/simplegodev" target="_blank" rel="noopener noreferrer">X / Twitter</a></div><div class="footerCol_ao_k"><h4>Legal</h4><a href="https://simplego.dev/legal/tos">Terms of Service</a><a href="https://simplego.dev/legal/privacy">Privacy Policy</a><a href="https://simplego.dev/legal/disclaimer">Disclaimer</a><a href="https://simplego.dev/imprint">Imprint</a></div><div class="footerCol_ao_k"><h4>Trust &amp; Compliance</h4><a href="https://simplego.dev/legal/aup">Acceptable Use</a><a href="https://simplego.dev/legal/law-enforcement">Law Enforcement</a><a href="https://simplego.dev/legal/transparency">Transparency Report</a></div><div class="footerCol_ao_k"><h4>Company</h4><a href="https://simplego.dev/contact">Partnership</a><a href="https://simplego.dev/ost">Soundtrack</a><a href="#">Kickstarter <span class="comingSoon_X_1S">SOON</span></a><a href="mailto:contact@simplego.dev">Contact</a></div></div></div><div class="footerBottom_SMHg"><div class="container_pcGX"><div class="footerBottomInner_mW35"><span>© 2026 SimpleGo.dev — IT and More Systems</span><span>Software: <a href="https://github.com/saschadaemgen/SimpleGo/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0</a> <!-- -->·<!-- --> <!-- -->Hardware: <a href="https://ohwr.org/cern_ohl_w_v2.txt" target="_blank" rel="noopener noreferrer">CERN-OHL-W-2.0</a></span></div></div></div></footer></div>
+</body>
+</html>
