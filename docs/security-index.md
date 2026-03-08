@@ -4,7 +4,7 @@ sidebar_position: 6
 title: Security
 ---
 
-![SimpleGo Security](../../.github/assets/github_header_security.png)
+![SimpleGo Security](../.github/assets/github_header_security.png)
 
 # Security
 
