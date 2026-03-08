@@ -27,6 +27,9 @@
     "@docusaurus/module-type-aliases": "^3.9.2",
     "@docusaurus/types": "^3.9.2"
   },
+  "overrides": {
+    "serialize-javascript": "7.0.3"
+  },
   "engines": {
     "node": ">=18.0"
   },
