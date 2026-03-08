@@ -20,6 +20,16 @@ const config = {
     locales: ['en'],
   },
 
+  plugins: [
+    [
+      require.resolve('@cmfcmf/docusaurus-search-local'),
+      {
+        language: 'en',
+        indexBlog: false,
+      },
+    ],
+  ],
+
   presets: [
     [
       'classic',
