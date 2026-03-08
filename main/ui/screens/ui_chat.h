@@ -99,6 +99,14 @@ void ui_chat_clear_contact(int contact_idx);
  */
 void ui_chat_update_settings_icon(void);
 
+/**
+ * @brief SEC-01/SEC-04: Securely wipe all decrypted message content.
+ * Zeros PSRAM cache with sodium_memzero and clears LVGL bubble labels.
+ * Called automatically by ui_chat_cleanup(), also callable externally
+ * by screen lock or shutdown logic.
+ */
+void ui_chat_secure_wipe(void);
+
 /* ============== Session 40c: Sliding Window API ============== */
 
 /**

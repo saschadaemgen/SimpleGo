@@ -33,6 +33,7 @@ extern void chat_bubble_cleanup(void);
 #include "smp_history.h"       /* history_message_t for PSRAM cache */
 #include "esp_heap_caps.h"     /* PSRAM allocation */
 #include "esp_log.h"
+#include <sodium.h>            /* SEC-01: sodium_memzero for secure cache wipe */
 #include <string.h>
 #include <time.h>             /* time() for live message timestamp */
 
@@ -96,10 +97,56 @@ static bool s_scroll_cb_registered = false;
 /* Forward declaration for scroll handler */
 static void on_scroll_cb(lv_event_t *e);
 
+/* ============== SEC-01/SEC-04: Secure Memory Wipe ============== */
+
+/**
+ * Recursively clear all LVGL label text within an object tree.
+ * Best-effort wipe: lv_label_set_text("") overwrites the label's
+ * internal text buffer, making it less likely to persist in the
+ * LVGL 64KB pool after object deletion.
+ */
+static void wipe_labels_recursive(lv_obj_t *obj)
+{
+    if (!obj) return;
+    if (lv_obj_check_type(obj, &lv_label_class)) {
+        lv_label_set_text(obj, "");
+    }
+    uint32_t count = lv_obj_get_child_count(obj);
+    for (uint32_t i = 0; i < count; i++) {
+        wipe_labels_recursive(lv_obj_get_child(obj, i));
+    }
+}
+
+void ui_chat_secure_wipe(void)
+{
+    /* Phase 1: Wipe LVGL bubble labels (must happen while msg_container
+     * still exists, BEFORE screen destroy). Best-effort: clears text
+     * buffers so freed LVGL pool memory no longer holds message content. */
+    if (msg_container) {
+        wipe_labels_recursive(msg_container);
+        ESP_LOGI(TAG, "SEC-04: Bubble labels wiped");
+    }
+
+    /* Phase 2: Wipe PSRAM message cache with sodium_memzero.
+     * Cryptographically secure: cannot be optimized away by compiler,
+     * unlike plain memset (CWE-14). */
+    if (s_msg_cache != NULL) {
+        sodium_memzero(s_msg_cache, sizeof(history_message_t) * MSG_CACHE_SIZE);
+        s_cache_count = 0;
+        ESP_LOGI(TAG, "SEC-01: PSRAM msg cache wiped (%u bytes)",
+                 (unsigned)(sizeof(history_message_t) * MSG_CACHE_SIZE));
+    }
+}
+
 /* ============== Screen Cleanup ============== */
 
 void ui_chat_cleanup(void)
 {
+    /* SEC-01 + SEC-04: Wipe decrypted message content from PSRAM cache
+     * and LVGL label buffers BEFORE destroying objects. Must happen while
+     * msg_container is still valid so labels can be overwritten. */
+    ui_chat_secure_wipe();
+
     /* Null all LVGL object pointers BEFORE lv_obj_del(screen).
      * lv_obj_del destroys the objects, but these static pointers
      * would still reference freed memory (dangling pointers).
@@ -551,6 +598,8 @@ void ui_chat_switch_contact(int contact_idx, const char *name)
      * LVGL pool memory. Since cache_history will render fresh bubbles
      * anyway, full cleanup is safe and prevents pool fragmentation. */
     if (msg_container) {
+        /* SEC-01: Wipe bubble labels before destroying them */
+        wipe_labels_recursive(msg_container);
         lv_obj_clean(msg_container);
         s_loading_box = NULL;
         chat_bubble_reset_count();
@@ -558,6 +607,14 @@ void ui_chat_switch_contact(int contact_idx, const char *name)
 
     ESP_LOGI(TAG, "42e: Switched to contact [%d] '%s' (pool cleared, scroll guard ON)",
              contact_idx, name ? name : "?");
+
+    /* SEC-01: Wipe old contact's decrypted messages from PSRAM.
+     * New data arrives via cache_history after SD load completes. */
+    if (s_msg_cache != NULL && s_cache_count > 0) {
+        sodium_memzero(s_msg_cache, sizeof(history_message_t) * MSG_CACHE_SIZE);
+        s_cache_count = 0;
+        ESP_LOGI(TAG, "SEC-01: Cache wiped on contact switch");
+    }
 }
 
 void ui_chat_clear_contact(int contact_idx)
@@ -673,6 +730,10 @@ void ui_chat_cache_history(const history_message_t *batch, int count, int slot)
     }
 
     /* Copy last MSG_CACHE_SIZE messages into cache */
+    /* SEC-01: Wipe entire cache before loading new data. Ensures no
+     * leftover plaintext from previous contact if new batch is smaller. */
+    sodium_memzero(s_msg_cache, sizeof(history_message_t) * MSG_CACHE_SIZE);
+
     int to_copy = count;
     int src_start = 0;
     if (to_copy > MSG_CACHE_SIZE) {
