@@ -205,6 +205,33 @@ void smp_storage_print_info(void);
  */
 esp_err_t smp_storage_self_test(void);
 
+// ============== Display Name (Session 43) ==============
+
+/**
+ * Read the user's display name from NVS.
+ * Returns "SimpleGo" if no name has been configured.
+ *
+ * @param buf       Output buffer
+ * @param buf_size  Buffer capacity (recommend 32)
+ */
+void storage_get_display_name(char *buf, size_t buf_size);
+
+/**
+ * Save the user's display name to NVS.
+ * Validates input: max 31 chars, no quotes or backslashes (JSON safety).
+ *
+ * @param name  Display name string (null-terminated)
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG if validation fails
+ */
+esp_err_t storage_set_display_name(const char *name);
+
+/**
+ * Check if a display name has been configured (for first-boot detection).
+ *
+ * @return true if NVS key "user_name" exists
+ */
+bool storage_has_display_name(void);
+
 // ============== Future: Typed Convenience Functions (Auftrag 50b) ==============
 
 // esp_err_t smp_storage_save_ratchet(uint8_t contact_idx, const void *blob, size_t len);

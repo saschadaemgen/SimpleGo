@@ -288,9 +288,14 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     // Standard flow: SEND without auth works on unsecured queues.
 
     // ========== Build connInfo (ChatMessage JSON) ==========
-    const char *conn_info_json =
-        "{\"v\":\"1-16\",\"event\":\"x.info\",\"params\":{\"profile\":{\"displayName\":\"ESP32\",\"fullName\":\"\"}}}";
-    int json_len = (int)strlen(conn_info_json);
+    char display_name[32];
+    storage_get_display_name(display_name, sizeof(display_name));
+
+    char conn_info_buf[256];
+    snprintf(conn_info_buf, sizeof(conn_info_buf),
+        "{\"v\":\"1-16\",\"event\":\"x.info\",\"params\":{\"profile\":{\"displayName\":\"%s\",\"fullName\":\"\"}}}",
+        display_name);
+    const char *conn_info_json = conn_info_buf;    int json_len = (int)strlen(conn_info_json);
 
     ESP_LOGI(TAG, "   📋 ConnInfo JSON (%d bytes):", json_len);
     ESP_LOGI(TAG, "      %s", conn_info_json);

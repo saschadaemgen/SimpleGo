@@ -386,6 +386,57 @@ bool smp_storage_sd_file_exists(const char *path) {
     return (stat(path, &st) == 0);
 }
 
+// ============== Display Name (Session 43) ==============
+
+#define DISPLAY_NAME_NVS_KEY    "user_name"
+#define DISPLAY_NAME_MAX_LEN    31
+#define DISPLAY_NAME_DEFAULT    "SimpleGo"
+
+void storage_get_display_name(char *buf, size_t buf_size)
+{
+    if (!buf || buf_size == 0) return;
+    buf[0] = '\0';
+
+    if (!storage.nvs_ready) {
+        snprintf(buf, buf_size, "%s", DISPLAY_NAME_DEFAULT);
+        return;
+    }
+
+    size_t out_len = 0;
+    esp_err_t ret = smp_storage_load_blob(DISPLAY_NAME_NVS_KEY, buf, buf_size - 1, &out_len);
+    if (ret != ESP_OK || out_len == 0) {
+        snprintf(buf, buf_size, "%s", DISPLAY_NAME_DEFAULT);
+        return;
+    }
+    buf[out_len] = '\0';
+}
+
+esp_err_t storage_set_display_name(const char *name)
+{
+    if (!name) return ESP_ERR_INVALID_ARG;
+
+    size_t len = strlen(name);
+    if (len == 0 || len > DISPLAY_NAME_MAX_LEN) {
+        ESP_LOGW(TAG, "Display name invalid length: %zu (max %d)", len, DISPLAY_NAME_MAX_LEN);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    /* JSON safety: reject quotes and backslashes */
+    for (size_t i = 0; i < len; i++) {
+        if (name[i] == '"' || name[i] == '\\') {
+            ESP_LOGW(TAG, "Display name contains forbidden char at pos %zu", i);
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+
+    return smp_storage_save_blob(DISPLAY_NAME_NVS_KEY, name, len);
+}
+
+bool storage_has_display_name(void)
+{
+    return smp_storage_exists(DISPLAY_NAME_NVS_KEY);
+}
+
 // ============== Diagnostics ==============
 
 void smp_storage_print_info(void) {
