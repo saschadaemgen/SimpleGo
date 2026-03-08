@@ -1,6 +1,6 @@
 ---
 title: "Hardware Class 2 - Overview and Architecture"
-sidebar_position: 1
+sidebar_position: 14
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 2](../../.github/assets/github_header_security_architecture_class_2.png)

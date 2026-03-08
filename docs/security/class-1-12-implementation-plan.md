@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - Implementation Plan"
-sidebar_position: 12
+sidebar_position: 13
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)

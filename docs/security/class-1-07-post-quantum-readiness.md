@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - Post-Quantum Readiness"
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)

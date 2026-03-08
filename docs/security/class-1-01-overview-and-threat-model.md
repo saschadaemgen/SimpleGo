@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - Overview and Threat Model"
-sidebar_position: 1
+sidebar_position: 2
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)

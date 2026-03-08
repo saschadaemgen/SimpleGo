@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - Secure Boot V2"
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)

@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - ESP32-S3 eFuse Architecture"
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)

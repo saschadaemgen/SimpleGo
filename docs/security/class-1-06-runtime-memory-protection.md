@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - Runtime Memory Protection"
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)

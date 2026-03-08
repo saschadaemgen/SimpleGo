@@ -1,6 +1,6 @@
 ---
 title: "Hardware Class 3 - Overview and Architecture"
-sidebar_position: 1
+sidebar_position: 15
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 3](../../.github/assets/github_header_security_architecture_class_3.png)

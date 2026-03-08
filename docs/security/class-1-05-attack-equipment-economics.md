@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - Attack Equipment Economics"
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)

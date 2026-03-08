@@ -1,6 +1,6 @@
 ---
 title: "Class 1 - Four Security Modes"
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 ![SimpleGo Security Architecture - Hardware Class 1](../../.github/assets/github_header_security_architecture_class_1.png)
