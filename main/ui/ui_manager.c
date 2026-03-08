@@ -14,17 +14,21 @@
 #include "ui_connect.h"
 #include "ui_settings.h"
 #include "ui_developer.h"
+#include "ui_name_setup.h"
 #include "wifi_manager.h"
+#include "smp_storage.h"
 #include "esp_log.h"
 
 /* Cleanup functions called before screen deletion.
  * TODO: move to ui_chat.h */
 extern void ui_chat_cleanup(void);
+extern void ui_connect_cleanup(void);
 
 static const char *TAG = "UI_MGR";
 
 static lv_obj_t *screens[UI_SCREEN_COUNT] = {NULL};
 static ui_screen_t current_screen = UI_SCREEN_SPLASH;
+static bool s_name_check_done = false;  /* Session 43: one-shot first-boot name check */
 
 // Navigation stack (replaces single prev_screen)
 #define NAV_STACK_DEPTH 8
@@ -41,6 +45,7 @@ static const screen_create_fn screen_creators[UI_SCREEN_COUNT] = {
     [UI_SCREEN_CONNECT]   = ui_connect_create,
     [UI_SCREEN_SETTINGS]  = ui_settings_create,
     [UI_SCREEN_DEVELOPER] = ui_developer_create,
+    [UI_SCREEN_NAME_SETUP] = ui_name_setup_create,
 };
 
 static void nav_stack_push(ui_screen_t screen)
@@ -101,6 +106,7 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
         if (screens[prev] != NULL) {
             /* Null dangling pointers BEFORE destroying LVGL objects */
             if (prev == UI_SCREEN_CHAT) ui_chat_cleanup();
+            if (prev == UI_SCREEN_CONNECT) ui_connect_cleanup();
             lv_obj_del(screens[prev]);
             screens[prev] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", prev);
@@ -140,6 +146,21 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
             ui_settings_show_wifi_tab();
         }
     }
+
+    /* Session 43: First-boot name check (one-shot, catches ALL paths to MAIN).
+     * Triggers after splash, after WiFi setup, after any redirect -- whenever
+     * we land on MAIN without a display name configured. The flag prevents
+     * infinite loops (Skip button navigates to MAIN without saving). */
+    if (screen == UI_SCREEN_MAIN && !s_name_check_done && !storage_has_display_name()) {
+        s_name_check_done = true;
+        ESP_LOGI(TAG, "No display name -> name setup");
+        if (!screens[UI_SCREEN_NAME_SETUP]) {
+            screens[UI_SCREEN_NAME_SETUP] = screen_creators[UI_SCREEN_NAME_SETUP]();
+        }
+        nav_stack_push(current_screen);
+        current_screen = UI_SCREEN_NAME_SETUP;
+        lv_scr_load(screens[UI_SCREEN_NAME_SETUP]);
+    }
 }
 
 void ui_manager_go_back(void)
@@ -167,6 +188,7 @@ void ui_manager_go_back(void)
         if (screens[old] != NULL) {
             /* Null dangling pointers BEFORE destroying LVGL objects */
             if (old == UI_SCREEN_CHAT) ui_chat_cleanup();
+            if (old == UI_SCREEN_CONNECT) ui_connect_cleanup();
             lv_obj_del(screens[old]);
             screens[old] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", old);
@@ -181,6 +203,18 @@ void ui_manager_go_back(void)
     // Refresh main screen unread list when navigating back to it
     if (target == UI_SCREEN_MAIN) {
         ui_main_refresh();
+    }
+
+    /* Session 43: First-boot name check (same as in show_screen) */
+    if (target == UI_SCREEN_MAIN && !s_name_check_done && !storage_has_display_name()) {
+        s_name_check_done = true;
+        ESP_LOGI(TAG, "No display name -> name setup");
+        if (!screens[UI_SCREEN_NAME_SETUP]) {
+            screens[UI_SCREEN_NAME_SETUP] = screen_creators[UI_SCREEN_NAME_SETUP]();
+        }
+        nav_stack_push(current_screen);
+        current_screen = UI_SCREEN_NAME_SETUP;
+        lv_scr_load(screens[UI_SCREEN_NAME_SETUP]);
     }
     // NOTE: go_back does NOT push to stack
 }
