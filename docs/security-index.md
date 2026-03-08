@@ -4,6 +4,8 @@ sidebar_position: 6
 title: Security
 ---
 
+![SimpleGo Security](../../.github/assets/github_header_security.png)
+
 # Security
 
 SimpleGo's security architecture is built on the principle that every layer must be independently defensible. Compromising one layer must not weaken any other.
