@@ -97,6 +97,9 @@ void ui_connect_set_status(const char *text) {
 // 36d: Reset QR code and status for clean state
 void ui_connect_reset(void)
 {
+    /* Guard: if screen was deleted, pointers are dangling */
+    if (!screen) return;
+
     if (qr_code) {
         lv_obj_add_flag(qr_code, LV_OBJ_FLAG_HIDDEN);
     }
@@ -107,4 +110,13 @@ void ui_connect_reset(void)
         lv_label_set_text(status_lbl, "Generating...");
     }
     ESP_LOGI("UI_CONN", "36d: QR reset");
+}
+
+// Session 43: Null all static pointers before screen deletion
+void ui_connect_cleanup(void)
+{
+    screen = NULL;
+    qr_code = NULL;
+    placeholder = NULL;
+    status_lbl = NULL;
 }
