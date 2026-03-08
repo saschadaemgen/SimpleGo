@@ -15,6 +15,7 @@
 #include "ui_settings.h"
 #include "ui_developer.h"
 #include "ui_name_setup.h"
+#include "ui_lock.h"
 #include "wifi_manager.h"
 #include "smp_storage.h"
 #include "esp_log.h"
@@ -23,12 +24,18 @@
  * TODO: move to ui_chat.h */
 extern void ui_chat_cleanup(void);
 extern void ui_connect_cleanup(void);
+extern void ui_lock_cleanup(void);
 
 static const char *TAG = "UI_MGR";
 
 static lv_obj_t *screens[UI_SCREEN_COUNT] = {NULL};
 static ui_screen_t current_screen = UI_SCREEN_SPLASH;
 static bool s_name_check_done = false;  /* Session 43: one-shot first-boot name check */
+
+/* SEC-04: Inactivity lock timer */
+#define LOCK_TIMEOUT_MS      60000   /* 60 seconds inactivity to lock */
+#define LOCK_CHECK_INTERVAL  2000    /* Check every 2 seconds */
+static lv_timer_t *s_lock_timer = NULL;
 
 // Navigation stack (replaces single prev_screen)
 #define NAV_STACK_DEPTH 8
@@ -46,6 +53,7 @@ static const screen_create_fn screen_creators[UI_SCREEN_COUNT] = {
     [UI_SCREEN_SETTINGS]  = ui_settings_create,
     [UI_SCREEN_DEVELOPER] = ui_developer_create,
     [UI_SCREEN_NAME_SETUP] = ui_name_setup_create,
+    [UI_SCREEN_LOCK]       = ui_lock_create,
 };
 
 static void nav_stack_push(ui_screen_t screen)
@@ -70,6 +78,28 @@ static ui_screen_t nav_stack_pop(void)
     return UI_SCREEN_MAIN;
 }
 
+/* SEC-04: Inactivity timer callback.
+ * Checks lv_disp_get_inactive_time() every LOCK_CHECK_INTERVAL ms.
+ * If no input for LOCK_TIMEOUT_MS, locks the device. */
+static void lock_timer_cb(lv_timer_t *timer)
+{
+    (void)timer;
+
+    /* Don't lock if already locked or still on splash */
+    if (current_screen == UI_SCREEN_LOCK) return;
+    if (current_screen == UI_SCREEN_SPLASH) return;
+
+    lv_disp_t *disp = lv_disp_get_default();
+    if (!disp) return;
+
+    uint32_t inactive = lv_disp_get_inactive_time(disp);
+    if (inactive >= LOCK_TIMEOUT_MS) {
+        ESP_LOGI(TAG, "SEC-04: Inactivity %u ms >= %u ms, locking",
+                 (unsigned)inactive, LOCK_TIMEOUT_MS);
+        ui_manager_lock();
+    }
+}
+
 esp_err_t ui_manager_init(void)
 {
     ESP_LOGI(TAG, "Init...");
@@ -79,6 +109,12 @@ esp_err_t ui_manager_init(void)
     lv_scr_load(screens[UI_SCREEN_SPLASH]);
     
     current_screen = UI_SCREEN_SPLASH;
+
+    /* SEC-04: Start inactivity monitoring for auto-lock */
+    s_lock_timer = lv_timer_create(lock_timer_cb, LOCK_CHECK_INTERVAL, NULL);
+    ESP_LOGI(TAG, "SEC-04: Lock timer started (%d ms timeout, %d ms check)",
+             LOCK_TIMEOUT_MS, LOCK_CHECK_INTERVAL);
+
     return ESP_OK;
 }
 
@@ -107,6 +143,7 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
             /* Null dangling pointers BEFORE destroying LVGL objects */
             if (prev == UI_SCREEN_CHAT) ui_chat_cleanup();
             if (prev == UI_SCREEN_CONNECT) ui_connect_cleanup();
+            if (prev == UI_SCREEN_LOCK) ui_lock_cleanup();
             lv_obj_del(screens[prev]);
             screens[prev] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", prev);
@@ -189,6 +226,7 @@ void ui_manager_go_back(void)
             /* Null dangling pointers BEFORE destroying LVGL objects */
             if (old == UI_SCREEN_CHAT) ui_chat_cleanup();
             if (old == UI_SCREEN_CONNECT) ui_connect_cleanup();
+            if (old == UI_SCREEN_LOCK) ui_lock_cleanup();
             lv_obj_del(screens[old]);
             screens[old] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", old);
@@ -222,4 +260,38 @@ void ui_manager_go_back(void)
 ui_screen_t ui_manager_get_current(void)
 {
     return current_screen;
+}
+
+/* ============== SEC-04: Screen Lock ============== */
+
+void ui_manager_lock(void)
+{
+    if (current_screen == UI_SCREEN_LOCK) return;
+    if (current_screen == UI_SCREEN_SPLASH) return;
+
+    ESP_LOGI(TAG, "SEC-04: Locking device (from screen %d)", current_screen);
+
+    /* Force-wipe decrypted message data regardless of current screen.
+     * If chat is active, this wipes labels + cache before navigation
+     * destroys the screen. If chat is not active, the cache was already
+     * wiped during previous navigation cleanup - this is a no-op. */
+    ui_chat_secure_wipe();
+
+    /* Navigate to lock screen. Normal cleanup path handles the rest:
+     * if current is CHAT, show_screen calls ui_chat_cleanup() which
+     * does a second wipe (harmless, sodium_memzero is idempotent). */
+    ui_manager_show_screen(UI_SCREEN_LOCK, LV_SCR_LOAD_ANIM_NONE);
+}
+
+void ui_manager_unlock(void)
+{
+    if (current_screen != UI_SCREEN_LOCK) return;
+
+    ESP_LOGI(TAG, "SEC-04: Unlocking device");
+
+    /* Go back to previous screen. If the previous screen was CHAT,
+     * it was destroyed on lock. go_back will pop the stack and land
+     * on MAIN or CONTACTS. User re-enters chat normally, which triggers
+     * fresh SD history load. */
+    ui_manager_go_back();
 }
