@@ -1,14 +1,7 @@
-# SimpleGo - Lyrics
+# SimpleGo OST / Track 2 - Lyrics
 ## connected
 
-**Song by:** Cannatoshi & Claude AI (Opus 4.5)  
-**Music Generated with:** Suno AI (Pro)  
-**Style:** Electro Swing   
-**Created:** 2026-01-28  
-
----
-
-[Verse 1]
+### [Verse 1]
 Three AM the hex dump glowing on the screen
 Fourteen thousand lines and still no signal clean
 Built a theory swore it had to be the key
@@ -18,13 +11,13 @@ XSalsa20 zeros where the nonce should write
 Proved it wrong again and started from the ground
 Every dead end just another way around
 
-[Pre-Chorus]
+### [Pre-Chorus]
 No spec no manual no guide
 Just Haskell source and stubborn pride
 Wrong ten times but right on eleven
 Tracing ghosts from hell to heaven
 
-[Chorus]
+### [Chorus]
 Connected on the screen tonight
 Twenty-three sessions to get it right
 Connected the ESP32
@@ -34,7 +27,7 @@ What a chip and a dream were always meant to be
 SimpleGo alive and the signal's strong
 This is where we always did belong
 
-[Verse 2]
+### [Verse 2]
 Word16 prefix off by just one byte
 Eleven when it should be twelve to write
 Eight bugs hiding in a single session's run
@@ -44,13 +37,13 @@ encodeLarge flipped everything we knew
 Morning light and still no sleep in sight
 Rebuilt the wire format through another night
 
-[Pre-Chorus]
+### [Pre-Chorus]
 We theorized the padding wrong
 Reversed it proved it moved along
 The DH keys were swapped around
 But every failure held the ground
 
-[Chorus]
+### [Chorus]
 Connected on the screen tonight
 Twenty-three sessions to get it right
 Connected the ESP32
@@ -60,7 +53,7 @@ What a chip and a dream were always meant to be
 SimpleGo alive and the signal's strong
 This is where we always did belong
 
-[Bridge]
+### [Bridge]
 Sent a question that was already answered twice
 Deleted messages and paid the price
 Nine days silence thought we lost the door
@@ -74,7 +67,7 @@ Mammals writing history on the stage
 Meaning over money that's the deal
 Endless hours building something real
 
-[Verse 3]
+### [Verse 3]
 Reply Queue locked we built the wrong decrypt
 Five more theories five more nights we slipped
 Layer two the nonce was from the envelope
@@ -84,7 +77,7 @@ PHConfirmation just like he said
 Thirty-one bugs across the sessions deep
 Every single one we earned in loss of sleep
 
-[Final Chorus]
+### [Final Chorus]
 Connected notification glow
 ESP32 and SimpleX say hello
 Connected what they said can't be done
@@ -94,17 +87,17 @@ Two words that turned our sleepless nights to deeds
 Connected SimpleGo takes flight
 Hardware messenger burning bright
 
-[Outro]
+### [Outro]
 Zero to one... native on the wire...
 Every wrong theory... took us somewhere higher...
 Not alone... never on our own...
 Connected...
 SimpleGo...
 
----
+**Song by:** Cannatoshi & Claude AI (Opus 4.5)  
+**Music Generated with:** Suno AI (Pro)  
+**Style:** Electro Swing   
+**Created:** 2026-01-28 
 
 ## Suno Tags
-
-```
 electro swing,
-```
