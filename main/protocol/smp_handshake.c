@@ -19,6 +19,7 @@
 #include "esp_heap_caps.h"
 #include "esp_random.h"
 #include "mbedtls/sha256.h"
+#include "sodium.h"
 #include "smp_storage.h"
 
 static const char *TAG = "SMP_HAND";
@@ -41,6 +42,18 @@ static uint8_t active_handshake_idx = 0;
 
 // Convenience macro -- existing code works unchanged
 #define handshake_state (handshake_array[active_handshake_idx])
+
+// Retry buffer: holds encrypted transmission after write failure.
+// Needed because ratchet has already advanced - re-encryption would desync.
+typedef struct {
+    uint8_t *transmission;      // encrypted payload (PSRAM)
+    size_t   transmission_len;  // payload length
+    uint8_t  prev_msg_hash[32]; // SHA-256 of plaintext, for handshake_save_state after retry
+    uint8_t  contact_slot;      // which contact this belongs to
+    bool     pending;           // retry waiting?
+} retry_buffer_t;
+
+static retry_buffer_t s_retry = {0};
 
 bool handshake_multi_init(void) {
     if (handshake_array) return true;
@@ -780,16 +793,45 @@ static bool encrypt_and_send_agent_msg(
     
     ESP_LOGD(TAG, "   [%s] Transmission: %d bytes", label, tp);
     
+    // Pre-compute prev_msg_hash BEFORE network write.
+    // On success: used normally by the OK handler below.
+    // On failure: saved in retry buffer for deferred handshake_save_state().
+    uint8_t pre_msg_hash[32];
+    mbedtls_sha256(msg_plain, msg_plain_len, pre_msg_hash, 0);
+    
     // 7. Send!
     int ret = smp_write_command_block(ssl, block, transmission, tp);
-    free(transmission);
-    
+
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ [%s] Send failed: %d", label, ret);
+        ESP_LOGE(TAG, "   [%s] Write failed: %d - saving retry buffer", label, ret);
+
+        // Free old retry buffer if any
+        if (s_retry.transmission) {
+            sodium_memzero(s_retry.transmission, s_retry.transmission_len);
+            free(s_retry.transmission);
+        }
+
+        // Move to PSRAM retry buffer (internal SRAM too scarce for long-term hold)
+        s_retry.transmission = (uint8_t *)heap_caps_malloc(tp, MALLOC_CAP_SPIRAM);
+        if (s_retry.transmission) {
+            memcpy(s_retry.transmission, transmission, tp);
+            s_retry.transmission_len = tp;
+            memcpy(s_retry.prev_msg_hash, pre_msg_hash, 32);
+            s_retry.contact_slot = active_handshake_idx;
+            s_retry.pending = true;
+            ESP_LOGI(TAG, "   [%s] Retry buffer: %d bytes saved in PSRAM", label, tp);
+        } else {
+            ESP_LOGE(TAG, "   [%s] PSRAM alloc FAILED! Message lost.", label);
+            s_retry.pending = false;
+        }
+
+        free(transmission);
         return false;
     }
+
+    free(transmission);
     
-    ESP_LOGI(TAG, "   📤 [%s] sent! Waiting for response...", label);
+    ESP_LOGI(TAG, "   [%s] sent! Waiting for response...", label);
     
     // 8. Wait for response
     int content_len = smp_read_block(ssl, block, 10000);
@@ -802,10 +844,10 @@ static bool encrypt_and_send_agent_msg(
     
     for (int i = 0; i < content_len - 1; i++) {
         if (resp[i] == 'O' && resp[i+1] == 'K') {
-            ESP_LOGI(TAG, "   ✅ [%s] Server accepted!", label);
+            ESP_LOGI(TAG, "   [%s] Server accepted!", label);
             
-            // Update prev_msg_hash for next message
-            mbedtls_sha256(msg_plain, msg_plain_len, handshake_state.prev_msg_hash, 0);
+            // Update prev_msg_hash from pre-computed value
+            memcpy(handshake_state.prev_msg_hash, pre_msg_hash, 32);
             
             // Evgeny's Rule: persist before next send
             handshake_save_state();
@@ -1131,6 +1173,82 @@ void reset_handshake_state(void) {
 
 uint64_t handshake_get_last_msg_id(void) {
     return handshake_state.msg_id;
+}
+
+// ============== Retry After Write Failure ==============
+
+/**
+ * Retry sending the last failed message after reconnect.
+ * Uses the saved encrypted payload - no re-encryption, no ratchet mutation.
+ *
+ * @param ssl    New SSL context (after reconnect)
+ * @param block  SMP block buffer (SMP_BLOCK_SIZE)
+ * @return true if retry succeeded
+ */
+bool handshake_retry_send(mbedtls_ssl_context *ssl, uint8_t *block) {
+    if (!s_retry.pending || !s_retry.transmission || s_retry.transmission_len == 0) {
+        ESP_LOGD(TAG, "No pending retry");
+        return false;
+    }
+
+    ESP_LOGI(TAG, "Retrying failed send: %zu bytes", s_retry.transmission_len);
+
+    int ret = smp_write_command_block(ssl, block,
+                                       s_retry.transmission,
+                                       s_retry.transmission_len);
+    if (ret != 0) {
+        ESP_LOGE(TAG, "Retry write ALSO failed: %d - keeping buffer", ret);
+        return false;
+    }
+
+    // Wait for OK response
+    int content_len = smp_read_block(ssl, block, 10000);
+    if (content_len < 0) {
+        ESP_LOGE(TAG, "Retry: no server response");
+        return false;
+    }
+
+    uint8_t *resp = block + 2;
+    bool ok = false;
+    for (int i = 0; i < content_len - 1; i++) {
+        if (resp[i] == 'O' && resp[i + 1] == 'K') {
+            ok = true;
+            break;
+        }
+    }
+
+    if (ok) {
+        ESP_LOGI(TAG, "Retry SUCCEEDED!");
+
+        // Apply the saved prev_msg_hash and persist
+        memcpy(handshake_state.prev_msg_hash, s_retry.prev_msg_hash, 32);
+        handshake_save_state();
+
+        // Clean up
+        handshake_clear_retry();
+        return true;
+    }
+
+    ESP_LOGW(TAG, "Retry: server did not respond OK (%d bytes)", content_len);
+    return false;
+}
+
+bool handshake_has_retry_pending(void) {
+    return s_retry.pending;
+}
+
+void handshake_clear_retry(void) {
+    if (s_retry.transmission) {
+        // SEC: encrypted payload + ratchet state = plaintext reconstructable.
+        // sodium_memzero is mandatory crypto hygiene, not paranoia.
+        sodium_memzero(s_retry.transmission, s_retry.transmission_len);
+        free(s_retry.transmission);
+        s_retry.transmission = NULL;
+    }
+    s_retry.transmission_len = 0;
+    s_retry.pending = false;
+    sodium_memzero(s_retry.prev_msg_hash, 32);
+    s_retry.contact_slot = 0;
 }
 
 // ============== Persistence ==============

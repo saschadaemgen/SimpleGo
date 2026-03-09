@@ -210,4 +210,26 @@ bool handshake_load_state(void);
  */
 uint64_t handshake_get_last_msg_id(void);
 
+// ============== Retry After Write Failure (Bug #20) ==============
+
+/**
+ * Retry sending the last failed message after reconnect.
+ * Uses saved encrypted payload - no re-encryption, no ratchet mutation.
+ *
+ * @param ssl    New SSL context (after reconnect)
+ * @param block  SMP block buffer (SMP_BLOCK_SIZE)
+ * @return true if retry succeeded
+ */
+bool handshake_retry_send(mbedtls_ssl_context *ssl, uint8_t *block);
+
+/**
+ * Check if a retry buffer is pending (write failed, waiting for reconnect).
+ */
+bool handshake_has_retry_pending(void);
+
+/**
+ * Clear the retry buffer and securely zero all sensitive data.
+ */
+void handshake_clear_retry(void);
+
 #endif // SMP_HANDSHAKE_H

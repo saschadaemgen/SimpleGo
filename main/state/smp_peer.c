@@ -916,6 +916,27 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
         message
     );
 
+    if (!ok && handshake_has_retry_pending()) {
+        // Write failed on "alive but degraded" connection.
+        // FORCE-Reconnect: don't check peer_state.connected, just tear down and rebuild.
+        ESP_LOGW(TAG, "Write failed - FORCE reconnect + retry...");
+
+        peer_disconnect();
+
+        if (peer_connect(peer_state.last_host, peer_state.last_port)) {
+            ESP_LOGI(TAG, "Reconnected! Retrying failed send...");
+            ok = handshake_retry_send(&peer_state.ssl, block);
+
+            if (ok) {
+                ESP_LOGI(TAG, "Retry successful!");
+            } else {
+                ESP_LOGW(TAG, "Retry failed - buffer preserved for next attempt");
+            }
+        } else {
+            ESP_LOGE(TAG, "Reconnect failed - retry buffer preserved");
+        }
+    }
+
     free(block);
     return ok;
 }
@@ -988,6 +1009,27 @@ bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8
         peer_snd_msg_id,
         msg_hash
     );
+
+    if (!ok && handshake_has_retry_pending()) {
+        // Write failed on "alive but degraded" connection.
+        // FORCE-Reconnect: don't check peer_state.connected, just tear down and rebuild.
+        ESP_LOGW(TAG, "Receipt write failed - FORCE reconnect + retry...");
+
+        peer_disconnect();
+
+        if (peer_connect(peer_state.last_host, peer_state.last_port)) {
+            ESP_LOGI(TAG, "Reconnected! Retrying failed receipt...");
+            ok = handshake_retry_send(&peer_state.ssl, block);
+
+            if (ok) {
+                ESP_LOGI(TAG, "Receipt retry successful!");
+            } else {
+                ESP_LOGW(TAG, "Receipt retry failed - buffer preserved for next attempt");
+            }
+        } else {
+            ESP_LOGE(TAG, "Reconnect failed - receipt retry buffer preserved");
+        }
+    }
 
     free(block);
     return ok;
