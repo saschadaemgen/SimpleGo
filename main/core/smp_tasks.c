@@ -891,7 +891,7 @@ static void app_process_keyboard_queue(QueueHandle_t kbd_queue)
 
             history_message_t hist_msg = {
                 .direction = HISTORY_DIR_SENT,
-                .delivery_status = 0,
+                .delivery_status = HISTORY_STATUS_SENT,
                 .timestamp = time(NULL),
                 .text_len = (uint16_t)strlen(kbd_msg),
             };
@@ -901,8 +901,21 @@ static void app_process_keyboard_queue(QueueHandle_t kbd_queue)
             hist_msg.text[hist_msg.text_len] = '\0';
             smp_history_append((uint8_t)s_active_contact_idx, &hist_msg);
         } else {
-            ESP_LOGE(TAG_APP, "   ❌ Send failed! seq=%lu", (unsigned long)seq);
+            ESP_LOGE(TAG_APP, "   Send failed! seq=%lu", (unsigned long)seq);
             smp_notify_ui_delivery_status(seq, MSG_STATUS_FAILED);
+
+            // Persist failed message to SD - survives restart with red X
+            history_message_t hist_msg = {
+                .direction = HISTORY_DIR_SENT,
+                .delivery_status = HISTORY_STATUS_FAILED,
+                .timestamp = time(NULL),
+                .text_len = (uint16_t)strlen(kbd_msg),
+            };
+            if (hist_msg.text_len > HISTORY_MAX_TEXT)
+                hist_msg.text_len = HISTORY_MAX_TEXT;
+            memcpy(hist_msg.text, kbd_msg, hist_msg.text_len);
+            hist_msg.text[hist_msg.text_len] = '\0';
+            smp_history_append((uint8_t)s_active_contact_idx, &hist_msg);
         }
     }
 }

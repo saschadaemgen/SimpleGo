@@ -258,10 +258,18 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
         return err;
     }
 
-    /* Build plaintext payload: direction(1) + timestamp(8) + text_len(2) + text(N) */
+    /* Build plaintext payload: format depends on file version.
+     * v1: direction(1) + timestamp(8) + text_len(2) + text(N)
+     * v2: direction(1) + delivery_status(1) + timestamp(8) + text_len(2) + text(N)
+     * Existing v1 files keep v1 format. Only new files use v2. */
     uint16_t text_len = msg->text_len;
     if (text_len > HISTORY_MAX_TEXT) text_len = HISTORY_MAX_TEXT;
-    size_t plaintext_len = 1 + 8 + 2 + text_len;
+    size_t plaintext_len;
+    if (header.version >= 0x02) {
+        plaintext_len = 1 + 1 + 8 + 2 + text_len;  // v2: +1 for delivery_status
+    } else {
+        plaintext_len = 1 + 8 + 2 + text_len;       // v1: original format
+    }
     uint8_t *plaintext = malloc(plaintext_len);
     if (!plaintext) {
         memset(contact_key, 0, sizeof(contact_key));
@@ -270,6 +278,9 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
 
     size_t offset = 0;
     plaintext[offset++] = msg->direction;
+    if (header.version >= 0x02) {
+        plaintext[offset++] = msg->delivery_status;  // v2 only
+    }
     /* timestamp big-endian */
     int64_t ts = msg->timestamp;
     for (int i = 7; i >= 0; i--) {
@@ -581,10 +592,21 @@ esp_err_t smp_history_load_recent(uint8_t slot, history_message_t *out,
 
         size_t p = 0;
         m->direction = plaintext[p++];
-        m->delivery_status = 0;  /* Default: sent (v) */
 
-        /* Reconstruct delivery status from header high-water mark */
-        if (m->direction == HISTORY_DIR_SENT && msg_idx <= header.last_delivered_idx) {
+        if (header.version >= 0x02) {
+            // v2: delivery_status stored in record
+            m->delivery_status = plaintext[p++];
+        } else {
+            // v1: no delivery_status in record, default to sent
+            m->delivery_status = 0;
+        }
+
+        /* High-water mark: upgrade sent(0) to delivered(1).
+         * Never override FAILED(2) or PENDING(3) - those are terminal/retry states
+         * that must survive the high-water mark. */
+        if (m->direction == HISTORY_DIR_SENT &&
+            msg_idx <= header.last_delivered_idx &&
+            m->delivery_status < 2) {
             m->delivery_status = 1;  /* delivered (vv) */
         }
 

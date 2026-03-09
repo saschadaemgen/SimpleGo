@@ -20,7 +20,7 @@
 #define HISTORY_MAGIC_1       'G'
 #define HISTORY_MAGIC_2       'H'
 #define HISTORY_MAGIC_3       0x01
-#define HISTORY_VERSION       0x01
+#define HISTORY_VERSION       0x02
 #define HISTORY_HEADER_SIZE   32
 #define HISTORY_MAX_LOAD      20
 #define HISTORY_MAX_TEXT       4096
@@ -34,6 +34,12 @@
 // Directions
 #define HISTORY_DIR_SENT      0x00
 #define HISTORY_DIR_RECEIVED  0x01
+
+// Delivery status (v2 format: stored in record; v1: reconstructed from header)
+#define HISTORY_STATUS_SENT       0   // single check (sent, no receipt)
+#define HISTORY_STATUS_DELIVERED  1   // double check (receipt received)
+#define HISTORY_STATUS_FAILED     2   // red X (send failed)
+#define HISTORY_STATUS_PENDING    3   // clock icon (retry pending)
 
 /**
  * File header -- written once when chat file is created.
@@ -66,7 +72,7 @@ typedef struct __attribute__((packed)) {
  */
 typedef struct {
     uint8_t   direction;       // HISTORY_DIR_SENT or HISTORY_DIR_RECEIVED
-    uint8_t   delivery_status; // 0 = sent (v), 1 = delivered (vv). Reconstructed on load.
+    uint8_t   delivery_status; // HISTORY_STATUS_SENT/DELIVERED/FAILED/PENDING
     int64_t   timestamp;       // Unix timestamp (seconds)
     uint16_t  text_len;        // length of text in bytes
     char      text[HISTORY_MAX_TEXT];  // UTF-8 message text
@@ -80,8 +86,15 @@ typedef struct {
  *   uint8_t   tag[16]        -- GCM auth tag
  *
  * record_len = 2 + 12 + N + 16
- * N = sizeof(direction) + sizeof(timestamp) + sizeof(text_len) + text_len
- *   = 1 + 8 + 2 + text_len
+ *
+ * Plaintext payload (v1): direction(1) + timestamp(8) + text_len(2) + text(N)
+ *   N = 1 + 8 + 2 + text_len = 11 + text_len
+ *
+ * Plaintext payload (v2): direction(1) + delivery_status(1) + timestamp(8) + text_len(2) + text(N)
+ *   N = 1 + 1 + 8 + 2 + text_len = 12 + text_len
+ *
+ * Old v1 files keep v1 format forever (no migration).
+ * New files created after this version use v2 format.
  */
 
 // --- Public API (all called from App Task ONLY) ---
@@ -94,8 +107,10 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg);
 
 /**
  * Load the most recent messages from a slot's history.
- * Delivery status is reconstructed from header.last_delivered_idx:
- * SENT messages with index <= last_delivered_idx get delivery_status = 1.
+ * Delivery status handling:
+ *   v1 files: reconstructed from header.last_delivered_idx high-water mark.
+ *   v2 files: read from record, then high-water mark upgrades sent->delivered.
+ * High-water mark never overrides FAILED or PENDING status.
  *
  * @param slot      Contact slot index (0-127)
  * @param out       Output array, must have space for 'count' elements
