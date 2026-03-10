@@ -8,7 +8,32 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: Documentation + Security Cleanup + Display Name (2026-03-08 Session 43)
+## LATEST: Security Implementation - 5/6 Findings CLOSED (2026-03-10 Session 45)
+
+```
+Four Security Findings closed, two CRITICAL.
+SEC-01: sodium_memzero on 123KB PSRAM cache (4 call sites)
+SEC-02: HMAC NVS vault (eFuse BLOCK_KEY1, auto-provisioned first boot)
+SEC-04: Auto-lock screen (60s timeout, memory wipe before lock)
+SEC-05: Device-bound HKDF (chip MAC in key derivation)
+5/6 security findings CLOSED. Only SEC-06 (post-quantum) deferred.
+```
+
+## Session 44: Hardware Class 1 Security Architecture (2026-03-08)
+
+```
+Complete security architecture for SimpleGo Hardware Class 1.
+15 documentation files, 3,243 lines, 191 KB.
+Four modes: Open / NVS Vault / Fortress / Bunker
+HMAC NVS encryption (BLOCK_KEY1, HMAC_UP)
+Post-quantum: sntrup761 required (not Kyber)
+8 ESP32 vulnerabilities cataloged, attack economics documented
+ESP32-P4 evolution path (KMU eliminates derived-keys-in-RAM)
+Bug #20 demoted to KNOWN. Bug #21 SD phantom counter discovered.
+No firmware changes.
+```
+
+## Session 43: Documentation + Security Cleanup + Display Name (2026-03-08)
 
 ```
 Wiki live at wiki.simplego.dev (Docusaurus 3, search, mobile-ready)
@@ -510,6 +535,48 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **41** | **Mar 4** | ** Pre-GitHub Cleanup and Stabilization** | **5 lessons** |
 | **42** | **Mar 4-5** | ** Consolidation and Quality Pass** | **4 lessons** |
 | **43** | **Mar 5-8** | **Wiki + Security Cleanup + Display Name + Bug #20** | **3 lessons, 1 SHOWSTOPPER** |
+| **44** | **Mar 8** | **Hardware Class 1 Security Architecture (15 docs)** | **5 lessons, Bug #20 demoted** |
+| **45** | **Mar 10** | **Security Implementation: 5/6 Findings CLOSED** | **5 lessons, SEC-01/02/04/05** |
+
+---
+
+## Session 45 Key Achievements -- Security Implementation (5/6 CLOSED)
+
+```
+SEC-01 CLOSED (CRITICAL): sodium_memzero on 123KB PSRAM cache
+  wipe_labels_recursive() for LVGL labels + sodium_memzero for cache
+  4 call sites: cleanup, contact switch, history load, screen lock
+
+SEC-02 CLOSED (CRITICAL): HMAC NVS vault
+  eFuse BLOCK_KEY1 auto-provisioned on first boot
+  NVS encrypted, keys never in flash, HMAC_UP purpose
+
+SEC-04 CLOSED (HIGH): Auto-lock with memory wipe
+  60s inactivity timeout, lock screen, PSRAM wiped before lock
+  SMP connection continues during lock
+
+SEC-05 CLOSED (MEDIUM): Device-bound HKDF
+  Info: "simplego-slot-XX-AABBCCDDEEFF" (chip MAC)
+  Unique per-contact keys per physical device
+
+5 of 6 security findings CLOSED. Only SEC-06 (post-quantum) deferred.
+```
+
+---
+
+## Session 44 Key Achievements -- Hardware Class 1 Security Architecture
+
+```
+15 documentation files, 3,243 lines, 191 KB -- most comprehensive security analysis
+Four progressive modes: Open / NVS Vault / Fortress / Bunker (same hardware)
+HMAC NVS encryption chosen (BLOCK_KEY1, HMAC_UP, runtime derivation)
+Post-quantum: sntrup761 required for SimpleX compatibility (NOT Kyber)
+8 ESP32 vulnerabilities cataloged (AR2022-003: S3 AES side-channel)
+Attack economics: $15 without vault, $2K-30K with HMAC vault
+ESP32-P4 KMU: derived keys never in RAM (Mode 2 on P4 = Mode 4 on S3)
+Bug #20 demoted: SHOWSTOPPER to KNOWN (Alpha acceptable)
+Bug #21 discovered: SD phantom counter after erase-flash (LOW)
+```
 
 ---
 
@@ -1565,4 +1632,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 8, 2026 - Session 43 (Documentation + Security Cleanup + Display Name)*
+*Last updated: March 10, 2026 - Session 45 (Security Implementation: 5/6 Findings CLOSED)*

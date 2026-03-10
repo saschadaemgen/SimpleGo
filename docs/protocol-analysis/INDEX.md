@@ -3,6 +3,16 @@ slug: /protocol-analysis/session-index
 title: Session Index
 ---
 
+## Session 45 - 2026-03-10
+**Type:** Security Implementation Session
+**File:** 44_PART42_SESSION_45.md
+**Summary:** Four Security Findings closed (SEC-01, SEC-02, SEC-04, SEC-05), two CRITICAL. Runtime memory protection: sodium_memzero on 123KB PSRAM cache at 4 call sites, auto-lock screen with 60s timeout. HMAC NVS vault: eFuse BLOCK_KEY1 provisioned automatically on first boot, NVS encrypted. Device-bound HKDF with chip MAC. 5/6 security findings now closed. Only SEC-06 (post-quantum) deferred.
+
+## Session 44 - 2026-03-08
+**Type:** Security Architecture Session
+**File:** 43_PART41_SESSION_44.md
+**Summary:** Complete Hardware Class 1 security architecture designed and documented. 15 files, 3,243 lines, 191 KB. Four progressive security modes (Open/Vault/Fortress/Bunker). HMAC-based NVS encryption chosen. Post-quantum: sntrup761 required (not Kyber). 8 ESP32 vulnerabilities cataloged. Bug #20 demoted to KNOWN. Bug #21 (SD phantom counter) discovered. ESP32-P4 evolution path documented. No firmware changes.
+
 ## Session 43 - 2026-03-05 to 2026-03-08
 **Type:** Documentation, Security, and UX Session
 **File:** 42_PART40_SESSION_43.md

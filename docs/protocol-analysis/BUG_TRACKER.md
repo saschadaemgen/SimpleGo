@@ -2861,3 +2861,214 @@ Design decision: No broadcasting to existing contacts.
 *232 lessons learned*
 *Session 43: Documentation + Security Cleanup + Display Name*
 *OPEN: Bug #20 SEND fails after 6+ hours idle -- SHOWSTOPPER*
+
+---
+
+## Session 44 -- 2026-03-08 (Security Architecture Session)
+
+No firmware changes. Pure architecture and documentation session.
+
+### Bug #20 Status Change: SHOWSTOPPER demoted to KNOWN
+
+```
+Decision: Accepted for Alpha release. SEND-after-idle (6+ hours) is
+documented behavior for Alpha. Diagnostic logging deferred to future session.
+Rationale: Alpha users can reset device. Bug does not affect security.
+```
+
+### Bug #21: SD Card Phantom Counter (NEW, LOW)
+
+```
+Symptom:
+  After idf.py erase-flash and reflash, contact list shows old message
+  counters (e.g. "50 messages") and possibly old display names.
+
+Root Cause:
+  SD card survives erase-flash. Firmware reads SD card metadata without
+  verifying that corresponding NVS key material exists. Messages themselves
+  are NOT readable (encryption keys gone), but metadata indicator persists.
+
+Fix (planned):
+  Validate SD metadata against NVS state on boot. Missing NVS key for
+  a contact means SD data is orphaned -- ignore or clean.
+
+Priority: LOW (cosmetic, no security impact)
+```
+
+### Security Architecture Research Findings
+
+```
+8 ESP32 vulnerabilities cataloged:
+
+  AR2022-003: ESP32-S3 likely affected by AES side-channel extraction
+    (Ledger Donjon, IACR 2023/090, ~300K power measurements, ~2 hours)
+  HMAC peripheral (SHA-256): NOT specifically targeted -- potential advantage
+
+  ESP32-C6 DPA countermeasures proven ineffective (Courk 2024):
+    Anti-DPA pseudo-rounds and clock randomization bypassed
+    ESP32-P4 similar XTS_DPA_PSEUDO_LEVEL: unproven until validated
+
+  Attack economics:
+    Without vault: $15, 5 minutes (flash readout)
+    With HMAC vault: $2K-30K equipment, days to weeks, single device
+    SiliconToaster (EMFI): $50-150 DIY (open-source fault injection)
+
+Post-quantum discovery:
+  SimpleX uses sntrup761 (Streamlined NTRU Prime), NOT Kyber/ML-KEM
+  Must confirm with Evgeny before implementation
+```
+
+### Four Security Modes Defined
+
+```
+Mode 1 (Open):    No eFuse. Full dev access. Community Edition.
+Mode 2 (Vault):   HMAC key in eFuse. NVS encrypted. Web flash works. Kickstarter.
+Mode 3 (Fortress): Mode 2 + Flash Encryption. No web flash. OTA only.
+Mode 4 (Bunker):  Mode 3 + Secure Boot. Only signed firmware. JTAG disabled.
+```
+
+### New Lessons Learned (Session 44)
+
+233. **SimpleX uses sntrup761, NOT CRYSTALS-Kyber/ML-KEM for post-quantum** - Must verify with Evgeny before implementation. Both fit within ESP32 constraints (16 KB SMP block, < 13 ms key exchange). Protocol compatibility is non-negotiable (Session 44)
+234. **HMAC-based NVS encryption (HMAC_UP) is superior to Flash-Encryption-based NVS** - Independent operation, no nvs_keys partition, runtime key derivation, ESP-IDF v6.0 alignment. Uses BLOCK_KEY1. Chosen for SimpleGo Alpha (Session 44)
+235. **ESP32-C6 DPA countermeasure bypass (Courk 2024) means P4's similar features are unproven** - Never claim anti-DPA as "effective" without independent validation. XTS_DPA_PSEUDO_LEVEL is a mitigation attempt, not a guarantee (Session 44)
+236. **Espressif AR2022-003 lists ESP32-S3 as likely affected by AES side-channel** - HMAC peripheral (SHA-256) not specifically targeted, making it potentially stronger for key protection. Architecture choice: HMAC over AES for key derivation (Session 44)
+237. **SD card survives idf.py erase-flash** - Any SD metadata (message counters, display names) must be validated against NVS state. Missing NVS keys = orphaned SD data = ignore or clean (Session 44)
+
+---
+
+*Bug Tracker v40.0*
+*Last updated: March 8, 2026 - Session 44*
+*Total bugs documented: 73 (69 FIXED, 1 SPI3, 1 temp fix, 1 KNOWN idle, 1 LOW phantom) + Bug E*
+*237 lessons learned*
+*Session 44: Hardware Class 1 Security Architecture -- 15 docs, 3,243 lines, 191 KB*
+
+---
+
+## Session 45 -- 2026-03-10 (Security Implementation)
+
+### Four Security Findings CLOSED
+
+Session 45 closed 4 of the 6 tracked security findings, including both CRITICALs. This is the most impactful security session in the project's history.
+
+### SEC-01 CLOSED (CRITICAL): PSRAM Plaintext Wipe
+
+```
+Problem:
+  30 decrypted messages sat as plaintext in s_msg_cache (PSRAM).
+  Physical attacker with JTAG could read all messages while powered.
+  123,600 bytes of plaintext, never zeroed.
+
+Fix:
+  New function ui_chat_secure_wipe() in ui_chat.c:
+  1. wipe_labels_recursive(): iterate LVGL tree, set all labels to ""
+  2. sodium_memzero(s_msg_cache, 123600): guaranteed non-optimizable wipe
+
+  Called at 4 points:
+    ui_chat_cleanup()        -- screen destroy
+    ui_chat_switch_contact() -- before loading new contact
+    ui_chat_cache_history()  -- before copying new history
+    ui_manager_lock()        -- before lock screen
+
+  Log: "SEC-04: Bubble labels wiped" + "SEC-01: PSRAM msg cache wiped (123600 bytes)"
+```
+
+### SEC-04 CLOSED (HIGH): Auto-Lock with Memory Wipe
+
+```
+New files: ui_lock.c, ui_lock.h
+
+Lock screen: lock icon + "Press any key to unlock"
+Hidden LVGL textarea captures keypress -> ui_manager_unlock() -> go_back()
+
+LVGL timer in ui_manager.c checks lv_disp_get_inactive_time() every 2 seconds.
+After 60 seconds: ui_manager_lock() -> ui_chat_secure_wipe() -> lock screen.
+SMP connection and PING/PONG continue during lock.
+
+Minor fix: UI_FONT_LG does not exist in theme, corrected to UI_FONT_MD.
+```
+
+### SEC-02 CLOSED (CRITICAL): HMAC NVS Vault
+
+```
+Problem:
+  All cryptographic keys plaintext in NVS flash.
+  Physical attacker reading flash chip gets all private keys.
+
+Fix:
+  ESP-IDF HMAC-based NVS encryption.
+  nvs_flash_init() auto-provisions on first boot:
+    - Registers HMAC-based scheme
+    - Generates NVS encryption keys
+    - Burns eFuse BLOCK_KEY1 (HMAC_UP purpose)
+    - Encrypts NVS partition
+
+  Verified on Opfer-T-Deck (COM8):
+    KEY_PURPOSE_1 = HMAC_UP, status R/- (write-protected)
+    BLOCK_KEY1 = ??? (read-protected)
+    BLOCK_KEY0, KEY2-5 = empty (available as reserve)
+
+  main.c: logs Security Mode (Open/Vault), halts on NVS init error
+  (no fallback to unencrypted)
+```
+
+### SEC-05 CLOSED (MEDIUM): Device-Bound HKDF
+
+```
+Problem:
+  HKDF info parameter was only slot index (1 byte).
+  Same master key + same slot on different device = identical derived key.
+
+Fix:
+  Info parameter: "simplego-slot-XX-AABBCCDDEEFF"
+  Last 12 hex chars = chip MAC from esp_efuse_mac_get_default()
+  Each device derives unique per-contact encryption keys.
+
+  File: smp_history.c
+```
+
+### Build System Issues (Session 45)
+
+```
+1. Minimal sdkconfig.defaults: WRONG approach
+   Missing LVGL modules (lv_qrcode, lv_font_montserrat_10) on regeneration.
+   Fix: export complete working sdkconfig as defaults (93 KB).
+
+2. Windows PowerShell semicolon:
+   -D SDKCONFIG_DEFAULTS="a;b" silently ignores second file.
+   Fix: manual Add-Content to append vault lines.
+
+3. Spurious esp_efuse.h include:
+   nvs_flash_init() handles everything, no direct eFuse calls needed.
+   Caused linker error (efuse not in PRIV_REQUIRES).
+```
+
+### Security Status Summary
+
+```
+SEC-01 CLOSED (Session 45): sodium_memzero on PSRAM cache
+SEC-02 CLOSED (Session 45): HMAC NVS vault, eFuse BLOCK_KEY1
+SEC-03 CLOSED (Session 42): mbedtls_platform_zeroize
+SEC-04 CLOSED (Session 45): Auto-lock + memory wipe (60s)
+SEC-05 CLOSED (Session 45): Device-bound HKDF (chip MAC)
+SEC-06 DEFERRED:            Post-quantum (sntrup761, pending Evgeny)
+
+5 of 6 CLOSED. Only SEC-06 remains, intentionally deferred.
+```
+
+### New Lessons Learned (Session 45)
+
+238. **sodium_memzero must be called at every cache transition point** - Four call sites: cleanup, contact switch, history load, screen lock. Missing any one leaves plaintext in PSRAM. Not just on screen destroy (Session 45)
+239. **LVGL label text wipe is best-effort only** - LVGL internal pool does not guarantee overwrite on object deletion. Setting text to empty before deletion is closest approximation. True pool zeroing requires custom allocator (Session 45)
+240. **ESP-IDF HMAC NVS encryption is fully automatic after sdkconfig activation** - nvs_flash_init() handles eFuse detection, key generation, block burning, partition encryption on first boot. No manual espefuse.py needed (Session 45)
+241. **Windows PowerShell does not handle semicolons in -D SDKCONFIG_DEFAULTS** - Second file silently ignored. Workaround: merge overlay content into main defaults via script or manual append (Session 45)
+242. **Complete sdkconfig as defaults (93 KB) is safer than minimal handwritten** - Incomplete defaults cause missing LVGL modules and hard-to-diagnose build failures. Large file is the correct source of truth (Session 45)
+
+---
+
+*Bug Tracker v41.0*
+*Last updated: March 10, 2026 - Session 45*
+*Total bugs documented: 73 (69 FIXED, 1 SPI3, 1 temp fix, 1 KNOWN idle, 1 LOW phantom) + Bug E*
+*242 lessons learned*
+*Security: 5/6 findings CLOSED*
+*Session 45: Runtime Security + HMAC NVS Vault*

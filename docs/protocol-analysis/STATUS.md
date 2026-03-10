@@ -1,36 +1,36 @@
 
-## Status after Session 43 - 2026-03-08
+## Status after Session 45 - 2026-03-10
+
+### Security Implementation (Session 45)
+- SEC-01 CLOSED: sodium_memzero on PSRAM cache (123,600 bytes, 4 call sites)
+- SEC-02 CLOSED: HMAC NVS vault (eFuse BLOCK_KEY1, HMAC_UP, auto-provisioned)
+- SEC-03 CLOSED: mbedtls_platform_zeroize in smp_storage.c (Session 42)
+- SEC-04 CLOSED: Auto-lock screen (60s timeout, memory wipe before lock)
+- SEC-05 CLOSED: Device-bound HKDF (chip MAC in info parameter)
+- SEC-06 DEFERRED: Post-quantum (sntrup761, pending Evgeny confirmation)
+- **5 of 6 security findings CLOSED**
+
+### Firmware
+- SMP implementation: production-ready alpha
+- 128 contacts, delivery receipts, encrypted SD history, WiFi Manager
+- Display name: NVS-backed, first-boot prompt
+- Auto-lock with secure memory wipe (PSRAM + LVGL labels)
+- NVS vault mode: HMAC-encrypted keys at rest
+- Device-bound HKDF: per-contact SD keys tied to chip MAC
+- 47 source files with AGPL-3.0 headers
 
 ### Documentation
 - Docusaurus 3 live at wiki.simplego.dev
-- GitHub Actions deployment workflow active (triggers on docs/** and wiki/**)
-- SimpleGo design system applied (accent #45BDD1, Source Sans 3 + JetBrains Mono)
-- smp-in-c/ guide complete: 10 pages, world-first documentation for C implementation of SMP
-- hardware/, security/, architecture/, contributing/, reference/, why-simplego/ all migrated
-- Offline full-text search (1924 documents indexed)
-- README rewritten without criminal network references
-- security/audit-log.md: 6 resolved security issues documented
+- security-architecture/: 15 files covering Class 1 (3,243 lines)
+- smp-in-c/ guide: 10 pages, world-first for C implementation of SMP
 
-### Firmware (changed in Session 43)
-- Security log cleanup: all cryptographic material removed from serial output (3 files, 16 removals)
-- Display name: NVS-backed user-configurable name replaces hardcoded "ESP32"
-- First-boot prompt: user sets display name before any interaction
-- Crash fix: ui_connect.c dangling pointer after screen deletion
-- Performance: QR 60% faster, handshake 40% faster, boot 30% faster
-- SMP implementation: production-ready alpha
-- 128 contacts, delivery receipts, encrypted SD history, WiFi Manager
-- 47 source files with AGPL-3.0 headers
-
-### SHOWSTOPPER: Bug #20
-- SEND fails after 6+ hours idle (PING/PONG still working)
-- Red X on display, 2-3 red error lines in serial
-- Device reset fixes immediately
-- Must be resolved before alpha release
+### Bugs
+- Bug #20: SEND after 6+ hours idle (KNOWN, Alpha acceptable)
+- Bug #21: SD card phantom counter after erase-flash (LOW)
+- WiFi rebuild_timer_cb crash on erase-flash + first-boot (pre-existing, auto-recovers)
 
 ### Open Items
-- Bug #20: SEND after extended idle (SHOWSTOPPER, Session 44 priority)
-- Remaining dump_hex calls in smp_contacts.c (+0000: prefix format)
-- getting-started/ pages: quick-start, flashing, building, faq still stubs
-- eFuse + NVS Flash Encryption: Kickstarter phase
-- Private Message Routing: post-MVP
-- Battery runtime measurement: verify 20-day estimate
+- SEC-06: Post-quantum (confirm sntrup761 with Evgeny)
+- Alpha firmware binary for simplego.dev/installer
+- sdkconfig.defaults management (93 KB, git strategy needed)
+- ARCHITECTURE_AND_SECURITY.md update with closed SEC findings

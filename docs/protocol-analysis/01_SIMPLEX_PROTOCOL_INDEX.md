@@ -4,16 +4,18 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation
 **Version:** v0.1.18-alpha
-**Last Updated:** 2026-03-08 (Session 43 -- Documentation + Security Cleanup + Display Name)
+**Last Updated:** 2026-03-10 (Session 45 -- Security Implementation: 4 Findings Closed)
 
 ---
 
-## LATEST: Documentation + Security Cleanup + Display Name (Session 43)
+## LATEST: Security Implementation (Session 45)
 
-Session 43 completed three workstreams: wiki.simplego.dev live (Docusaurus 3, 17 migrated + 10 new smp-in-c/ pages), security log cleanup (all cryptographic material removed from serial output), and display name feature (NVS-backed user name replacing hardcoded "ESP32" with first-boot prompt). Bug #20 discovered: SEND fails after 6+ hours idle (SHOWSTOPPER). Performance: QR 60% faster, handshake 40% faster, boot 30% faster.
+Session 45 closed four Security Findings, two CRITICAL. SEC-01: sodium_memzero on 123KB PSRAM cache at 4 call sites. SEC-04: auto-lock screen with 60s timeout and memory wipe. SEC-02: HMAC NVS vault with eFuse BLOCK_KEY1 auto-provisioned on first boot. SEC-05: device-bound HKDF with chip MAC. 5 of 6 security findings now closed. Only SEC-06 (post-quantum) deferred pending Evgeny confirmation.
 
-Bugs: 72 total (1 new SHOWSTOPPER: #20 SEND after idle)
-Lessons: 232 total (3 new in S43: #230-#232)
+Bugs: 73 total (unchanged)
+Lessons: 242 total (5 new in S45: #238-#242)
+
+## PREVIOUS: Hardware Class 1 Security Architecture (Session 44)
 
 ## PREVIOUS: Consolidation and Quality Pass (Session 42)
 
@@ -94,7 +96,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 42 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -138,6 +140,8 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 
 | **38** | [**40_PART38_SESSION_41.md**](40_PART38_SESSION_41.md) | **~145** | ** Pre-GitHub Cleanup and Stabilization** |
 | **39** | [**41_PART39_SESSION_42.md**](41_PART39_SESSION_42.md) | **~130** | ** Consolidation and Quality Pass** |
 | **40** | [**42_PART40_SESSION_43.md**](42_PART40_SESSION_43.md) | **~210** | ** Documentation + Security Cleanup + Display Name** |
+| **41** | [**43_PART41_SESSION_44.md**](43_PART41_SESSION_44.md) | **~155** | ** Hardware Class 1 Security Architecture** |
+| **42** | [**44_PART42_SESSION_45.md**](44_PART42_SESSION_45.md) | **~155** | ** Security Implementation: 4 Findings Closed (SEC-01/02/04/05)** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -196,6 +200,8 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 
 | **41** | **Mar 4, 2026** | **CLEANUP** | ** Pre-GitHub Cleanup and Stabilization** |
 | **42** | **Mar 4-5, 2026** | **QUALITY** | ** Consolidation and Quality Pass** |
 | **43** | **Mar 5-8, 2026** | **DOCS+SEC+UX** | ** Wiki + Security Cleanup + Display Name + Bug #20** |
+| **44** | **Mar 8, 2026** | **SECURITY** | ** Hardware Class 1 Security Architecture (15 docs, 3,243 lines)** |
+| **45** | **Mar 10, 2026** | **SECURITY** | ** 4 Findings Closed (SEC-01/02/04/05), HMAC NVS Vault Live** |
 
 ---
 
@@ -310,6 +316,21 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 40 
 - **Crash Fix: ui_connect.c dangling pointer after screen deletion**
 - **Performance: QR 60% faster, handshake 40%, boot 30%**
 - **BUG #20 DISCOVERED: SEND fails after 6+ hours idle (SHOWSTOPPER)**
+- **Security Architecture: 15 docs, 3,243 lines, 191 KB** 🔒
+- **Four Security Modes: Open / Vault / Fortress / Bunker** 🔒
+- **HMAC NVS Encryption (BLOCK_KEY1, HMAC_UP)** 🔒
+- **Post-Quantum: sntrup761 required (not Kyber)** 🔒
+- **8 ESP32 Vulnerabilities Cataloged (AR2022-003)** 🔒
+- **ESP32-P4 Evolution Path (KMU, anti-DPA)** 🔒
+- **Bug #20 Demoted: SHOWSTOPPER to KNOWN** 🔒
+- **Bug #21: SD Card Phantom Counter** 🔒
+- **MILESTONE 20: Hardware Security Architecture** 🔒
+- **SEC-01 CLOSED: sodium_memzero on 123KB PSRAM cache (4 call sites)** 🛡️
+- **SEC-02 CLOSED: HMAC NVS vault (eFuse BLOCK_KEY1, auto-provisioned)** 🛡️
+- **SEC-04 CLOSED: Auto-lock screen (60s timeout, memory wipe)** 🛡️
+- **SEC-05 CLOSED: Device-bound HKDF (chip MAC in info)** 🛡️
+- **5/6 Security Findings CLOSED** 🛡️
+- **MILESTONE 21: Runtime Security + HMAC NVS Vault** 🛡️
 
 ### Session 23: The 7-Step Handshake
 ```
@@ -516,28 +537,21 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 44)
+## Next Steps (Session 46)
 
-### Phase 1: SHOWSTOPPER
+### Phase 1: Alpha Release Preparation
 ```
-P0: Bug #20 -- SEND fails after 6+ hours idle
-    Reproduce overnight, capture exact error lines
-    Check receiving during idle, add heap logging to SEND path
-    Compare WiFi Manager reconnect behavior
-```
-
-### Phase 2: Security + Features
-```
-P1: Remaining dump_hex calls in smp_contacts.c (+0000: prefix)
-P2: SD card on SPI3 bus (Bug #60 root cause fix)
-P3: German umlaut fallback fonts (LVGL, task prepared)
+P0: Alpha firmware binary for simplego.dev/installer
+P1: ARCHITECTURE_AND_SECURITY.md update with closed SEC findings
+P2: sdkconfig.defaults git strategy (93 KB, overlay approach)
 ```
 
-### Phase 3: Kickstarter Preparation
+### Phase 2: Remaining Items
 ```
-P4: eFuse + nvs_flash_secure_init combined with CRYSTALS-Kyber
-P5: CE marking preparation
-P6: Battery runtime measurement (verify 20-day estimate)
+P3: SEC-06 post-quantum (confirm sntrup761 with Evgeny first)
+P4: Bug #20 diagnostic logging (KNOWN, not blocking)
+P5: Bug #21 SD card metadata validation
+P6: WiFi rebuild_timer_cb crash on first-boot (pre-existing)
 ```
 
 ---
@@ -566,12 +580,14 @@ P6: Battery runtime measurement (verify 20-day estimate)
 | **17** | ** Pre-GitHub Stabilization** | **2026-03-04** | **41** |
 | **18** | ** Production Code Quality** | **2026-03-05** | **42** |
 | **19** | ** Professional Documentation Site** | **2026-03-05** | **43** |
+| **20** | ** Hardware Security Architecture** | **2026-03-08** | **44** |
+| **21** | ** Runtime Security + HMAC NVS Vault** | **2026-03-10** | **45** |
 
 ---
 
 ## Current Project Status
 
-**Version:** v0.1.18-alpha | **Last updated:** 2026-03-08 Session 43
+**Version:** v0.1.18-alpha | **Last updated:** 2026-03-10 Session 45
 
 ### Firmware
 
@@ -581,30 +597,40 @@ P6: Battery runtime measurement (verify 20-day estimate)
 - WiFi Manager with multi-network support and WPA3
 - Delivery receipts (double checkmark)
 - User-configurable display name with first-boot prompt
+- **SEC-01: PSRAM cache wiped with sodium_memzero (123KB, 4 call sites)**
+- **SEC-02: HMAC NVS vault (eFuse BLOCK_KEY1, auto-provisioned)**
+- **SEC-04: Auto-lock screen (60s timeout, memory wipe before lock)**
+- **SEC-05: Device-bound HKDF (chip MAC in key derivation info)**
 - Security log cleanup: zero cryptographic material on serial output
 - Zero printf in production code
 - 47 source files with AGPL-3.0 headers
-- **SHOWSTOPPER: Bug #20 -- SEND fails after 6+ hours idle**
+- Bug #20: SEND after 6+ hours idle (KNOWN, Alpha acceptable)
+- Bug #21: SD phantom counter after erase-flash (LOW)
+
+### Security Status: 5/6 Findings CLOSED
+
+| SEC | Status | Session |
+|-----|--------|---------|
+| SEC-01 (CRITICAL) | CLOSED | 45 |
+| SEC-02 (CRITICAL) | CLOSED | 45 |
+| SEC-03 (HIGH) | CLOSED | 42 |
+| SEC-04 (HIGH) | CLOSED | 45 |
+| SEC-05 (MEDIUM) | CLOSED | 45 |
+| SEC-06 (MEDIUM) | DEFERRED | pending Evgeny |
 
 ### Documentation
 
 - Docusaurus 3 live at wiki.simplego.dev
-- GitHub Actions deployment workflow active (docs/** and wiki/**)
-- smp-in-c/ guide: 10 pages, world-first documentation for C implementation of SMP
-- hardware/, security/, architecture/, contributing/, reference/, why-simplego/ all migrated
-- Offline full-text search (1924 documents indexed)
-- README rewritten without criminal network references
-- security/audit-log.md: 6 resolved security issues documented
+- security-architecture/: 15 files covering Class 1 (3,243 lines)
+- smp-in-c/ guide: 10 pages, world-first for C implementation of SMP
 
 ### Open Items
 
-- Bug #20: SEND after extended idle (SHOWSTOPPER, Session 44 priority)
-- Remaining dump_hex calls in smp_contacts.c (+0000: prefix format)
-- getting-started/ pages: quick-start, flashing, building, faq still stubs
-- eFuse + NVS Flash Encryption: Kickstarter phase
-- Private Message Routing: post-MVP
-- Battery runtime measurement: verify 20-day estimate from Evgeny architecture doc
+- SEC-06: Post-quantum (confirm sntrup761 with Evgeny)
+- Alpha firmware binary for simplego.dev/installer
+- sdkconfig.defaults management (93 KB, git strategy needed)
+- ARCHITECTURE_AND_SECURITY.md update with closed SEC findings
 
 ---
 
-*Index updated: 2026-03-08 Session 43 -- Documentation + Security Cleanup + Display Name*
+*Index updated: 2026-03-10 Session 45 -- Security Implementation: 5/6 Findings CLOSED*
