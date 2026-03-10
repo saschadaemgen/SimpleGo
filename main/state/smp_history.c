@@ -31,6 +31,7 @@
 #include "freertos/semphr.h"
 #include "tdeck_lvgl.h"        // Session 37b: LVGL recursive mutex = SPI2 bus lock
 #include "esp_heap_caps.h"     // Session 40a: PSRAM allocation for raw record buffer
+#include "esp_mac.h"           // SEC-05: Device-bound HKDF via chip MAC
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -82,18 +83,34 @@ static void history_build_path(uint8_t slot, char *path, size_t path_len)
 /* ============================================================
  * Helper: Derive per-contact key from master key using HKDF-SHA256.
  * Salt: "simplego-history"
- * Info: single byte slot_index
+ * Info: "simplego-slot-XX-AABBCCDDEEFF" (slot + chip MAC)
+ *
+ * SEC-05: The chip's unique MAC address binds derived keys to this
+ * specific device. Same master key on a different ESP32-S3 produces
+ * completely different per-contact keys, preventing SD card theft
+ * from exposing chat history on another device.
  * ============================================================ */
 static esp_err_t history_derive_key(uint8_t slot, uint8_t *out_key)
 {
     const uint8_t salt[] = "simplego-history";
-    uint8_t info[1] = { slot };
+
+    /* Build device-bound info string: "simplego-slot-XX-AABBCCDDEEFF"
+     * where XX is the hex slot index and AABBCCDDEEFF is the chip MAC. */
+    uint8_t mac[6];
+    esp_efuse_mac_get_default(mac);
+
+    char info[48];
+    int info_len = snprintf(info, sizeof(info),
+                            "simplego-slot-%02x-%02x%02x%02x%02x%02x%02x",
+                            slot,
+                            mac[0], mac[1], mac[2],
+                            mac[3], mac[4], mac[5]);
 
     int ret = mbedtls_hkdf(
         mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
         salt, sizeof(salt) - 1,    // salt (without null terminator)
         s_master_key, HISTORY_MASTER_KEY_LEN,  // input key material
-        info, 1,                   // info = slot index
+        (const uint8_t *)info, (size_t)info_len,  // info = slot + device MAC
         out_key, HISTORY_MASTER_KEY_LEN  // output: 32 bytes
     );
 
@@ -180,6 +197,7 @@ esp_err_t smp_history_init(void)
     sd_unlock();
 
     s_initialized = true;
+    ESP_LOGI(TAG, "History engine initialized (AES-256-GCM, device-bound HKDF)");
     return ESP_OK;
 }
 
