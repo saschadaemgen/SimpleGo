@@ -24,7 +24,6 @@
 #include "esp_random.h"
 #include "esp_heap_caps.h"
 #include "nvs_flash.h"
-
 #include "mbedtls/ssl.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
@@ -445,12 +444,49 @@ void app_main(void) {
     }
     ESP_LOGI(TAG, "X448 initialized (wolfSSL)");
 
+    /* ========== SEC-02: NVS Initialization (Open or Vault Mode) ==========
+     *
+     * When CONFIG_NVS_ENCRYPTION + HMAC scheme is enabled (Vault build),
+     * nvs_flash_init() automatically handles eFuse provisioning:
+     *   1. Checks if HMAC key exists at BLOCK_KEY1
+     *   2. If absent: generates random key, burns to eFuse, sets read-protect
+     *   3. Derives XTS encryption keys via HMAC peripheral
+     *   4. Initializes NVS with transparent encryption
+     *
+     * When CONFIG_NVS_ENCRYPTION is disabled (Open build), nvs_flash_init()
+     * performs standard unencrypted initialization. No eFuse is touched.
+     *
+     * The CONFIG_SIMPLEGO_AUTO_PROVISION_EFUSE flag is a SimpleGo-level
+     * guard that mirrors the NVS encryption setting for logging purposes. */
+
+#if defined(CONFIG_SIMPLEGO_AUTO_PROVISION_EFUSE) && defined(CONFIG_NVS_ENCRYPTION)
+    ESP_LOGI(TAG, "");
+    ESP_LOGI(TAG, "SEC-02: Security Mode = VAULT (HMAC NVS Encryption)");
+    ESP_LOGI(TAG, "SEC-02: eFuse BLOCK_KEY1 will be auto-provisioned on first boot");
+    ESP_LOGI(TAG, "");
+#else
+    ESP_LOGI(TAG, "SEC-02: Security Mode = OPEN (NVS unencrypted)");
+#endif
+
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_LOGW(TAG, "NVS format change detected, erasing for re-init");
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-    ESP_ERROR_CHECK(ret);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "NVS init FAILED: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "SEC-02: Cannot continue without NVS. Halting.");
+        while (1) { vTaskDelay(pdMS_TO_TICKS(10000)); }
+    }
+
+#if defined(CONFIG_SIMPLEGO_AUTO_PROVISION_EFUSE) && defined(CONFIG_NVS_ENCRYPTION)
+    /* Log eFuse status after init (key should now be provisioned) */
+    ESP_LOGI(TAG, "SEC-02: NVS encrypted init OK. Verify with:");
+    ESP_LOGI(TAG, "  espefuse.py -c esp32s3 -p COM6 summary");
+#else
+    ESP_LOGI(TAG, "NVS initialized (unencrypted mode)");
+#endif
 
     // Storage Phase 1: NVS only (before display, no SPI conflict)
     smp_storage_init();
