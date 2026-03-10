@@ -202,6 +202,21 @@ endmenu
 
 menu "Security Configuration"
 
+    config SIMPLEGO_AUTO_PROVISION_EFUSE
+        bool "Auto-provision eFuse HMAC key on first boot (Vault Mode)"
+        default n
+        help
+            When enabled, the firmware will automatically generate an HMAC
+            key and burn it to eFuse BLOCK_KEY1 on first boot if no key
+            is present. This enables HMAC-based NVS encryption (Mode 2).
+
+            WARNING: eFuse burning is IRREVERSIBLE. Once burned, the key
+            block cannot be changed or erased. Only enable this for Vault
+            builds on devices intended for production or security testing.
+
+            Requires CONFIG_NVS_ENCRYPTION=y and HMAC scheme selected.
+            Has no effect when CONFIG_NVS_ENCRYPTION is disabled.
+
     config SIMPLEGO_REQUIRE_PIN
         bool "Require PIN/Password"
         default n
