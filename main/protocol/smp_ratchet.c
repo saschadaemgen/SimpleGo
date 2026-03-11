@@ -677,6 +677,7 @@ static int pq_recv_process(pq_kem_state_t *pq,
             pq->pq_kem_state = 1;  /* proposed */
             pq->pq_active = 1;
             ESP_LOGI(TAG, "PQ-SM: State -> proposed (pk[0]=%02x)", pq->own_kem_pk[0]);
+            pq_nvs_save(ratchet_get_active());  /* Write-Before-Send */
             pq_crypto_precompute_keypair();
         }
         /* Anti-downgrade: if already active, stay active even on Nothing */
@@ -715,6 +716,7 @@ static int pq_recv_process(pq_kem_state_t *pq,
         pq_crypto_precompute_keypair();
         ESP_LOGI(TAG, "PQ-SM: State -> accepted (ss[0]=%02x, ct[0]=%02x)",
                  kem_ss[0], pq->pending_ct[0]);
+        pq_nvs_save(ratchet_get_active());  /* Write-Before-Send */
         return 0;
     }
 
@@ -772,6 +774,7 @@ static int pq_recv_process(pq_kem_state_t *pq,
         pq_crypto_precompute_keypair();
         ESP_LOGI(TAG, "PQ-SM: State -> accepted (decap+encap, ss[0]=%02x, ct[0]=%02x)",
                  kem_ss[0], pq->pending_ct[0]);
+        pq_nvs_save(ratchet_get_active());  /* Write-Before-Send */
         return 0;
     }
 
@@ -1511,6 +1514,106 @@ bool ratchet_load_state(uint8_t contact_idx) {
              ratchet_state.dh_self.public_key[0], ratchet_state.dh_self.public_key[1],
              ratchet_state.msg_num_send, ratchet_state.msg_num_recv);
 
+    return true;
+}
+
+// ============== PQ NVS Persistence (Session 46 Teil F) ==============
+
+bool pq_nvs_save(uint8_t contact_idx) {
+    if (contact_idx >= MAX_RATCHETS) return false;
+
+    pq_kem_state_t *pq = &ratchet_state.pq;
+    char key[16];
+    esp_err_t ret;
+    bool ok = true;
+
+    snprintf(key, sizeof(key), "pq_%02x_act", contact_idx);
+    ret = smp_storage_save_blob_sync(key, &pq->pq_active, 1);
+    if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+
+    snprintf(key, sizeof(key), "pq_%02x_st", contact_idx);
+    ret = smp_storage_save_blob_sync(key, &pq->pq_kem_state, 1);
+    if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+
+    /* Only save key material if there's something valid */
+    if (pq->own_kem_valid) {
+        snprintf(key, sizeof(key), "pq_%02x_opk", contact_idx);
+        ret = smp_storage_save_blob_sync(key, pq->own_kem_pk, SNTRUP761_PUBLICKEYBYTES);
+        if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+
+        snprintf(key, sizeof(key), "pq_%02x_osk", contact_idx);
+        ret = smp_storage_save_blob_sync(key, pq->own_kem_sk, SNTRUP761_SECRETKEYBYTES);
+        if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+    }
+
+    if (pq->peer_kem_valid) {
+        snprintf(key, sizeof(key), "pq_%02x_ppk", contact_idx);
+        ret = smp_storage_save_blob_sync(key, pq->peer_kem_pk, SNTRUP761_PUBLICKEYBYTES);
+        if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+    }
+
+    if (pq->pending_ct_valid) {
+        snprintf(key, sizeof(key), "pq_%02x_ct", contact_idx);
+        ret = smp_storage_save_blob_sync(key, pq->pending_ct, SNTRUP761_CIPHERTEXTBYTES);
+        if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+    }
+
+    if (ok) {
+        ESP_LOGI(TAG, "PQ NVS saved: [%02x] active=%u state=%u own=%u peer=%u ct=%u",
+                 contact_idx, pq->pq_active, pq->pq_kem_state,
+                 pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid);
+    }
+    return ok;
+}
+
+bool pq_nvs_load(uint8_t contact_idx) {
+    if (contact_idx >= MAX_RATCHETS) return false;
+
+    pq_kem_state_t *pq = &ratchet_state.pq;
+    char key[16];
+    size_t len;
+
+    /* Check if PQ state exists for this contact */
+    snprintf(key, sizeof(key), "pq_%02x_act", contact_idx);
+    if (!smp_storage_exists(key)) {
+        ESP_LOGD(TAG, "pq_nvs_load [%02x]: no PQ state in NVS", contact_idx);
+        return false;
+    }
+
+    len = 0;
+    smp_storage_load_blob(key, &pq->pq_active, 1, &len);
+
+    snprintf(key, sizeof(key), "pq_%02x_st", contact_idx);
+    len = 0;
+    smp_storage_load_blob(key, &pq->pq_kem_state, 1, &len);
+
+    snprintf(key, sizeof(key), "pq_%02x_opk", contact_idx);
+    if (smp_storage_exists(key)) {
+        len = 0;
+        smp_storage_load_blob(key, pq->own_kem_pk, SNTRUP761_PUBLICKEYBYTES, &len);
+        snprintf(key, sizeof(key), "pq_%02x_osk", contact_idx);
+        len = 0;
+        smp_storage_load_blob(key, pq->own_kem_sk, SNTRUP761_SECRETKEYBYTES, &len);
+        pq->own_kem_valid = 1;
+    }
+
+    snprintf(key, sizeof(key), "pq_%02x_ppk", contact_idx);
+    if (smp_storage_exists(key)) {
+        len = 0;
+        smp_storage_load_blob(key, pq->peer_kem_pk, SNTRUP761_PUBLICKEYBYTES, &len);
+        pq->peer_kem_valid = 1;
+    }
+
+    snprintf(key, sizeof(key), "pq_%02x_ct", contact_idx);
+    if (smp_storage_exists(key)) {
+        len = 0;
+        smp_storage_load_blob(key, pq->pending_ct, SNTRUP761_CIPHERTEXTBYTES, &len);
+        pq->pending_ct_valid = 1;
+    }
+
+    ESP_LOGI(TAG, "PQ NVS loaded: [%02x] active=%u state=%u own=%u peer=%u ct=%u",
+             contact_idx, pq->pq_active, pq->pq_kem_state,
+             pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid);
     return true;
 }
 

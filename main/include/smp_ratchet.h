@@ -329,6 +329,27 @@ bool ratchet_save_state(uint8_t contact_idx);
  */
 bool ratchet_load_state(uint8_t contact_idx);
 
+// ============== PQ NVS Persistence (Session 46 Teil F) ==============
+
+/**
+ * Save PQ KEM state to separate NVS keys for Write-Before-Send safety.
+ * Keys: pq_XX_act, pq_XX_st, pq_XX_opk, pq_XX_osk, pq_XX_ppk, pq_XX_ct
+ * Must run on smp_app_task (SRAM stack, NVS-safe).
+ *
+ * @param contact_idx  Contact slot (0-127)
+ * @return true on success
+ */
+bool pq_nvs_save(uint8_t contact_idx);
+
+/**
+ * Load PQ KEM state from NVS into active ratchet state.
+ * Called at boot after ratchet_load_state for active contacts.
+ *
+ * @param contact_idx  Contact slot (0-127)
+ * @return true if PQ state was found and loaded
+ */
+bool pq_nvs_load(uint8_t contact_idx);
+
 // ============== PQ State Machine (Session 46 Teil E) ==============
 
 /**

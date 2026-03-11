@@ -677,6 +677,11 @@ void app_main(void) {
             // Session 34 Phase 6: Load per-contact reply queues
             int rq_loaded = reply_queues_load_all();
             ESP_LOGI(TAG, "Reply queues: %d loaded from NVS", rq_loaded);
+
+            // Session 46 Teil F: Load PQ KEM state from separate NVS keys
+            if (pq_nvs_load(0)) {
+                ESP_LOGI(TAG, "SEC-06: PQ state restored from NVS");
+            }
         } else {
             ESP_LOGW(TAG, "⚠️ Partial restore failed (ratchet=%d, queue=%d) — fresh start",
                      ratchet_ok, queue_ok);
