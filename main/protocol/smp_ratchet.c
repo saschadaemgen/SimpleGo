@@ -305,6 +305,304 @@ static void build_msg_header(uint8_t *header, const uint8_t *dh_public,
     memset(&header[p], '#', 88 - p);
 }
 
+// ============== PQ Header Serialization (Session 46 Teil C) ==============
+
+static const uint8_t X448_SPKI_HDR[12] = {
+    0x30,0x42,0x30,0x05,0x06,0x03,0x2b,0x65,0x6f,0x03,0x39,0x00
+};
+
+int pq_header_serialize(uint8_t *buf, size_t buf_size,
+                        const uint8_t *dh_public,
+                        const pq_kem_state_t *pq,
+                        uint32_t pn, uint32_t ns) {
+
+    bool is_pq = (pq != NULL && pq->pq_active && smp_settings_get_pq_enabled());
+    size_t padded_len = is_pq ? MSG_HEADER_PQ_PADDED_LEN : MSG_HEADER_PADDED_LEN;
+
+    if (buf_size < padded_len) {
+        ESP_LOGE(TAG, "pq_header_serialize: buf too small (%zu < %zu)", buf_size, padded_len);
+        return -1;
+    }
+
+    memset(buf, 0, padded_len);
+    int p = 2;  /* skip content_len, fill at end */
+
+    /* msgMaxVersion: Word16 BE */
+    buf[p++] = 0x00;
+    buf[p++] = RATCHET_VERSION;
+
+    /* msgDHRs: 1 byte length + X448 SPKI DER (12 header + 56 key = 68) */
+    buf[p++] = 68;
+    memcpy(&buf[p], X448_SPKI_HDR, 12); p += 12;
+    memcpy(&buf[p], dh_public, 56); p += 56;
+
+    /* msgKEM */
+    if (!is_pq || pq->pq_kem_state == 0) {
+        /* Nothing: '0' */
+        buf[p++] = PQ_KEM_NOTHING;
+    } else if (pq->pq_kem_state == 1) {
+        /* Proposed: Just('1') + 'P' + pk_len(Word16) + pk(1158) */
+        buf[p++] = PQ_KEM_JUST;
+        buf[p++] = PQ_KEM_PROPOSED;
+        buf[p++] = (SNTRUP761_PUBLICKEYBYTES >> 8) & 0xFF;
+        buf[p++] = SNTRUP761_PUBLICKEYBYTES & 0xFF;
+        memcpy(&buf[p], pq->own_kem_pk, SNTRUP761_PUBLICKEYBYTES);
+        p += SNTRUP761_PUBLICKEYBYTES;
+    } else if (pq->pq_kem_state == 2) {
+        /* Accepted: Just('1') + 'A' + ct_len(Word16) + ct(1039) + pk_len(Word16) + pk(1158) */
+        buf[p++] = PQ_KEM_JUST;
+        buf[p++] = PQ_KEM_ACCEPTED;
+        buf[p++] = (SNTRUP761_CIPHERTEXTBYTES >> 8) & 0xFF;
+        buf[p++] = SNTRUP761_CIPHERTEXTBYTES & 0xFF;
+        memcpy(&buf[p], pq->pending_ct, SNTRUP761_CIPHERTEXTBYTES);
+        p += SNTRUP761_CIPHERTEXTBYTES;
+        buf[p++] = (SNTRUP761_PUBLICKEYBYTES >> 8) & 0xFF;
+        buf[p++] = SNTRUP761_PUBLICKEYBYTES & 0xFF;
+        memcpy(&buf[p], pq->own_kem_pk, SNTRUP761_PUBLICKEYBYTES);
+        p += SNTRUP761_PUBLICKEYBYTES;
+    }
+
+    /* msgPN: Word32 BE */
+    buf[p++] = (pn >> 24) & 0xFF;
+    buf[p++] = (pn >> 16) & 0xFF;
+    buf[p++] = (pn >> 8) & 0xFF;
+    buf[p++] = pn & 0xFF;
+
+    /* msgNs: Word32 BE */
+    buf[p++] = (ns >> 24) & 0xFF;
+    buf[p++] = (ns >> 16) & 0xFF;
+    buf[p++] = (ns >> 8) & 0xFF;
+    buf[p++] = ns & 0xFF;
+
+    /* content_len (bytes 0-1): actual content bytes excluding the 2-byte length field */
+    uint16_t content_len = (uint16_t)(p - 2);
+    buf[0] = (content_len >> 8) & 0xFF;
+    buf[1] = content_len & 0xFF;
+
+    /* Pad with '#' to target size */
+    memset(&buf[p], '#', padded_len - p);
+
+    ESP_LOGD(TAG, "pq_header_serialize: content=%u, padded=%zu, pq=%d, kem_state=%d",
+             content_len, padded_len, is_pq ? 1 : 0,
+             (pq && is_pq) ? pq->pq_kem_state : -1);
+
+    return (int)padded_len;
+}
+
+int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
+                          parsed_msg_header_t *out) {
+
+    memset(out, 0, sizeof(parsed_msg_header_t));
+
+    if (buf_len < MSG_HEADER_PADDED_LEN) {
+        ESP_LOGE(TAG, "pq_header_deserialize: buf too small (%zu)", buf_len);
+        return -1;
+    }
+
+    int p = 0;
+    uint16_t content_len = (buf[p] << 8) | buf[p + 1]; p += 2;
+
+    /* Bounds check: content must fit in buffer */
+    if ((size_t)(content_len + 2) > buf_len) {
+        ESP_LOGE(TAG, "pq_header_deserialize: content_len %u exceeds buf %zu", content_len, buf_len);
+        return -2;
+    }
+
+    /* msgMaxVersion: Word16 BE */
+    out->version = (buf[p] << 8) | buf[p + 1]; p += 2;
+
+    /* msgDHRs: 1 byte length + SPKI DER */
+    uint8_t key_len = buf[p++];
+    if (key_len != 68) {
+        ESP_LOGE(TAG, "pq_header_deserialize: unexpected key_len %u (expected 68)", key_len);
+        return -3;
+    }
+    /* Skip 12-byte SPKI header, extract 56-byte raw X448 key */
+    p += 12;
+    memcpy(out->dh_public, &buf[p], 56); p += 56;
+
+    /* msgKEM (only if version >= 3) */
+    out->kem_tag = PQ_KEM_NOTHING;
+    if (out->version >= 3) {
+        uint8_t maybe_tag = buf[p++];
+        if (maybe_tag == PQ_KEM_NOTHING) {
+            out->kem_tag = PQ_KEM_NOTHING;
+        } else if (maybe_tag == PQ_KEM_JUST) {
+            uint8_t variant = buf[p++];
+            if (variant == PQ_KEM_PROPOSED) {
+                out->kem_tag = PQ_KEM_PROPOSED;
+                uint16_t pk_len = (buf[p] << 8) | buf[p + 1]; p += 2;
+                if (pk_len != SNTRUP761_PUBLICKEYBYTES) {
+                    ESP_LOGE(TAG, "pq_header_deserialize: bad PK len %u", pk_len);
+                    return -4;
+                }
+                memcpy(out->kem_pk, &buf[p], SNTRUP761_PUBLICKEYBYTES);
+                p += SNTRUP761_PUBLICKEYBYTES;
+                out->kem_pk_valid = true;
+            } else if (variant == PQ_KEM_ACCEPTED) {
+                out->kem_tag = PQ_KEM_ACCEPTED;
+                uint16_t ct_len = (buf[p] << 8) | buf[p + 1]; p += 2;
+                if (ct_len != SNTRUP761_CIPHERTEXTBYTES) {
+                    ESP_LOGE(TAG, "pq_header_deserialize: bad CT len %u", ct_len);
+                    return -5;
+                }
+                memcpy(out->kem_ct, &buf[p], SNTRUP761_CIPHERTEXTBYTES);
+                p += SNTRUP761_CIPHERTEXTBYTES;
+                out->kem_ct_valid = true;
+                uint16_t pk_len = (buf[p] << 8) | buf[p + 1]; p += 2;
+                if (pk_len != SNTRUP761_PUBLICKEYBYTES) {
+                    ESP_LOGE(TAG, "pq_header_deserialize: bad PK len %u in Accepted", pk_len);
+                    return -6;
+                }
+                memcpy(out->kem_pk, &buf[p], SNTRUP761_PUBLICKEYBYTES);
+                p += SNTRUP761_PUBLICKEYBYTES;
+                out->kem_pk_valid = true;
+            } else {
+                ESP_LOGE(TAG, "pq_header_deserialize: unknown KEM variant 0x%02x", variant);
+                return -7;
+            }
+        } else {
+            ESP_LOGE(TAG, "pq_header_deserialize: unknown maybe tag 0x%02x", maybe_tag);
+            return -8;
+        }
+    }
+
+    /* msgPN: Word32 BE */
+    out->pn = ((uint32_t)buf[p] << 24) | ((uint32_t)buf[p + 1] << 16) |
+              ((uint32_t)buf[p + 2] << 8) | (uint32_t)buf[p + 3];
+    p += 4;
+
+    /* msgNs: Word32 BE */
+    out->ns = ((uint32_t)buf[p] << 24) | ((uint32_t)buf[p + 1] << 16) |
+              ((uint32_t)buf[p + 2] << 8) | (uint32_t)buf[p + 3];
+    p += 4;
+
+    ESP_LOGD(TAG, "pq_header_deserialize: v=%u, kem=0x%02x, pn=%u, ns=%u, content=%u",
+             out->version, out->kem_tag, out->pn, out->ns, content_len);
+
+    return 0;
+}
+
+// ============== PQ Header Test (Session 46 Teil C) ==============
+
+void pq_header_test(void) {
+    ESP_LOGI(TAG, "");
+    ESP_LOGI(TAG, "=== PQ Header Wire Format Test ===");
+
+    /* Fake DH key for testing */
+    uint8_t fake_dh[56];
+    memset(fake_dh, 0xAA, 56);
+
+    parsed_msg_header_t parsed;
+    int ret;
+    uint16_t cl;
+    bool pass = true;
+
+    /* ---- Test 1: Non-PQ header (88 bytes) ---- */
+    uint8_t hdr_nopq[MSG_HEADER_PADDED_LEN];
+    ret = pq_header_serialize(hdr_nopq, sizeof(hdr_nopq), fake_dh, NULL, 5, 10);
+    cl = (hdr_nopq[0] << 8) | hdr_nopq[1];
+    ESP_LOGI(TAG, "[1] Non-PQ: size=%d, content_len=%u, kem=0x%02x",
+             ret, cl, hdr_nopq[73]);
+    ESP_LOGI(TAG, "    first 16:");
+    ESP_LOG_BUFFER_HEX_LEVEL(TAG, hdr_nopq, 16, ESP_LOG_INFO);
+
+    ret = pq_header_deserialize(hdr_nopq, sizeof(hdr_nopq), &parsed);
+    if (ret != 0 || parsed.version != RATCHET_VERSION || parsed.pn != 5 ||
+        parsed.ns != 10 || parsed.kem_tag != PQ_KEM_NOTHING || cl != 80) {
+        ESP_LOGE(TAG, "    FAIL: deser ret=%d v=%u pn=%u ns=%u kem=0x%02x cl=%u",
+                 ret, parsed.version, parsed.pn, parsed.ns, parsed.kem_tag, cl);
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "    PASS: round-trip OK (v=%u pn=%u ns=%u)", parsed.version, parsed.pn, parsed.ns);
+    }
+
+    /* ---- Test 2: PQ Proposed (2310 bytes, content=1241) ---- */
+    pq_kem_state_t pq_prop = {0};
+    pq_prop.pq_active = 1;
+    pq_prop.pq_kem_state = 1;
+    memset(pq_prop.own_kem_pk, 0xBB, SNTRUP761_PUBLICKEYBYTES);
+
+    uint8_t *hdr_prop = heap_caps_malloc(MSG_HEADER_PQ_PADDED_LEN, MALLOC_CAP_SPIRAM);
+    if (!hdr_prop) { ESP_LOGE(TAG, "malloc failed"); return; }
+
+    ret = pq_header_serialize(hdr_prop, MSG_HEADER_PQ_PADDED_LEN, fake_dh, &pq_prop, 3, 7);
+    cl = (hdr_prop[0] << 8) | hdr_prop[1];
+    ESP_LOGI(TAG, "[2] Proposed: size=%d, content_len=%u", ret, cl);
+    ESP_LOGI(TAG, "    KEM area [73..77]: %02x %02x %02x %02x %02x",
+             hdr_prop[73], hdr_prop[74], hdr_prop[75], hdr_prop[76], hdr_prop[77]);
+
+    ret = pq_header_deserialize(hdr_prop, MSG_HEADER_PQ_PADDED_LEN, &parsed);
+    if (ret != 0 || parsed.kem_tag != PQ_KEM_PROPOSED || !parsed.kem_pk_valid ||
+        parsed.pn != 3 || parsed.ns != 7 || cl != 1241 ||
+        parsed.kem_pk[0] != 0xBB) {
+        ESP_LOGE(TAG, "    FAIL: ret=%d kem=0x%02x pk_v=%d pk[0]=0x%02x cl=%u",
+                 ret, parsed.kem_tag, parsed.kem_pk_valid, parsed.kem_pk[0], cl);
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "    PASS: round-trip OK (kem=P, pk[0]=0xBB, pn=%u ns=%u)", parsed.pn, parsed.ns);
+    }
+    free(hdr_prop);
+
+    /* ---- Test 3: PQ Accepted (2310 bytes, content=2282) ---- */
+    pq_kem_state_t pq_acc = {0};
+    pq_acc.pq_active = 1;
+    pq_acc.pq_kem_state = 2;
+    memset(pq_acc.own_kem_pk, 0xCC, SNTRUP761_PUBLICKEYBYTES);
+    memset(pq_acc.pending_ct, 0xDD, SNTRUP761_CIPHERTEXTBYTES);
+
+    uint8_t *hdr_acc = heap_caps_malloc(MSG_HEADER_PQ_PADDED_LEN, MALLOC_CAP_SPIRAM);
+    if (!hdr_acc) { ESP_LOGE(TAG, "malloc failed"); return; }
+
+    ret = pq_header_serialize(hdr_acc, MSG_HEADER_PQ_PADDED_LEN, fake_dh, &pq_acc, 1, 0);
+    cl = (hdr_acc[0] << 8) | hdr_acc[1];
+    ESP_LOGI(TAG, "[3] Accepted: size=%d, content_len=%u", ret, cl);
+    ESP_LOGI(TAG, "    KEM area [73..77]: %02x %02x %02x %02x %02x",
+             hdr_acc[73], hdr_acc[74], hdr_acc[75], hdr_acc[76], hdr_acc[77]);
+
+    ret = pq_header_deserialize(hdr_acc, MSG_HEADER_PQ_PADDED_LEN, &parsed);
+    if (ret != 0 || parsed.kem_tag != PQ_KEM_ACCEPTED || !parsed.kem_pk_valid ||
+        !parsed.kem_ct_valid || parsed.pn != 1 || parsed.ns != 0 || cl != 2282 ||
+        parsed.kem_pk[0] != 0xCC || parsed.kem_ct[0] != 0xDD) {
+        ESP_LOGE(TAG, "    FAIL: ret=%d kem=0x%02x pk_v=%d ct_v=%d cl=%u",
+                 ret, parsed.kem_tag, parsed.kem_pk_valid, parsed.kem_ct_valid, cl);
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "    PASS: round-trip OK (kem=A, pk[0]=0xCC, ct[0]=0xDD, pn=%u ns=%u)",
+                 parsed.pn, parsed.ns);
+    }
+    free(hdr_acc);
+
+    /* ---- Test 4: PQ active but kem_state=0 (Nothing, still 2310 padding) ---- */
+    pq_kem_state_t pq_none = {0};
+    pq_none.pq_active = 1;
+    pq_none.pq_kem_state = 0;
+
+    uint8_t *hdr_pqnone = heap_caps_malloc(MSG_HEADER_PQ_PADDED_LEN, MALLOC_CAP_SPIRAM);
+    if (!hdr_pqnone) { ESP_LOGE(TAG, "malloc failed"); return; }
+
+    ret = pq_header_serialize(hdr_pqnone, MSG_HEADER_PQ_PADDED_LEN, fake_dh, &pq_none, 0, 0);
+    cl = (hdr_pqnone[0] << 8) | hdr_pqnone[1];
+    ESP_LOGI(TAG, "[4] PQ-active Nothing: size=%d, content_len=%u, kem=0x%02x",
+             ret, cl, hdr_pqnone[73]);
+
+    if (ret != MSG_HEADER_PQ_PADDED_LEN || cl != 80 || hdr_pqnone[73] != PQ_KEM_NOTHING) {
+        ESP_LOGE(TAG, "    FAIL: size or content mismatch");
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "    PASS: Nothing with PQ padding (2310 bytes, anti-downgrade)");
+    }
+    free(hdr_pqnone);
+
+    /* ---- Summary ---- */
+    if (pass) {
+        ESP_LOGI(TAG, "=== PQ Header Test: ALL PASS ===");
+    } else {
+        ESP_LOGE(TAG, "=== PQ Header Test: FAILURES ===");
+    }
+    ESP_LOGI(TAG, "");
+}
+
 // ============== Encrypt Message ==============
 
 int ratchet_encrypt(const uint8_t *plaintext, size_t pt_len,

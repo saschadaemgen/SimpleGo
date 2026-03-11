@@ -24,6 +24,13 @@
 #define X448_PUBLIC_KEY_LEN     56
 #define MAX_RATCHETS  128   // Session 33: Multi-contact support (68KB in PSRAM)
 
+// Session 46 Teil C: PQ header wire format constants
+#define MSG_HEADER_PQ_PADDED_LEN  2310   // Padded PQ header (hides Proposed vs Accepted)
+#define PQ_KEM_NOTHING            0x30   // '0' - no KEM params
+#define PQ_KEM_JUST               0x31   // '1' - KEM params present
+#define PQ_KEM_PROPOSED           0x50   // 'P' - sending own public key
+#define PQ_KEM_ACCEPTED           0x41   // 'A' - sending ciphertext + public key
+
 // ============== PQ KEM State (Session 46: SEC-06) ==============
 
 typedef struct {
@@ -86,6 +93,61 @@ typedef struct {
     pq_kem_state_t pq;
 
 } ratchet_state_t;
+
+// ============== Parsed MsgHeader (Session 46 Teil C) ==============
+
+typedef struct {
+    uint16_t version;
+    uint8_t dh_public[X448_PUBLIC_KEY_LEN];              // Raw X448 key (no SPKI)
+    uint8_t kem_tag;                                      // PQ_KEM_NOTHING, _PROPOSED, or _ACCEPTED
+    uint8_t kem_pk[SNTRUP761_PUBLICKEYBYTES];             // 1158 bytes (valid when kem_pk_valid)
+    uint8_t kem_ct[SNTRUP761_CIPHERTEXTBYTES];            // 1039 bytes (valid when kem_ct_valid)
+    bool kem_pk_valid;
+    bool kem_ct_valid;
+    uint32_t pn;
+    uint32_t ns;
+} parsed_msg_header_t;
+
+// ============== PQ Header Serialization (Session 46 Teil C) ==============
+
+/**
+ * Serialize a plaintext MsgHeader with optional PQ KEM fields.
+ *
+ * Without PQ: 88 bytes (content 80 + padding to 88)
+ * With PQ:    2310 bytes (content varies + padding to 2310)
+ *
+ * @param buf       Output buffer (must be >= 88 or >= 2310 bytes)
+ * @param buf_size  Size of output buffer
+ * @param dh_public Our X448 DH public key (56 bytes, raw)
+ * @param pq        PQ KEM state (NULL = no PQ)
+ * @param pn        Previous chain length
+ * @param ns        Message number in current chain
+ * @return Padded header size (88 or 2310) on success, negative on error
+ */
+int pq_header_serialize(uint8_t *buf, size_t buf_size,
+                        const uint8_t *dh_public,
+                        const pq_kem_state_t *pq,
+                        uint32_t pn, uint32_t ns);
+
+/**
+ * Deserialize a decrypted plaintext MsgHeader.
+ *
+ * Handles both non-PQ (88 bytes) and PQ (2310 bytes) headers.
+ * The content_len field at offset 0 determines how much is content vs padding.
+ *
+ * @param buf      Decrypted header buffer
+ * @param buf_len  Buffer length (88 or 2310)
+ * @param out      Parsed header output
+ * @return 0 on success, negative on error
+ */
+int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
+                          parsed_msg_header_t *out);
+
+/**
+ * Run PQ header serialization round-trip test.
+ * Logs hex dumps to serial monitor for verification.
+ */
+void pq_header_test(void);
 
 // ============== Decrypt Mode (SameRatchet vs AdvanceRatchet) ==============
 

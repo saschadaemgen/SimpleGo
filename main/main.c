@@ -641,6 +641,9 @@ void app_main(void) {
     uint8_t pq_on = smp_settings_get_pq_enabled();
     ESP_LOGI(TAG, "SEC-06: Post-Quantum Encryption = %s", pq_on ? "ON" : "OFF");
 
+    // Session 46 Teil C: PQ header wire format round-trip test
+    pq_header_test();
+
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========
     if (smp_storage_exists("rat_00") && smp_storage_exists("queue_our")) {
         ESP_LOGI(TAG, "");
