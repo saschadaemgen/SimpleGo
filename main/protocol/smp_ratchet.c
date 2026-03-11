@@ -149,15 +149,40 @@ cleanup:
 
 // ============== Key Derivation ==============
 
+/**
+ * Root KDF with optional PQ KEM shared secret.
+ *
+ * IKM = dh_out (56 bytes) || kem_secret (32 bytes, optional)
+ * Salt = root_key (32 bytes)
+ * Info = "SimpleXRootRatchet" (18 bytes)
+ * Output = 96 bytes: new_root_key(32) | chain_key(32) | next_header_key(32)
+ *
+ * When kem_secret is NULL, IKM is just the DH output (unchanged behavior).
+ */
 static void kdf_root(const uint8_t *root_key, const uint8_t *dh_out,
+                     const uint8_t *kem_secret, size_t kem_secret_len,
                      uint8_t *new_root_key, uint8_t *chain_key, uint8_t *next_header_key) {
+    uint8_t ikm[88];  /* 56 (DH) + 32 (KEM) max */
+    size_t ikm_len = 56;
+
+    memcpy(ikm, dh_out, 56);
+    if (kem_secret != NULL && kem_secret_len > 0) {
+        if (kem_secret_len > 32) kem_secret_len = 32;
+        memcpy(ikm + 56, kem_secret, kem_secret_len);
+        ikm_len += kem_secret_len;
+    }
+
     uint8_t kdf_output[96];
-    hkdf_sha512(root_key, 32, dh_out, 56,
+    hkdf_sha512(root_key, 32, ikm, ikm_len,
                 (const uint8_t *)"SimpleXRootRatchet", 18,
                 kdf_output, 96);
     memcpy(new_root_key, kdf_output, 32);
     memcpy(chain_key, kdf_output + 32, 32);
     memcpy(next_header_key, kdf_output + 64, 32);
+
+    /* Wipe intermediate key material */
+    sodium_memzero(ikm, sizeof(ikm));
+    sodium_memzero(kdf_output, sizeof(kdf_output));
 }
 
 static void kdf_chain(const uint8_t *chain_key,
@@ -245,7 +270,7 @@ bool ratchet_init_sender(const uint8_t *peer_dh_public, const x448_keypair_t *ou
 
     uint8_t new_root_key[32];
     uint8_t next_header_key[32];
-    kdf_root(ratchet_state.root_key, dh_out,
+    kdf_root(ratchet_state.root_key, dh_out, NULL, 0,
              new_root_key, ratchet_state.chain_key_send, next_header_key);
     memcpy(ratchet_state.root_key, new_root_key, 32);
     
@@ -603,6 +628,87 @@ void pq_header_test(void) {
     ESP_LOGI(TAG, "");
 }
 
+// ============== HKDF KAT Test (Session 46 Teil D) ==============
+
+void pq_hkdf_kat_test(void) {
+    ESP_LOGI(TAG, "");
+    ESP_LOGI(TAG, "=== PQ HKDF Root Key Derivation KAT ===");
+
+    /* Fixed test vectors */
+    uint8_t root_key[32];
+    memset(root_key, 0x11, 32);
+
+    uint8_t dh_out[56];
+    memset(dh_out, 0x22, 56);
+
+    uint8_t kem_secret[32];
+    memset(kem_secret, 0x33, 32);
+
+    uint8_t rk1[32], ck1[32], nhk1[32];
+    uint8_t rk2[32], ck2[32], nhk2[32];
+    uint8_t rk3[32], ck3[32], nhk3[32];
+    uint8_t rk4[32], ck4[32], nhk4[32];
+    bool pass = true;
+
+    /* Test 1: DH-only, run twice for determinism */
+    kdf_root(root_key, dh_out, NULL, 0, rk1, ck1, nhk1);
+    kdf_root(root_key, dh_out, NULL, 0, rk2, ck2, nhk2);
+
+    if (memcmp(rk1, rk2, 32) != 0 || memcmp(ck1, ck2, 32) != 0 || memcmp(nhk1, nhk2, 32) != 0) {
+        ESP_LOGE(TAG, "[1] FAIL: DH-only not deterministic!");
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "[1] PASS: DH-only deterministic");
+        ESP_LOGI(TAG, "    RK:  %02x%02x%02x%02x...", rk1[0], rk1[1], rk1[2], rk1[3]);
+        ESP_LOGI(TAG, "    CK:  %02x%02x%02x%02x...", ck1[0], ck1[1], ck1[2], ck1[3]);
+        ESP_LOGI(TAG, "    NHK: %02x%02x%02x%02x...", nhk1[0], nhk1[1], nhk1[2], nhk1[3]);
+    }
+
+    /* Test 2: DH+KEM, run twice for determinism */
+    kdf_root(root_key, dh_out, kem_secret, 32, rk3, ck3, nhk3);
+    kdf_root(root_key, dh_out, kem_secret, 32, rk4, ck4, nhk4);
+
+    if (memcmp(rk3, rk4, 32) != 0 || memcmp(ck3, ck4, 32) != 0 || memcmp(nhk3, nhk4, 32) != 0) {
+        ESP_LOGE(TAG, "[2] FAIL: DH+KEM not deterministic!");
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "[2] PASS: DH+KEM deterministic");
+        ESP_LOGI(TAG, "    RK:  %02x%02x%02x%02x...", rk3[0], rk3[1], rk3[2], rk3[3]);
+        ESP_LOGI(TAG, "    CK:  %02x%02x%02x%02x...", ck3[0], ck3[1], ck3[2], ck3[3]);
+        ESP_LOGI(TAG, "    NHK: %02x%02x%02x%02x...", nhk3[0], nhk3[1], nhk3[2], nhk3[3]);
+    }
+
+    /* Test 3: DH-only vs DH+KEM must differ */
+    if (memcmp(rk1, rk3, 32) == 0) {
+        ESP_LOGE(TAG, "[3] FAIL: DH-only and DH+KEM produce same root key!");
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "[3] PASS: KEM changes output (DH-only RK != DH+KEM RK)");
+    }
+
+    /* Test 4: KEM with zero-length = same as DH-only */
+    uint8_t rk5[32], ck5[32], nhk5[32];
+    kdf_root(root_key, dh_out, kem_secret, 0, rk5, ck5, nhk5);
+
+    if (memcmp(rk1, rk5, 32) != 0) {
+        ESP_LOGE(TAG, "[4] FAIL: kem_len=0 should equal DH-only!");
+        pass = false;
+    } else {
+        ESP_LOGI(TAG, "[4] PASS: kem_len=0 equals DH-only (no regression)");
+    }
+
+    /* Wipe */
+    sodium_memzero(rk1, 32); sodium_memzero(ck1, 32); sodium_memzero(nhk1, 32);
+    sodium_memzero(rk3, 32); sodium_memzero(ck3, 32); sodium_memzero(nhk3, 32);
+
+    if (pass) {
+        ESP_LOGI(TAG, "=== PQ HKDF KAT: ALL PASS ===");
+    } else {
+        ESP_LOGE(TAG, "=== PQ HKDF KAT: FAILURES ===");
+    }
+    ESP_LOGI(TAG, "");
+}
+
 // ============== Encrypt Message ==============
 
 int ratchet_encrypt(const uint8_t *plaintext, size_t pt_len,
@@ -885,7 +991,7 @@ int ratchet_decrypt(const uint8_t *ciphertext, size_t ct_len,
                  dh_out[0], dh_out[1], dh_out[2], dh_out[3]);
         
         uint8_t new_root_key[32], new_chain_key[32], new_header_key[32];
-        kdf_root(ratchet_state.root_key, dh_out, new_root_key, new_chain_key, new_header_key);
+        kdf_root(ratchet_state.root_key, dh_out, NULL, 0, new_root_key, new_chain_key, new_header_key);
         
         memcpy(ratchet_state.root_key, new_root_key, 32);
         memcpy(ratchet_state.chain_key_recv, new_chain_key, 32);
@@ -986,7 +1092,7 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
     }
 
     uint8_t new_root_key_1[32];
-    kdf_root(ratchet_state.root_key, dh_secret_recv,
+    kdf_root(ratchet_state.root_key, dh_secret_recv, NULL, 0,
              new_root_key_1, recv_chain_key, new_nhk_recv);
 
     ESP_LOGD(TAG, "DH recv: secret=%02x%02x.. rk1=%02x%02x.. ck=%02x%02x..",
@@ -1006,7 +1112,7 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
         return -3;
     }
 
-    kdf_root(new_root_key_1, dh_secret_send,
+    kdf_root(new_root_key_1, dh_secret_send, NULL, 0,
              new_root_key_2, send_chain_key, new_nhk_send);
 
     ESP_LOGD(TAG, "DH send: new_pub=%02x%02x.. rk2=%02x%02x.. ck=%02x%02x..",

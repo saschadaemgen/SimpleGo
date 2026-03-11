@@ -644,6 +644,9 @@ void app_main(void) {
     // Session 46 Teil C: PQ header wire format round-trip test
     pq_header_test();
 
+    // Session 46 Teil D: HKDF root key derivation KAT
+    pq_hkdf_kat_test();
+
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========
     if (smp_storage_exists("rat_00") && smp_storage_exists("queue_our")) {
         ESP_LOGI(TAG, "");

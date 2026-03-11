@@ -149,6 +149,15 @@ int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
  */
 void pq_header_test(void);
 
+/**
+ * Run HKDF KAT (Known-Answer-Test) for PQ root key derivation.
+ * Verifies:
+ *   1. DH-only produces deterministic output
+ *   2. DH+KEM produces different output from DH-only
+ *   3. DH+KEM is deterministic
+ */
+void pq_hkdf_kat_test(void);
+
 // ============== Decrypt Mode (SameRatchet vs AdvanceRatchet) ==============
 
 typedef enum {
