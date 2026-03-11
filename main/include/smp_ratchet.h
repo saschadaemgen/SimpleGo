@@ -329,6 +329,17 @@ bool ratchet_save_state(uint8_t contact_idx);
  */
 bool ratchet_load_state(uint8_t contact_idx);
 
+// ============== PQ State Machine (Session 46 Teil E) ==============
+
+/**
+ * Set received PQ KEM params from parsed header.
+ * Must be called BEFORE ratchet_decrypt_body() when PQ header was parsed.
+ * The decrypt_body ADVANCE path reads these to run the PQ state machine.
+ *
+ * @param hdr  Parsed header with KEM fields (NULL to clear)
+ */
+void ratchet_set_recv_pq(const parsed_msg_header_t *hdr);
+
 // ============== PQ Settings (Session 46: SEC-06) ==============
 
 /**

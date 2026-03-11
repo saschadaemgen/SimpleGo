@@ -10,6 +10,7 @@
 #include "smp_x448.h"
 #include "smp_crypto.h"
 #include "smp_storage.h"
+#include "pq_crypto_task.h"  // Session 46 Teil E: PQ crypto operations
 #include <string.h>
 #include "esp_log.h"
 #include "esp_random.h"
@@ -40,6 +41,10 @@ static uint8_t active_ratchet_idx = 0;
 static uint8_t saved_x3dh_hk[32] = {0};
 static uint8_t saved_x3dh_nhk[32] = {0};
 static bool saved_x3dh_valid = false;
+
+// Session 46 Teil E: Received PQ params (set by header parser before decrypt_body)
+static parsed_msg_header_t s_recv_pq_hdr;
+static bool s_recv_pq_valid = false;
 
 // ============== Session 33: Multi-Contact Functions ==============
 
@@ -628,6 +633,152 @@ void pq_header_test(void) {
     ESP_LOGI(TAG, "");
 }
 
+// ============== PQ State Machine (Session 46 Teil E) ==============
+
+void ratchet_set_recv_pq(const parsed_msg_header_t *hdr) {
+    if (hdr) {
+        memcpy(&s_recv_pq_hdr, hdr, sizeof(parsed_msg_header_t));
+        s_recv_pq_valid = true;
+    } else {
+        s_recv_pq_valid = false;
+    }
+}
+
+/**
+ * PQ receive state machine. Processes KEM params from incoming header.
+ * Returns 0 on success. If *kem_ss_valid is true, kem_ss contains 32 bytes
+ * that must be fed into kdf_root alongside the DH shared secret.
+ *
+ * Uses pq_crypto_task for keygen (too heavy for main task stack).
+ * Uses sntrup761_enc/dec directly (small enough, ~5-10 KB stack).
+ */
+static int pq_recv_process(pq_kem_state_t *pq,
+                           uint8_t kem_tag,
+                           const uint8_t *kem_pk,
+                           const uint8_t *kem_ct,
+                           uint8_t *kem_ss,
+                           bool *kem_ss_valid) {
+    *kem_ss_valid = false;
+    bool pq_enabled = smp_settings_get_pq_enabled();
+
+    /* ---- Fall 1: Nothing received ---- */
+    if (kem_tag == PQ_KEM_NOTHING) {
+        if (pq_enabled && pq->pq_kem_state == 0) {
+            /* Want PQ, no state yet: generate keypair and propose */
+            ESP_LOGI(TAG, "PQ-SM: Nothing received, generating keypair to propose...");
+            if (!pq_crypto_get_precomputed(pq->own_kem_pk, pq->own_kem_sk)) {
+                ESP_LOGW(TAG, "PQ-SM: No precomputed keypair, blocking keygen (~1.8s)...");
+                if (pq_crypto_keygen(pq->own_kem_pk, pq->own_kem_sk, 5000) != ESP_OK) {
+                    ESP_LOGE(TAG, "PQ-SM: keygen FAILED");
+                    return -1;
+                }
+            }
+            pq->own_kem_valid = 1;
+            pq->pq_kem_state = 1;  /* proposed */
+            pq->pq_active = 1;
+            ESP_LOGI(TAG, "PQ-SM: State -> proposed (pk[0]=%02x)", pq->own_kem_pk[0]);
+            pq_crypto_precompute_keypair();
+        }
+        /* Anti-downgrade: if already active, stay active even on Nothing */
+        return 0;
+    }
+
+    /* ---- Fall 2: Proposed(peer_key) received ---- */
+    if (kem_tag == PQ_KEM_PROPOSED) {
+        ESP_LOGI(TAG, "PQ-SM: Proposed received, accepting...");
+
+        /* Store peer's PQ public key */
+        memcpy(pq->peer_kem_pk, kem_pk, SNTRUP761_PUBLICKEYBYTES);
+        pq->peer_kem_valid = 1;
+
+        /* Generate own keypair */
+        if (!pq_crypto_get_precomputed(pq->own_kem_pk, pq->own_kem_sk)) {
+            ESP_LOGW(TAG, "PQ-SM: No precomputed keypair, blocking keygen (~1.8s)...");
+            if (pq_crypto_keygen(pq->own_kem_pk, pq->own_kem_sk, 5000) != ESP_OK) {
+                ESP_LOGE(TAG, "PQ-SM: keygen FAILED in Proposed");
+                return -2;
+            }
+        }
+        pq->own_kem_valid = 1;
+
+        /* Encapsulate to peer's key -> shared_secret + ciphertext */
+        if (pq_crypto_enc(pq->pending_ct, kem_ss, pq->peer_kem_pk, 3000) != ESP_OK) {
+            ESP_LOGE(TAG, "PQ-SM: encap FAILED");
+            return -3;
+        }
+        pq->pending_ct_valid = 1;
+        *kem_ss_valid = true;
+
+        pq->pq_kem_state = 2;  /* accepted */
+        pq->pq_active = 1;
+
+        pq_crypto_precompute_keypair();
+        ESP_LOGI(TAG, "PQ-SM: State -> accepted (ss[0]=%02x, ct[0]=%02x)",
+                 kem_ss[0], pq->pending_ct[0]);
+        return 0;
+    }
+
+    /* ---- Fall 3: Accepted(ciphertext, peer_key) received ---- */
+    if (kem_tag == PQ_KEM_ACCEPTED) {
+        ESP_LOGI(TAG, "PQ-SM: Accepted received, decapsulating...");
+
+        /* Must have a valid own keypair to decapsulate */
+        if (!pq->own_kem_valid) {
+            ESP_LOGE(TAG, "PQ-SM: CERatchetKEMState - no valid own keypair!");
+            ESP_LOGW(TAG, "PQ-SM: Continuing without PQ for this round");
+            return 0;  /* Not fatal, just no KEM secret */
+        }
+
+        /* Decapsulate -> shared_secret */
+        if (pq_crypto_dec(kem_ss, kem_ct, pq->own_kem_sk, 3000) != ESP_OK) {
+            ESP_LOGE(TAG, "PQ-SM: decap FAILED");
+            return -4;
+        }
+        *kem_ss_valid = true;
+
+        /* Wipe consumed secret key immediately */
+        sodium_memzero(pq->own_kem_sk, SNTRUP761_SECRETKEYBYTES);
+
+        /* Store new peer key */
+        memcpy(pq->peer_kem_pk, kem_pk, SNTRUP761_PUBLICKEYBYTES);
+        pq->peer_kem_valid = 1;
+
+        /* Generate new own keypair */
+        if (!pq_crypto_get_precomputed(pq->own_kem_pk, pq->own_kem_sk)) {
+            ESP_LOGW(TAG, "PQ-SM: No precomputed keypair, blocking keygen (~1.8s)...");
+            if (pq_crypto_keygen(pq->own_kem_pk, pq->own_kem_sk, 5000) != ESP_OK) {
+                ESP_LOGE(TAG, "PQ-SM: keygen FAILED after decap");
+                pq->own_kem_valid = 0;
+                return -5;
+            }
+        }
+        pq->own_kem_valid = 1;
+
+        /* Encapsulate with new peer key -> ss2 + ct2 */
+        uint8_t ss2[SNTRUP761_BYTES];
+        if (pq_crypto_enc(pq->pending_ct, ss2, pq->peer_kem_pk, 3000) != ESP_OK) {
+            ESP_LOGE(TAG, "PQ-SM: encap with new peer key FAILED");
+            sodium_memzero(ss2, sizeof(ss2));
+            return -6;
+        }
+        pq->pending_ct_valid = 1;
+
+        /* ss2 is NOT used now - it will be used in the next ratchet step */
+        sodium_memzero(ss2, sizeof(ss2));
+
+        pq->pq_kem_state = 2;  /* accepted */
+        pq->pq_active = 1;
+
+        pq_crypto_precompute_keypair();
+        ESP_LOGI(TAG, "PQ-SM: State -> accepted (decap+encap, ss[0]=%02x, ct[0]=%02x)",
+                 kem_ss[0], pq->pending_ct[0]);
+        return 0;
+    }
+
+    ESP_LOGE(TAG, "PQ-SM: Unknown KEM tag 0x%02x", kem_tag);
+    return -10;
+}
+
 // ============== HKDF KAT Test (Session 46 Teil D) ==============
 
 void pq_hkdf_kat_test(void) {
@@ -717,93 +868,125 @@ int ratchet_encrypt(const uint8_t *plaintext, size_t pt_len,
     
     if (!ratchet_state.initialized) return -1;
 
-    ESP_LOGD(TAG, "Encrypt: msg_num=%u CKs=%02x%02x..",
-             ratchet_state.msg_num_send,
-             ratchet_state.chain_key_send[0], ratchet_state.chain_key_send[1]);
+    /* Determine PQ mode for this message */
+    bool is_pq = (ratchet_state.pq.pq_active && smp_settings_get_pq_enabled());
+    size_t hdr_padded = is_pq ? MSG_HEADER_PQ_PADDED_LEN : MSG_HEADER_PADDED_LEN;
+    size_t em_hdr_total = 2 + GCM_IV_LEN + GCM_TAG_LEN + 2 + hdr_padded;
+    /* Non-PQ: 2+16+16+2+88 = 124, PQ: 2+16+16+2+2310 = 2346 */
 
-    // 1. Derive keys & IVs
+    ESP_LOGD(TAG, "Encrypt: msg_num=%u pq=%d kem_state=%d hdr=%zu",
+             ratchet_state.msg_num_send, is_pq ? 1 : 0,
+             ratchet_state.pq.pq_kem_state, hdr_padded);
 
+    int ret = -1;
+    uint8_t *hdr_buf = NULL;
+    uint8_t *enc_hdr = NULL;
+    uint8_t *em_hdr = NULL;
+    uint8_t *p_aad = NULL;
+    uint8_t *padded_payload = NULL;
+    uint8_t *encrypted_payload = NULL;
+
+    /* 1. Derive keys & IVs from chain */
     uint8_t message_key[32], next_chain_key[32], msg_iv[16], header_iv[16];
     kdf_chain(ratchet_state.chain_key_send, next_chain_key, message_key, msg_iv, header_iv);
-    
     memcpy(ratchet_state.chain_key_send, next_chain_key, 32);
 
-    uint8_t msg_header[MSG_HEADER_PADDED_LEN];
-    build_msg_header(msg_header, ratchet_state.dh_self.public_key,
-                     ratchet_state.prev_chain_len, ratchet_state.msg_num_send);
-    
-    uint8_t aad_full[AAD_FULL_LEN];
-    memcpy(aad_full, ratchet_state.assoc_data, 112);
-    memcpy(aad_full + 112, msg_header, MSG_HEADER_PADDED_LEN);
+    /* 2. Build plaintext header */
+    hdr_buf = heap_caps_malloc(hdr_padded, MALLOC_CAP_SPIRAM);
+    if (!hdr_buf) { ESP_LOGE(TAG, "Encrypt: hdr_buf alloc failed"); goto cleanup; }
 
-    uint8_t encrypted_header[MSG_HEADER_PADDED_LEN];
+    if (is_pq) {
+        int ser_ret = pq_header_serialize(hdr_buf, hdr_padded,
+                                          ratchet_state.dh_self.public_key,
+                                          &ratchet_state.pq,
+                                          ratchet_state.prev_chain_len,
+                                          ratchet_state.msg_num_send);
+        if (ser_ret < 0) { ESP_LOGE(TAG, "Encrypt: pq_header_serialize failed"); goto cleanup; }
+    } else {
+        build_msg_header(hdr_buf, ratchet_state.dh_self.public_key,
+                         ratchet_state.prev_chain_len, ratchet_state.msg_num_send);
+    }
+
+    /* 3. Encrypt header with AES-256-GCM (AAD = assoc_data) */
+    enc_hdr = heap_caps_malloc(hdr_padded, MALLOC_CAP_SPIRAM);
+    if (!enc_hdr) { ESP_LOGE(TAG, "Encrypt: enc_hdr alloc failed"); goto cleanup; }
+
     uint8_t header_tag[GCM_TAG_LEN];
     if (aes_gcm_encrypt(ratchet_state.header_key_send, header_iv, GCM_IV_LEN,
                         ratchet_state.assoc_data, 112,
-                        msg_header, MSG_HEADER_PADDED_LEN,
-                        encrypted_header, header_tag) != 0) {
-        return -1;
+                        hdr_buf, hdr_padded,
+                        enc_hdr, header_tag) != 0) {
+        ESP_LOGE(TAG, "Encrypt: header AES-GCM failed");
+        goto cleanup;
     }
 
-    uint8_t em_header[124];
+    /* 4. Build emHeader: version + IV + tag + body_len + encrypted_body */
+    em_hdr = heap_caps_malloc(em_hdr_total, MALLOC_CAP_SPIRAM);
+    if (!em_hdr) { ESP_LOGE(TAG, "Encrypt: em_hdr alloc failed"); goto cleanup; }
+
     int hp = 0;
-    em_header[hp++] = 0x00; em_header[hp++] = RATCHET_VERSION;
-    memcpy(&em_header[hp], header_iv, 16); hp += 16;
-    memcpy(&em_header[hp], header_tag, 16); hp += 16;
-    em_header[hp++] = 0x00; em_header[hp++] = 0x58;
-    memcpy(&em_header[hp], encrypted_header, 88); hp += 88;
+    em_hdr[hp++] = 0x00; em_hdr[hp++] = RATCHET_VERSION;
+    memcpy(&em_hdr[hp], header_iv, 16); hp += 16;
+    memcpy(&em_hdr[hp], header_tag, 16); hp += 16;
+    em_hdr[hp++] = (hdr_padded >> 8) & 0xFF;
+    em_hdr[hp++] = hdr_padded & 0xFF;
+    memcpy(&em_hdr[hp], enc_hdr, hdr_padded); hp += hdr_padded;
 
-    ESP_LOGD(TAG, "emHeader: v%d, %d bytes", (em_header[0]<<8)|em_header[1], 124);
+    ESP_LOGD(TAG, "emHeader: v%d, %zu bytes (body=%zu)", RATCHET_VERSION, em_hdr_total, hdr_padded);
 
-    uint8_t payload_aad[236];
-    memcpy(payload_aad, ratchet_state.assoc_data, 112);
-    memcpy(payload_aad + 112, em_header, 124);
-    
-    uint8_t *padded_payload = malloc(padded_msg_len);
-    if (!padded_payload) return -1;
-    
+    /* 5. Encrypt body (AAD = assoc_data + emHeader) */
+    size_t p_aad_len = 112 + em_hdr_total;
+    p_aad = heap_caps_malloc(p_aad_len, MALLOC_CAP_SPIRAM);
+    if (!p_aad) { ESP_LOGE(TAG, "Encrypt: p_aad alloc failed"); goto cleanup; }
+    memcpy(p_aad, ratchet_state.assoc_data, 112);
+    memcpy(p_aad + 112, em_hdr, em_hdr_total);
+
+    padded_payload = malloc(padded_msg_len);
+    if (!padded_payload) { ESP_LOGE(TAG, "Encrypt: padded_payload alloc failed"); goto cleanup; }
+
     padded_payload[0] = (pt_len >> 8) & 0xFF;
     padded_payload[1] = pt_len & 0xFF;
     memcpy(&padded_payload[2], plaintext, pt_len);
     memset(&padded_payload[2 + pt_len], '#', padded_msg_len - 2 - pt_len);
 
-    ESP_LOGD(TAG, "L5 padded: %zu bytes", padded_msg_len);
+    encrypted_payload = malloc(padded_msg_len);
+    if (!encrypted_payload) { ESP_LOGE(TAG, "Encrypt: encrypted_payload alloc failed"); goto cleanup; }
 
-    uint8_t *encrypted_payload = malloc(padded_msg_len);
-    if (!encrypted_payload) {
-        free(padded_payload);
-        return -1;
-    }
     uint8_t payload_tag[GCM_TAG_LEN];
     if (aes_gcm_encrypt(message_key, msg_iv, GCM_IV_LEN,
-                        payload_aad, 236,
+                        p_aad, p_aad_len,
                         padded_payload, padded_msg_len,
                         encrypted_payload, payload_tag) != 0) {
-        free(padded_payload);
-        free(encrypted_payload);
-        return -1;
+        ESP_LOGE(TAG, "Encrypt: body AES-GCM failed");
+        goto cleanup;
     }
 
+    /* 6. Assemble output: emHeader_len(2) + emHeader + payload_tag(16) + encrypted_payload */
     int op = 0;
-    output[op++] = 0x00;
-    output[op++] = 124;
-    memcpy(&output[op], em_header, 124); op += 124;
+    output[op++] = (em_hdr_total >> 8) & 0xFF;
+    output[op++] = em_hdr_total & 0xFF;
+    memcpy(&output[op], em_hdr, em_hdr_total); op += em_hdr_total;
     memcpy(&output[op], payload_tag, 16); op += 16;
     memcpy(&output[op], encrypted_payload, padded_msg_len); op += padded_msg_len;
     *out_len = op;
 
-    ESP_LOGD(TAG, "L4 encrypted: %zu bytes", *out_len);
-
     ratchet_state.msg_num_send++;
-    free(padded_payload);
-    free(encrypted_payload);
 
-    // Auftrag 50b R3: Evgeny's Rule — persist BEFORE caller sends over network
-    // Session 34: Use active slot, not hardcoded 0 (multi-contact fix)
+    /* Evgeny's Rule: persist BEFORE caller sends over network */
     ratchet_save_state(ratchet_get_active());
 
-    ESP_LOGI(TAG, "✅ Encrypted %zu bytes (padded to %zu) -> %zu bytes", pt_len, padded_msg_len, *out_len);
-    return 0;
+    ESP_LOGI(TAG, "Encrypted %zu bytes (padded to %zu) -> %zu bytes, pq=%s",
+             pt_len, padded_msg_len, *out_len, is_pq ? "YES" : "no");
+    ret = 0;
+
+cleanup:
+    if (hdr_buf) { sodium_memzero(hdr_buf, hdr_padded); heap_caps_free(hdr_buf); }
+    if (enc_hdr) heap_caps_free(enc_hdr);
+    if (em_hdr) heap_caps_free(em_hdr);
+    if (p_aad) heap_caps_free(p_aad);
+    if (padded_payload) { sodium_memzero(padded_payload, padded_msg_len); free(padded_payload); }
+    if (encrypted_payload) free(encrypted_payload);
+    return ret;
 }
 
 // ============== Self-Decrypt Test ==============
@@ -1091,16 +1274,39 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
         return -1;
     }
 
+    // Session 46 Teil E: PQ State Machine (between DH and root KDF)
+    uint8_t kem_ss[SNTRUP761_BYTES];
+    bool kem_ss_valid = false;
+    if (s_recv_pq_valid && smp_settings_get_pq_enabled()) {
+        int pq_ret = pq_recv_process(&ratchet_state.pq,
+                                     s_recv_pq_hdr.kem_tag,
+                                     s_recv_pq_hdr.kem_pk_valid ? s_recv_pq_hdr.kem_pk : NULL,
+                                     s_recv_pq_hdr.kem_ct_valid ? s_recv_pq_hdr.kem_ct : NULL,
+                                     kem_ss, &kem_ss_valid);
+        if (pq_ret != 0) {
+            ESP_LOGW(TAG, "PQ-SM returned %d, continuing with DH-only", pq_ret);
+            kem_ss_valid = false;
+        }
+        s_recv_pq_valid = false;  /* consumed */
+    }
+
     uint8_t new_root_key_1[32];
-    kdf_root(ratchet_state.root_key, dh_secret_recv, NULL, 0,
+    kdf_root(ratchet_state.root_key, dh_secret_recv,
+             kem_ss_valid ? kem_ss : NULL, kem_ss_valid ? SNTRUP761_BYTES : 0,
              new_root_key_1, recv_chain_key, new_nhk_recv);
 
-    ESP_LOGD(TAG, "DH recv: secret=%02x%02x.. rk1=%02x%02x.. ck=%02x%02x..",
+    /* Wipe KEM shared secret after use */
+    if (kem_ss_valid) {
+        sodium_memzero(kem_ss, sizeof(kem_ss));
+    }
+
+    ESP_LOGD(TAG, "DH recv: secret=%02x%02x.. rk1=%02x%02x.. ck=%02x%02x.. pq=%s",
              dh_secret_recv[0], dh_secret_recv[1],
              new_root_key_1[0], new_root_key_1[1],
-             recv_chain_key[0], recv_chain_key[1]);
+             recv_chain_key[0], recv_chain_key[1],
+             kem_ss_valid ? "YES" : "no");
 
-    // DH Ratchet Step 2: Sending Chain
+    // DH Ratchet Step 2: Sending Chain (no KEM for send direction)
     if (!x448_generate_keypair(&new_dh_self)) {
         ESP_LOGE(TAG, "X448 keygen failed!");
         return -2;

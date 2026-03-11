@@ -49,6 +49,7 @@
 #include "smp_tasks.h"
 #include "smp_history.h"   // Session 37: history_message_t, HISTORY_DIR_SENT
 #include "sntrup761_test.h" // Session 46: Post-quantum KEM verification
+#include "pq_crypto_task.h" // Session 46 Teil E: PQ crypto task init
 #include "smp_ratchet.h"    // Session 46: smp_settings_get_pq_enabled()
 
 #include "smp_x448.h"
@@ -635,6 +636,13 @@ void app_main(void) {
             ESP_LOGE(TAG, "=== PQ Test: FAIL (code %d) ===", pq_result);
         }
         ESP_LOGI(TAG, "");
+    }
+
+    // Session 46 Teil E: Start PQ crypto task (80 KB PSRAM, for keygen/encap/decap)
+    if (pq_crypto_task_init() != ESP_OK) {
+        ESP_LOGE(TAG, "PQ crypto task init failed! PQ operations will block.");
+    } else {
+        pq_crypto_precompute_keypair();  // Pre-generate first keypair in background
     }
 
     // Session 46: Read PQ setting from NVS (creates default ON if missing)

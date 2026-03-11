@@ -229,6 +229,23 @@ static bool ratchet_decrypt_message(
         return false;
     }
 
+    // Session 46 Teil E: Parse PQ KEM fields from decrypted header
+    // and feed to ratchet state machine BEFORE body decrypt.
+    // pq_header_deserialize handles both 88-byte (non-PQ) and 2310-byte (PQ) headers.
+    {
+        parsed_msg_header_t pq_hdr;
+        if (pq_header_deserialize(header_plain, eh_body_len, &pq_hdr) == 0) {
+            ratchet_set_recv_pq(&pq_hdr);
+            if (pq_hdr.kem_tag != PQ_KEM_NOTHING) {
+                ESP_LOGI(TAG, "PQ: KEM tag=0x%02x pk_valid=%d ct_valid=%d",
+                         pq_hdr.kem_tag, pq_hdr.kem_pk_valid, pq_hdr.kem_ct_valid);
+            }
+        } else {
+            ratchet_set_recv_pq(NULL);
+            ESP_LOGD(TAG, "PQ: header deserialize skipped (not PQ or parse error)");
+        }
+    }
+
     // Body decrypt
     const uint8_t *body_auth_tag = em_header + em_header_len;
     const uint8_t *body_data = em_header + em_header_len + 16;
