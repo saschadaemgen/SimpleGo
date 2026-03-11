@@ -55,7 +55,8 @@ bool ratchet_multi_init(void) {
     // Copy current working state to slot 0
     memcpy(&ratchet_states[0], &ratchet_state, sizeof(ratchet_state_t));
     active_ratchet_idx = 0;
-    ESP_LOGI(TAG, "Ratchet PSRAM array: %d slots, %zu bytes", MAX_RATCHETS, total);
+    ESP_LOGI(TAG, "Ratchet PSRAM array: %d slots, %zu bytes (per slot: %zu, PQ: %zu)",
+             MAX_RATCHETS, total, sizeof(ratchet_state_t), sizeof(pq_kem_state_t));
     return true;
 }
 
@@ -863,17 +864,26 @@ bool ratchet_load_state(uint8_t contact_idx) {
 
     size_t loaded_len = 0;
     ratchet_state_t loaded;
+    memset(&loaded, 0, sizeof(ratchet_state_t));  // Zero all fields including PQ
     esp_err_t ret = smp_storage_load_blob(key, &loaded, sizeof(ratchet_state_t), &loaded_len);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "❌ ratchet_load_state('%s') FAILED: %s", key, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "ratchet_load_state('%s') FAILED: %s", key, esp_err_to_name(ret));
         return false;
     }
 
-    // Validate loaded data
-    if (loaded_len != sizeof(ratchet_state_t)) {
-        ESP_LOGE(TAG, "❌ ratchet_load_state: size mismatch! got %zu, expected %zu",
-                 loaded_len, sizeof(ratchet_state_t));
+    // Session 46: Migration support for pre-PQ ratchet states.
+    // Old struct was 520 bytes (before pq_kem_state_t was added).
+    // Accept old size: classical fields load correctly, PQ fields stay zeroed
+    // (pq_active = 0 means PQ is off, which is the correct default).
+    #define RATCHET_STATE_SIZE_PRE_PQ  520
+    if (loaded_len != sizeof(ratchet_state_t) && loaded_len != RATCHET_STATE_SIZE_PRE_PQ) {
+        ESP_LOGE(TAG, "ratchet_load_state: size mismatch! got %zu, expected %zu or %zu",
+                 loaded_len, sizeof(ratchet_state_t), (size_t)RATCHET_STATE_SIZE_PRE_PQ);
         return false;
+    }
+    if (loaded_len == RATCHET_STATE_SIZE_PRE_PQ) {
+        ESP_LOGI(TAG, "ratchet_load_state: migrating pre-PQ state (%zu -> %zu bytes, PQ fields zeroed)",
+                 loaded_len, sizeof(ratchet_state_t));
     }
     if (!loaded.initialized) {
         ESP_LOGW(TAG, "❌ ratchet_load_state: loaded state has initialized=false!");
@@ -892,6 +902,40 @@ bool ratchet_load_state(uint8_t contact_idx) {
              ratchet_state.msg_num_send, ratchet_state.msg_num_recv);
 
     return true;
+}
+
+// ============== PQ Settings (Session 46: SEC-06) ==============
+
+static uint8_t s_pq_enabled = 1;       // Cached value, default ON
+static bool s_pq_loaded = false;        // True after first NVS read
+
+uint8_t smp_settings_get_pq_enabled(void) {
+    if (s_pq_loaded) return s_pq_enabled;
+
+    // First read: try NVS
+    uint8_t val = 1;  // Default: PQ ON
+    size_t len = 0;
+    esp_err_t ret = smp_storage_load_blob("pq_enabled", &val, sizeof(val), &len);
+    if (ret != ESP_OK || len != sizeof(val)) {
+        // Key doesn't exist (first boot) - create with default
+        val = 1;
+        smp_storage_save_blob_sync("pq_enabled", &val, sizeof(val));
+        ESP_LOGI(TAG, "PQ setting: created with default ON");
+    } else {
+        ESP_LOGI(TAG, "PQ setting: loaded from NVS = %u", val);
+    }
+
+    s_pq_enabled = val;
+    s_pq_loaded = true;
+    return s_pq_enabled;
+}
+
+void smp_settings_set_pq_enabled(uint8_t val) {
+    val = val ? 1 : 0;  // Normalize
+    s_pq_enabled = val;
+    s_pq_loaded = true;
+    smp_storage_save_blob_sync("pq_enabled", &val, sizeof(val));
+    ESP_LOGI(TAG, "PQ setting: saved to NVS = %u", val);
 }
 
 // ============== Getters ==============

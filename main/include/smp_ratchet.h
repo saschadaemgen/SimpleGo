@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "smp_x448.h"
+#include "sntrup761.h"  // Session 46: PQ KEM key sizes
 
 // ============== Constants ==============
 
@@ -22,6 +23,26 @@
 #define RATCHET_HEADER_LEN      88
 #define X448_PUBLIC_KEY_LEN     56
 #define MAX_RATCHETS  128   // Session 33: Multi-contact support (68KB in PSRAM)
+
+// ============== PQ KEM State (Session 46: SEC-06) ==============
+
+typedef struct {
+    uint8_t pq_active;                                      // 0 = no PQ, 1 = PQ active
+    uint8_t pq_kem_state;                                   // 0 = none, 1 = proposed, 2 = accepted
+
+    // Own KEM keypair (for receiving ciphertexts from peer)
+    uint8_t own_kem_pk[SNTRUP761_PUBLICKEYBYTES];           // 1158 bytes
+    uint8_t own_kem_sk[SNTRUP761_SECRETKEYBYTES];           // 1763 bytes
+    uint8_t own_kem_valid;                                  // 1 if keypair is valid
+
+    // Peer's last KEM public key (for encapsulation)
+    uint8_t peer_kem_pk[SNTRUP761_PUBLICKEYBYTES];          // 1158 bytes
+    uint8_t peer_kem_valid;                                 // 1 if peer key is valid
+
+    // Pending ciphertext (to send in next header)
+    uint8_t pending_ct[SNTRUP761_CIPHERTEXTBYTES];          // 1039 bytes
+    uint8_t pending_ct_valid;                               // 1 if ciphertext ready to send
+} pq_kem_state_t;
 
 // ============== Ratchet State ==============
 
@@ -59,6 +80,10 @@ typedef struct {
     //   assoc_data = peer_key1 (56 bytes) || our_key1 (56 bytes)
     // This is ABSOLUTE (role-based), NOT relative (our/peer)!
     uint8_t assoc_data[112];         // 56 + 56 bytes = initiator || responder
+
+    // Session 46: Post-quantum KEM state per contact
+    // ~5.1 KB per contact. Ignored entirely when pq.pq_active == 0.
+    pq_kem_state_t pq;
 
 } ratchet_state_t;
 
@@ -232,6 +257,21 @@ bool ratchet_save_state(uint8_t contact_idx);
  * @return true on success (ratchet state restored)
  */
 bool ratchet_load_state(uint8_t contact_idx);
+
+// ============== PQ Settings (Session 46: SEC-06) ==============
+
+/**
+ * Get PQ encryption enabled setting from NVS.
+ * Default: 1 (enabled). Created on first read if missing.
+ * @return 1 = PQ enabled, 0 = PQ disabled
+ */
+uint8_t smp_settings_get_pq_enabled(void);
+
+/**
+ * Set PQ encryption enabled setting in NVS.
+ * @param val  1 = enable PQ, 0 = disable PQ
+ */
+void smp_settings_set_pq_enabled(uint8_t val);
 
 // ============== State Access / Debug ==============
 

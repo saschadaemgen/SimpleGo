@@ -49,6 +49,7 @@
 #include "smp_tasks.h"
 #include "smp_history.h"   // Session 37: history_message_t, HISTORY_DIR_SENT
 #include "sntrup761_test.h" // Session 46: Post-quantum KEM verification
+#include "smp_ratchet.h"    // Session 46: smp_settings_get_pq_enabled()
 
 #include "smp_x448.h"
 #include "smp_queue.h"
@@ -635,6 +636,10 @@ void app_main(void) {
         }
         ESP_LOGI(TAG, "");
     }
+
+    // Session 46: Read PQ setting from NVS (creates default ON if missing)
+    uint8_t pq_on = smp_settings_get_pq_enabled();
+    ESP_LOGI(TAG, "SEC-06: Post-Quantum Encryption = %s", pq_on ? "ON" : "OFF");
 
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========
     if (smp_storage_exists("rat_00") && smp_storage_exists("queue_our")) {
