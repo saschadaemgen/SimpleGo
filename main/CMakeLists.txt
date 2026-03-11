@@ -55,4 +55,5 @@ idf_component_register(
         sdmmc
         fatfs
         vfs
+        sntrup761
 )

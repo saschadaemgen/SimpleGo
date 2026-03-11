@@ -48,6 +48,7 @@
 #include "smp_storage.h"
 #include "smp_tasks.h"
 #include "smp_history.h"   // Session 37: history_message_t, HISTORY_DIR_SENT
+#include "sntrup761_test.h" // Session 46: Post-quantum KEM verification
 
 #include "smp_x448.h"
 #include "smp_queue.h"
@@ -617,6 +618,22 @@ void app_main(void) {
                  timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
     } else {
         ESP_LOGW(TAG, "NTP sync timeout - timestamps will be 0");
+    }
+
+    // ========== Session 46: sntrup761 Post-Quantum KEM Test ==========
+    // Runs once at boot to verify PQClean component on PSRAM stack.
+    // WiFi is active here -> esp_fill_random() has true hardware entropy.
+    // Remove this block after successful verification.
+    {
+        ESP_LOGI(TAG, "");
+        ESP_LOGI(TAG, "=== sntrup761 Post-Quantum KEM Test ===");
+        int pq_result = sntrup761_run_test();
+        if (pq_result == 0) {
+            ESP_LOGI(TAG, "=== PQ Test: PASS ===");
+        } else {
+            ESP_LOGE(TAG, "=== PQ Test: FAIL (code %d) ===", pq_result);
+        }
+        ESP_LOGI(TAG, "");
     }
 
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========

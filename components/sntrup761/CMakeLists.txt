@@ -1,7 +1,7 @@
 # sntrup761 ESP-IDF Component
 #
 # Post-quantum KEM based on Streamlined NTRU Prime 761.
-# Source: PQClean (round3 tag), crypto_kem/sntrup761/clean/
+# Source: github.com/saschadaemgen/sntrup761 (forked from PQClean round3)
 # License: Public Domain (PQClean), AGPL-3.0 (SimpleGo wrapper)
 #
 # Platform dependencies:

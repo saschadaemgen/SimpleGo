@@ -4,9 +4,9 @@
  * Tests: keypair generation, encapsulation, decapsulation.
  * Verifies shared secrets match and logs timing for each operation.
  *
- * This test MUST run on a task with >= 80 KB stack (internal SRAM).
- * Do NOT call from app_main directly - the default main task stack
- * is too small.
+ * Uses PSRAM stack via heap_caps_malloc + xTaskCreateStatic to match
+ * the production crypto task deployment. Internal SRAM has only ~6 KB
+ * free after SimpleGo boots (Session 46 measurement).
  *
  * Copyright (c) 2025-2026 Sascha Daemgen, IT and More Systems
  * License: AGPL-3.0
@@ -15,6 +15,7 @@
 #include "sntrup761.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
@@ -36,9 +37,13 @@ static void test_task(void *arg) {
     int ret;
 
     ESP_LOGI(TAG, "=== sntrup761 KEM Verification Test ===");
+    ESP_LOGI(TAG, "Stack: 80 KB PSRAM (heap_caps_malloc + xTaskCreateStatic)");
     ESP_LOGI(TAG, "PK: %d bytes, SK: %d bytes, CT: %d bytes, SS: %d bytes",
              SNTRUP761_PUBLICKEYBYTES, SNTRUP761_SECRETKEYBYTES,
              SNTRUP761_CIPHERTEXTBYTES, SNTRUP761_BYTES);
+    ESP_LOGI(TAG, "Free PSRAM: %u bytes, Free SRAM: %u bytes",
+             (unsigned int)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+             (unsigned int)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
 
     /* Report stack high water mark before heavy operations */
     UBaseType_t stack_before = uxTaskGetStackHighWaterMark(NULL);
@@ -124,6 +129,12 @@ static void test_task(void *arg) {
     ESP_LOGI(TAG, "Peak stack usage: ~%u bytes",
              81920 - (unsigned int)(stack_final * sizeof(StackType_t)));
 
+    /* Memory report */
+    ESP_LOGI(TAG, "Free PSRAM after test: %u bytes",
+             (unsigned int)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    ESP_LOGI(TAG, "Free SRAM after test: %u bytes",
+             (unsigned int)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+
     /* Secure wipe */
     sodium_memzero(sk, sizeof(sk));
     sodium_memzero(ss_enc, sizeof(ss_enc));
@@ -135,23 +146,44 @@ static void test_task(void *arg) {
     vTaskDelete(NULL);
 }
 
+/* Static TCB for test task */
+static StaticTask_t s_test_tcb;
+
 int sntrup761_run_test(void) {
     s_test_result = -1;
     s_test_done = false;
 
-    /* Create test task with 80 KB stack in internal SRAM */
-    BaseType_t ret = xTaskCreatePinnedToCore(
+    /* Allocate 80 KB stack from PSRAM - matches production crypto task.
+     * Internal SRAM only has ~6 KB free (Session 46 measurement). */
+    const size_t stack_size = 80 * 1024;
+    StackType_t *stack = (StackType_t *)heap_caps_malloc(
+        stack_size, MALLOC_CAP_SPIRAM);
+
+    if (stack == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate %d bytes from PSRAM for test stack",
+                 (int)stack_size);
+        ESP_LOGE(TAG, "Free PSRAM: %u bytes",
+                 (unsigned int)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+        return -1;
+    }
+
+    ESP_LOGI(TAG, "Test stack: %d KB from PSRAM", (int)(stack_size / 1024));
+
+    /* Create test task with PSRAM stack via xTaskCreateStatic */
+    TaskHandle_t task = xTaskCreateStaticPinnedToCore(
         test_task,
         "pq_test",
-        80 * 1024 / sizeof(StackType_t),  /* 80 KB stack */
+        stack_size / sizeof(StackType_t),
         NULL,
         5,       /* priority */
-        NULL,
+        stack,
+        &s_test_tcb,
         0        /* Core 0 */
     );
 
-    if (ret != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create test task - not enough SRAM?");
+    if (task == NULL) {
+        ESP_LOGE(TAG, "xTaskCreateStaticPinnedToCore returned NULL");
+        heap_caps_free(stack);
         return -1;
     }
 
@@ -161,6 +193,10 @@ int sntrup761_run_test(void) {
         vTaskDelay(pdMS_TO_TICKS(100));
         timeout_ms -= 100;
     }
+
+    /* Wipe and free PSRAM stack (may contain key material) */
+    sodium_memzero(stack, stack_size);
+    heap_caps_free(stack);
 
     if (!s_test_done) {
         ESP_LOGE(TAG, "Test timed out after 10 seconds");

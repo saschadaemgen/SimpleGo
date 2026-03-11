@@ -2,14 +2,21 @@
  * pq_crypto_task.c - Dedicated crypto task for post-quantum operations
  *
  * Architecture:
- *   - 80 KB stack on Core 0 (internal SRAM, not PSRAM)
+ *   - 80 KB stack in PSRAM (heap_caps_malloc + xTaskCreateStatic)
+ *   - PSRAM is safe here: this task does NOT write NVS (the ESP32-S3
+ *     hardware constraint only affects NVS/flash writes, which disable
+ *     the cache that PSRAM depends on). SHA-512 hardware accelerator
+ *     uses memory-mapped peripheral registers, not DMA.
  *   - Waits on FreeRTOS queue for work items
  *   - Serializes all sntrup761 operations (keygen, encap, decap)
  *   - Supports background keypair pre-computation
  *   - Results returned via per-request semaphore
  *
- * The task does NOT write NVS - it only performs crypto.
- * NVS persistence of PQ keys is handled by smp_app_task.
+ * Why PSRAM: Internal SRAM has only ~6 KB free after SimpleGo boots
+ * (measured Session 46). 80 KB from internal SRAM is impossible.
+ * PSRAM has ~7.9 MB free. Decision documented and approved.
+ *
+ * NVS persistence of PQ keys is handled by smp_app_task (SRAM stack).
  *
  * Copyright (c) 2025-2026 Sascha Daemgen, IT and More Systems
  * License: AGPL-3.0
@@ -66,6 +73,10 @@ typedef struct {
 
 static TaskHandle_t s_crypto_task = NULL;
 static QueueHandle_t s_request_queue = NULL;
+
+/* xTaskCreateStatic resources - stack allocated from PSRAM at runtime */
+static StaticTask_t s_crypto_task_tcb;
+static StackType_t *s_crypto_stack = NULL;  /* heap_caps_malloc(PSRAM) */
 
 /* Pre-computed keypair buffer */
 static uint8_t s_precomp_pk[SNTRUP761_PUBLICKEYBYTES];
@@ -187,22 +198,25 @@ esp_err_t pq_crypto_task_init(void) {
         return ESP_ERR_NO_MEM;
     }
 
-    /* Create crypto task with 80 KB internal SRAM stack on Core 0 */
-    BaseType_t ret = xTaskCreatePinnedToCore(
-        crypto_task,
-        "pq_crypto",
-        PQ_CRYPTO_TASK_STACK_SIZE / sizeof(StackType_t),
-        NULL,
-        PQ_CRYPTO_TASK_PRIORITY,
-        &s_crypto_task,
-        PQ_CRYPTO_TASK_CORE
-    );
+    /* Allocate 80 KB stack from PSRAM explicitly.
+     *
+     * Why PSRAM is safe for this task:
+     *   1. No NVS writes (flash ops disable cache, PSRAM depends on cache)
+     *   2. SHA-512 peripheral is memory-mapped, not DMA-based
+     *   3. All crypto is pure computation, no SPI/flash interaction
+     *
+     * Internal SRAM budget: only ~6 KB free after boot (Session 46 measurement).
+     * PSRAM budget: ~7.9 MB free. 80 KB is negligible.
+     */
+    size_t stack_words = PQ_CRYPTO_TASK_STACK_SIZE / sizeof(StackType_t);
+    s_crypto_stack = (StackType_t *)heap_caps_malloc(
+        PQ_CRYPTO_TASK_STACK_SIZE, MALLOC_CAP_SPIRAM);
 
-    if (ret != pdPASS) {
-        ESP_LOGE(TAG, "failed to create crypto task - SRAM insufficient?");
-        ESP_LOGE(TAG, "need %d bytes, free SRAM: %u bytes",
-                 PQ_CRYPTO_TASK_STACK_SIZE,
-                 (unsigned int)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    if (s_crypto_stack == NULL) {
+        ESP_LOGE(TAG, "failed to allocate %d bytes from PSRAM for crypto stack",
+                 PQ_CRYPTO_TASK_STACK_SIZE);
+        ESP_LOGE(TAG, "free PSRAM: %u bytes",
+                 (unsigned int)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
         vQueueDelete(s_request_queue);
         s_request_queue = NULL;
         vSemaphoreDelete(s_precomp_mutex);
@@ -210,8 +224,36 @@ esp_err_t pq_crypto_task_init(void) {
         return ESP_ERR_NO_MEM;
     }
 
-    ESP_LOGI(TAG, "initialized (stack %d KB, core %d, free SRAM: %u bytes)",
-             PQ_CRYPTO_TASK_STACK_SIZE / 1024, PQ_CRYPTO_TASK_CORE,
+    /* Create task with static stack (PSRAM) and static TCB (BSS/SRAM).
+     * xTaskCreateStatic never fails - it returns the task handle directly.
+     * Core affinity set via separate API call after creation. */
+    s_crypto_task = xTaskCreateStaticPinnedToCore(
+        crypto_task,
+        "pq_crypto",
+        stack_words,
+        NULL,
+        PQ_CRYPTO_TASK_PRIORITY,
+        s_crypto_stack,
+        &s_crypto_task_tcb,
+        PQ_CRYPTO_TASK_CORE
+    );
+
+    if (s_crypto_task == NULL) {
+        /* Should never happen with xTaskCreateStatic, but be defensive */
+        ESP_LOGE(TAG, "xTaskCreateStaticPinnedToCore returned NULL");
+        heap_caps_free(s_crypto_stack);
+        s_crypto_stack = NULL;
+        vQueueDelete(s_request_queue);
+        s_request_queue = NULL;
+        vSemaphoreDelete(s_precomp_mutex);
+        s_precomp_mutex = NULL;
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "initialized (stack %d KB PSRAM, core %d)",
+             PQ_CRYPTO_TASK_STACK_SIZE / 1024, PQ_CRYPTO_TASK_CORE);
+    ESP_LOGI(TAG, "free PSRAM: %u bytes, free SRAM: %u bytes",
+             (unsigned int)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
              (unsigned int)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
 
     return ESP_OK;
@@ -221,6 +263,12 @@ void pq_crypto_task_deinit(void) {
     if (s_crypto_task != NULL) {
         vTaskDelete(s_crypto_task);
         s_crypto_task = NULL;
+    }
+    if (s_crypto_stack != NULL) {
+        /* Wipe stack memory before freeing (may contain key material) */
+        sodium_memzero(s_crypto_stack, PQ_CRYPTO_TASK_STACK_SIZE);
+        heap_caps_free(s_crypto_stack);
+        s_crypto_stack = NULL;
     }
     if (s_request_queue != NULL) {
         vQueueDelete(s_request_queue);
@@ -367,7 +415,8 @@ void pq_crypto_get_stats(uint32_t *stack_free, uint32_t *sram_free,
         }
     }
     if (sram_free != NULL) {
-        *sram_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        /* Report PSRAM free since that's where crypto stack lives */
+        *sram_free = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
     }
     if (precomp_ready != NULL) {
         *precomp_ready = s_precomp_ready;

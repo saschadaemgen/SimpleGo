@@ -3,8 +3,12 @@
  *
  * sntrup761 key generation needs ~60-70 KB stack - far more than any
  * normal FreeRTOS task in SimpleGo. This module provides a dedicated
- * task with 80 KB internal SRAM stack on Core 0 that serializes all
+ * task with 80 KB PSRAM stack on Core 0 that serializes all
  * PQ crypto operations.
+ *
+ * PSRAM is safe because this task never writes NVS or accesses flash.
+ * SHA-512 hardware accelerator uses memory-mapped registers, not DMA.
+ * Internal SRAM only has ~6 KB free after boot (Session 46 measurement).
  *
  * Usage:
  *   pq_crypto_task_init();              // Start task at boot
@@ -36,7 +40,7 @@ extern "C" {
 
 /* ---- Task configuration ---- */
 
-#define PQ_CRYPTO_TASK_STACK_SIZE  (80 * 1024)   /* 80 KB internal SRAM */
+#define PQ_CRYPTO_TASK_STACK_SIZE  (80 * 1024)   /* 80 KB PSRAM (heap_caps_malloc) */
 #define PQ_CRYPTO_TASK_PRIORITY    6             /* Above app (5), below network (7) */
 #define PQ_CRYPTO_TASK_CORE        0             /* Core 0 with network task */
 #define PQ_CRYPTO_QUEUE_DEPTH      4             /* Max pending requests */
@@ -121,8 +125,8 @@ bool pq_crypto_has_precomputed(void);
 /**
  * Get memory usage report for diagnostics.
  *
- * @param stack_free     Output: crypto task stack bytes remaining
- * @param sram_free      Output: total free internal SRAM
+ * @param stack_free     Output: crypto task stack bytes remaining (PSRAM)
+ * @param sram_free      Output: total free PSRAM (where crypto stack lives)
  * @param precomp_ready  Output: whether pre-computed keypair is available
  */
 void pq_crypto_get_stats(uint32_t *stack_free, uint32_t *sram_free,

@@ -873,7 +873,7 @@ static void app_process_keyboard_queue(QueueHandle_t kbd_queue)
 {
     char kbd_msg[256];
     while (kbd_queue && xQueueReceive(kbd_queue, kbd_msg, 0) == pdTRUE) {
-        ESP_LOGI(TAG_APP, "⌨️ Sending: \"%s\"", kbd_msg);
+        ESP_LOGI(TAG_APP, "Sending: \"%s\"", kbd_msg);
         uint32_t seq = ui_chat_get_last_seq();
         contact_t *msg_contact = &contacts_db.contacts[s_active_contact_idx];
 
