@@ -79,6 +79,9 @@ static void rebuild_timer_cb(lv_timer_t *t)
 {
     (void)t;
     s_rebuild_timer = NULL;
+    /* Guard: If WiFi tab is not displayed (e.g. Name Setup screen after
+     * erase-flash), s_wifi_list is NULL. Skip rebuild to avoid crash. */
+    if (!s_wifi_list) return;
     /* Session 39k: Don't rebuild while scan is running. Rebuild calls
      * cleanup which resets s_scan_in_progress, so scan results would
      * never be displayed. Reschedule and try again in 300ms. */
@@ -93,6 +96,8 @@ static void rebuild_timer_cb(lv_timer_t *t)
 static void deferred_wifi_rebuild(void *data)
 {
     (void)data;
+    /* Guard: WiFi tab not displayed, don't schedule rebuild */
+    if (!s_wifi_list) return;
     /* Session 39k: Give WiFi stack 200ms to stabilize status after
      * connect/disconnect. Original used vTaskDelay which BLOCKED the
      * LVGL task for 200ms causing UI freeze. Now uses a one-shot LVGL

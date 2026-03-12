@@ -610,6 +610,11 @@ int smp_request_add_contact(const char *name)
     cmd.cmd = NET_CMD_ADD_CONTACT;
     strncpy(cmd.contact_name, name, sizeof(cmd.contact_name) - 1);
 
+    if (!app_to_net_buf) {
+        ESP_LOGE(TAG_APP, "APP: Task infrastructure not ready - cannot add contact yet");
+        return -1;
+    }
+
     if (xRingbufferSend(app_to_net_buf, &cmd, sizeof(cmd), pdMS_TO_TICKS(2000)) != pdTRUE) {
         ESP_LOGE(TAG_APP, "APP: Failed to send ADD_CONTACT command!");
         return -1;
