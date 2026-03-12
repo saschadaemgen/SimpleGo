@@ -1,0 +1,2 @@
+﻿idf_component_register(INCLUDE_DIRS include)
+target_compile_definitions(${COMPONENT_LIB} INTERFACE WOLFSSL_USER_SETTINGS)

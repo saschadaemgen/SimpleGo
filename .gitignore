@@ -25,7 +25,6 @@ Thumbs.db
 
 # Third-party components (managed by ESP-IDF)
 components/wolfssl__wolfssl/
-components/wolfssl_config/
 components/zstd/
 
 # Git submodules
