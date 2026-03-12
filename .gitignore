@@ -26,8 +26,6 @@ Thumbs.db
 # Third-party components (managed by ESP-IDF)
 components/wolfssl__wolfssl/
 
-# Git submodules
-.gitmodules
 
 
 # LVGL (install via ESP-IDF component manager)
