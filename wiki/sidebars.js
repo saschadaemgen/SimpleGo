@@ -44,11 +44,6 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Why SimpleGo',
-      items: ['SIMPLEGO_VS_GRAPHENEOS', 'SIMPLEX_VS_MATRIX'],
-    },
-    {
-      type: 'category',
       label: 'Contributing',
       items: ['BUILD_SYSTEM', 'DEVELOPMENT', 'DEVNOTES'],
     },
