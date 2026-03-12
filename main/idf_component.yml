@@ -17,4 +17,4 @@ dependencies:
 
   # LVGL - UI framework for T-Deck Plus display
   # lv_conf.h is in main/ with LV_CONF_PATH set in CMakeLists.txt
-  lvgl/lvgl: ~9.2
+  lvgl/lvgl: ^9.2
