@@ -49,6 +49,10 @@ typedef struct {
     // Pending ciphertext (to send in next header)
     uint8_t pending_ct[SNTRUP761_CIPHERTEXTBYTES];          // 1039 bytes
     uint8_t pending_ct_valid;                               // 1 if ciphertext ready to send
+
+    // Pending shared secret (from Encap, waiting for next SEND kdf_root)
+    uint8_t pending_ss[SNTRUP761_BYTES];                    // 32 bytes
+    uint8_t pending_ss_valid;                               // 1 if ss ready for send-side kdf_root
 } pq_kem_state_t;
 
 // ============== Ratchet State ==============

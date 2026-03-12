@@ -702,20 +702,25 @@ static int pq_recv_process(pq_kem_state_t *pq,
         }
         pq->own_kem_valid = 1;
 
-        /* Encapsulate to peer's key -> shared_secret + ciphertext */
-        if (pq_crypto_enc(pq->pending_ct, kem_ss, pq->peer_kem_pk, 3000) != ESP_OK) {
+        /* Encapsulate to peer's key -> shared_secret + ciphertext.
+         * The secret goes into pending_ss, NOT into kem_ss.
+         * Reason: The sender used DH-only for this message's kdf_root.
+         * Our encap secret will be sent as Accepted(ct) and fed into
+         * our SEND kdf_root on the next outgoing ratchet step. */
+        if (pq_crypto_enc(pq->pending_ct, pq->pending_ss, pq->peer_kem_pk, 3000) != ESP_OK) {
             ESP_LOGE(TAG, "PQ-SM: encap FAILED");
             return -3;
         }
         pq->pending_ct_valid = 1;
-        *kem_ss_valid = true;
+        pq->pending_ss_valid = 1;
+        *kem_ss_valid = false;  /* NOT in current recv kdf_root */
 
         pq->pq_kem_state = 2;  /* accepted */
         pq->pq_active = 1;
 
         pq_crypto_precompute_keypair();
-        ESP_LOGI(TAG, "PQ-SM: State -> accepted (ss[0]=%02x, ct[0]=%02x)",
-                 kem_ss[0], pq->pending_ct[0]);
+        ESP_LOGI(TAG, "PQ-SM: State -> accepted (pending_ss[0]=%02x, ct[0]=%02x, kem_ss=DEFERRED)",
+                 pq->pending_ss[0], pq->pending_ct[0]);
         pq_nvs_save(ratchet_get_active());  /* Write-Before-Send */
         return 0;
     }
@@ -731,12 +736,14 @@ static int pq_recv_process(pq_kem_state_t *pq,
             return 0;  /* Not fatal, just no KEM secret */
         }
 
-        /* Decapsulate -> shared_secret */
+        /* Decapsulate -> shared_secret (ss1).
+         * This goes into the current recv kdf_root because the SENDER
+         * used this same secret in their send kdf_root. */
         if (pq_crypto_dec(kem_ss, kem_ct, pq->own_kem_sk, 3000) != ESP_OK) {
             ESP_LOGE(TAG, "PQ-SM: decap FAILED");
             return -4;
         }
-        *kem_ss_valid = true;
+        *kem_ss_valid = true;  /* ss1 goes into current recv kdf_root */
 
         /* Wipe consumed secret key immediately */
         sodium_memzero(pq->own_kem_sk, SNTRUP761_SECRETKEYBYTES);
@@ -756,24 +763,22 @@ static int pq_recv_process(pq_kem_state_t *pq,
         }
         pq->own_kem_valid = 1;
 
-        /* Encapsulate with new peer key -> ss2 + ct2 */
-        uint8_t ss2[SNTRUP761_BYTES];
-        if (pq_crypto_enc(pq->pending_ct, ss2, pq->peer_kem_pk, 3000) != ESP_OK) {
+        /* Encapsulate with new peer key -> ss2 + ct2.
+         * ss2 goes into pending_ss (for next SEND kdf_root).
+         * ct2 goes into pending_ct (for next outgoing header). */
+        if (pq_crypto_enc(pq->pending_ct, pq->pending_ss, pq->peer_kem_pk, 3000) != ESP_OK) {
             ESP_LOGE(TAG, "PQ-SM: encap with new peer key FAILED");
-            sodium_memzero(ss2, sizeof(ss2));
             return -6;
         }
         pq->pending_ct_valid = 1;
-
-        /* ss2 is NOT used now - it will be used in the next ratchet step */
-        sodium_memzero(ss2, sizeof(ss2));
+        pq->pending_ss_valid = 1;
 
         pq->pq_kem_state = 2;  /* accepted */
         pq->pq_active = 1;
 
         pq_crypto_precompute_keypair();
-        ESP_LOGI(TAG, "PQ-SM: State -> accepted (decap+encap, ss[0]=%02x, ct[0]=%02x)",
-                 kem_ss[0], pq->pending_ct[0]);
+        ESP_LOGI(TAG, "PQ-SM: State -> accepted (decap ss[0]=%02x, new pending_ss[0]=%02x, ct[0]=%02x)",
+                 kem_ss[0], pq->pending_ss[0], pq->pending_ct[0]);
         pq_nvs_save(ratchet_get_active());  /* Write-Before-Send */
         return 0;
     }
@@ -876,6 +881,21 @@ int ratchet_encrypt(const uint8_t *plaintext, size_t pt_len,
     size_t hdr_padded = is_pq ? MSG_HEADER_PQ_PADDED_LEN : MSG_HEADER_PADDED_LEN;
     size_t em_hdr_total = 2 + GCM_IV_LEN + GCM_TAG_LEN + 2 + hdr_padded;
     /* Non-PQ: 2+16+16+2+88 = 124, PQ: 2+16+16+2+2310 = 2346 */
+
+    /* Bug 2 Fix: PQ header is 2222 bytes larger. To keep total output the same
+     * size (so all caller buffers still fit), reduce body padding by the
+     * header overhead difference. The peer reads content_len from bytes [0:2]
+     * and doesn't care about the amount of '#' padding after the content. */
+    if (is_pq) {
+        size_t pq_overhead = MSG_HEADER_PQ_PADDED_LEN - MSG_HEADER_PADDED_LEN;  /* 2222 */
+        if (padded_msg_len > pq_overhead + 256) {  /* Ensure enough room for content */
+            padded_msg_len -= pq_overhead;
+            ESP_LOGD(TAG, "PQ: padded_msg_len reduced by %zu -> %zu", pq_overhead, padded_msg_len);
+        } else {
+            ESP_LOGE(TAG, "PQ: padded_msg_len %zu too small for PQ overhead %zu!", padded_msg_len, pq_overhead);
+            return -1;
+        }
+    }
 
     ESP_LOGD(TAG, "Encrypt: msg_num=%u pq=%d kem_state=%d hdr=%zu",
              ratchet_state.msg_num_send, is_pq ? 1 : 0,
@@ -1277,7 +1297,9 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
         return -1;
     }
 
-    // Session 46 Teil E: PQ State Machine (between DH and root KDF)
+    // PQ State Machine: process KEM params from received header.
+    // Fall 2 (Proposed): kem_ss_valid = false (secret deferred to send side)
+    // Fall 3 (Accepted): kem_ss_valid = true (sender used this secret)
     uint8_t kem_ss[SNTRUP761_BYTES];
     bool kem_ss_valid = false;
     if (s_recv_pq_valid && smp_settings_get_pq_enabled()) {
@@ -1290,7 +1312,7 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
             ESP_LOGW(TAG, "PQ-SM returned %d, continuing with DH-only", pq_ret);
             kem_ss_valid = false;
         }
-        s_recv_pq_valid = false;  /* consumed */
+        s_recv_pq_valid = false;
     }
 
     uint8_t new_root_key_1[32];
@@ -1298,18 +1320,16 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
              kem_ss_valid ? kem_ss : NULL, kem_ss_valid ? SNTRUP761_BYTES : 0,
              new_root_key_1, recv_chain_key, new_nhk_recv);
 
-    /* Wipe KEM shared secret after use */
     if (kem_ss_valid) {
         sodium_memzero(kem_ss, sizeof(kem_ss));
     }
 
-    ESP_LOGD(TAG, "DH recv: secret=%02x%02x.. rk1=%02x%02x.. ck=%02x%02x.. pq=%s",
-             dh_secret_recv[0], dh_secret_recv[1],
+    ESP_LOGD(TAG, "DH recv: rk1=%02x%02x.. ck=%02x%02x.. pq_recv=%s",
              new_root_key_1[0], new_root_key_1[1],
              recv_chain_key[0], recv_chain_key[1],
              kem_ss_valid ? "YES" : "no");
 
-    // DH Ratchet Step 2: Sending Chain (no KEM for send direction)
+    // DH Ratchet Step 2: Sending Chain
     if (!x448_generate_keypair(&new_dh_self)) {
         ESP_LOGE(TAG, "X448 keygen failed!");
         return -2;
@@ -1321,13 +1341,30 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
         return -3;
     }
 
-    kdf_root(new_root_key_1, dh_secret_send, NULL, 0,
+    // Feed pending_ss into send kdf_root if available AND PQ sending is active.
+    // pending_ss must only be used when the outgoing header will contain
+    // Accepted(ct), so the peer can decap and derive the same chain keys.
+    bool pq_send_active = (ratchet_state.pq.pq_active && smp_settings_get_pq_enabled());
+    uint8_t *send_kem = NULL;
+    size_t send_kem_len = 0;
+    if (ratchet_state.pq.pending_ss_valid && pq_send_active) {
+        send_kem = ratchet_state.pq.pending_ss;
+        send_kem_len = SNTRUP761_BYTES;
+    }
+
+    kdf_root(new_root_key_1, dh_secret_send, send_kem, send_kem_len,
              new_root_key_2, send_chain_key, new_nhk_send);
 
-    ESP_LOGD(TAG, "DH send: new_pub=%02x%02x.. rk2=%02x%02x.. ck=%02x%02x..",
-             new_dh_self.public_key[0], new_dh_self.public_key[1],
+    if (send_kem) {
+        ESP_LOGI(TAG, "PQ: pending_ss[0]=%02x fed into send kdf_root", ratchet_state.pq.pending_ss[0]);
+        sodium_memzero(ratchet_state.pq.pending_ss, SNTRUP761_BYTES);
+        ratchet_state.pq.pending_ss_valid = 0;
+    }
+
+    ESP_LOGD(TAG, "DH send: rk2=%02x%02x.. ck=%02x%02x.. pq_send=%s",
              new_root_key_2[0], new_root_key_2[1],
-             send_chain_key[0], send_chain_key[1]);
+             send_chain_key[0], send_chain_key[1],
+             send_kem ? "YES" : "no");
 
     } else {
         // RATCHET_MODE_SAME: Skip DH ratchet, use existing chain_key_recv
@@ -1436,6 +1473,11 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
 
 // ============== Persistence (Auftrag 50b) ==============
 
+/* Session 46: Classical ratchet size = struct BEFORE the pq field.
+ * Full struct is 5640 bytes (exceeds NVS blob limit of ~4000 bytes).
+ * PQ fields are saved separately via pq_nvs_save() in Teil F. */
+#define RATCHET_CLASSICAL_SIZE  offsetof(ratchet_state_t, pq)
+
 bool ratchet_save_state(uint8_t contact_idx) {
     if (contact_idx >= MAX_RATCHETS) {
         ESP_LOGE(TAG, "ratchet_save_state: invalid contact_idx %d", contact_idx);
@@ -1449,14 +1491,15 @@ bool ratchet_save_state(uint8_t contact_idx) {
     char key[16];
     snprintf(key, sizeof(key), "rat_%02u", contact_idx);
 
-    esp_err_t ret = smp_storage_save_blob_sync(key, &ratchet_state, sizeof(ratchet_state_t));
+    /* Save only classical part - PQ fields saved separately via pq_nvs_save() */
+    esp_err_t ret = smp_storage_save_blob_sync(key, &ratchet_state, RATCHET_CLASSICAL_SIZE);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "❌ ratchet_save_state('%s') FAILED: %s", key, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "ratchet_save_state('%s') FAILED: %s", key, esp_err_to_name(ret));
         return false;
     }
 
-    ESP_LOGI(TAG, "💾 Ratchet state saved: '%s' (%zu bytes) | send=%u recv=%u",
-             key, sizeof(ratchet_state_t),
+    ESP_LOGD(TAG, "Ratchet saved: '%s' (%zu bytes) | send=%u recv=%u",
+             key, RATCHET_CLASSICAL_SIZE,
              ratchet_state.msg_num_send, ratchet_state.msg_num_recv);
     return true;
 }
@@ -1471,49 +1514,41 @@ bool ratchet_load_state(uint8_t contact_idx) {
     snprintf(key, sizeof(key), "rat_%02u", contact_idx);
 
     if (!smp_storage_exists(key)) {
-        ESP_LOGI(TAG, "ratchet_load_state: '%s' not found — fresh start", key);
+        ESP_LOGI(TAG, "ratchet_load_state: '%s' not found - fresh start", key);
         return false;
     }
 
+    /* Zero entire struct (PQ fields default to 0 = inactive) */
     size_t loaded_len = 0;
     ratchet_state_t loaded;
-    memset(&loaded, 0, sizeof(ratchet_state_t));  // Zero all fields including PQ
-    esp_err_t ret = smp_storage_load_blob(key, &loaded, sizeof(ratchet_state_t), &loaded_len);
+    memset(&loaded, 0, sizeof(ratchet_state_t));
+
+    /* Load classical part only. NVS blob is RATCHET_CLASSICAL_SIZE (~520 bytes).
+     * Old pre-PQ blobs (also 520 bytes) load identically. */
+    esp_err_t ret = smp_storage_load_blob(key, &loaded, RATCHET_CLASSICAL_SIZE, &loaded_len);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "ratchet_load_state('%s') FAILED: %s", key, esp_err_to_name(ret));
         return false;
     }
 
-    // Session 46: Migration support for pre-PQ ratchet states.
-    // Old struct was 520 bytes (before pq_kem_state_t was added).
-    // Accept old size: classical fields load correctly, PQ fields stay zeroed
-    // (pq_active = 0 means PQ is off, which is the correct default).
+    /* Accept both old (520) and new (RATCHET_CLASSICAL_SIZE) sizes */
     #define RATCHET_STATE_SIZE_PRE_PQ  520
-    if (loaded_len != sizeof(ratchet_state_t) && loaded_len != RATCHET_STATE_SIZE_PRE_PQ) {
+    if (loaded_len != RATCHET_CLASSICAL_SIZE && loaded_len != RATCHET_STATE_SIZE_PRE_PQ) {
         ESP_LOGE(TAG, "ratchet_load_state: size mismatch! got %zu, expected %zu or %zu",
-                 loaded_len, sizeof(ratchet_state_t), (size_t)RATCHET_STATE_SIZE_PRE_PQ);
+                 loaded_len, RATCHET_CLASSICAL_SIZE, (size_t)RATCHET_STATE_SIZE_PRE_PQ);
         return false;
     }
-    if (loaded_len == RATCHET_STATE_SIZE_PRE_PQ) {
-        ESP_LOGI(TAG, "ratchet_load_state: migrating pre-PQ state (%zu -> %zu bytes, PQ fields zeroed)",
-                 loaded_len, sizeof(ratchet_state_t));
-    }
     if (!loaded.initialized) {
-        ESP_LOGW(TAG, "❌ ratchet_load_state: loaded state has initialized=false!");
+        ESP_LOGW(TAG, "ratchet_load_state: loaded state has initialized=false!");
         return false;
     }
 
-    // Accept loaded state
+    /* Accept loaded state (PQ fields stay zeroed, loaded via pq_nvs_load) */
     memcpy(&ratchet_state, &loaded, sizeof(ratchet_state_t));
 
     ESP_LOGI(TAG, "Ratchet restored: '%s' (%zu bytes) send=%u recv=%u",
              key, loaded_len,
              ratchet_state.msg_num_send, ratchet_state.msg_num_recv);
-    ESP_LOGD(TAG, "Restored: rk=%02x%02x.. dh=%02x%02x.. send=%u recv=%u",
-             ratchet_state.root_key[0], ratchet_state.root_key[1],
-             ratchet_state.dh_self.public_key[0], ratchet_state.dh_self.public_key[1],
-             ratchet_state.msg_num_send, ratchet_state.msg_num_recv);
-
     return true;
 }
 
@@ -1558,10 +1593,17 @@ bool pq_nvs_save(uint8_t contact_idx) {
         if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
     }
 
+    if (pq->pending_ss_valid) {
+        snprintf(key, sizeof(key), "pq_%02x_ss", contact_idx);
+        ret = smp_storage_save_blob_sync(key, pq->pending_ss, SNTRUP761_BYTES);
+        if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+    }
+
     if (ok) {
-        ESP_LOGI(TAG, "PQ NVS saved: [%02x] active=%u state=%u own=%u peer=%u ct=%u",
+        ESP_LOGI(TAG, "PQ NVS saved: [%02x] active=%u state=%u own=%u peer=%u ct=%u ss=%u",
                  contact_idx, pq->pq_active, pq->pq_kem_state,
-                 pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid);
+                 pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid,
+                 pq->pending_ss_valid);
     }
     return ok;
 }
@@ -1611,9 +1653,17 @@ bool pq_nvs_load(uint8_t contact_idx) {
         pq->pending_ct_valid = 1;
     }
 
-    ESP_LOGI(TAG, "PQ NVS loaded: [%02x] active=%u state=%u own=%u peer=%u ct=%u",
+    snprintf(key, sizeof(key), "pq_%02x_ss", contact_idx);
+    if (smp_storage_exists(key)) {
+        len = 0;
+        smp_storage_load_blob(key, pq->pending_ss, SNTRUP761_BYTES, &len);
+        pq->pending_ss_valid = 1;
+    }
+
+    ESP_LOGI(TAG, "PQ NVS loaded: [%02x] active=%u state=%u own=%u peer=%u ct=%u ss=%u",
              contact_idx, pq->pq_active, pq->pq_kem_state,
-             pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid);
+             pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid,
+             pq->pending_ss_valid);
     return true;
 }
 
