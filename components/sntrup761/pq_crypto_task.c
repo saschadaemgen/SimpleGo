@@ -65,7 +65,7 @@ typedef struct {
         } dec;
     };
     /* Result signaling */
-    int result;                  /* 0 = success */
+    int *result_ptr;                 /* Points to caller's stack (valid while blocked) */
     SemaphoreHandle_t done_sem;  /* NULL for background ops */
 } pq_request_t;
 
@@ -88,23 +88,26 @@ static SemaphoreHandle_t s_precomp_mutex = NULL;
 
 static void handle_keygen(pq_request_t *req) {
     int64_t t0 = esp_timer_get_time();
-    req->result = sntrup761_keypair(req->keygen.pk, req->keygen.sk);
+    int ret = sntrup761_keypair(req->keygen.pk, req->keygen.sk);
     int64_t dt = esp_timer_get_time() - t0;
-    ESP_LOGD(TAG, "keygen: %lld us (%d)", dt, req->result);
+    if (req->result_ptr) *req->result_ptr = ret;
+    ESP_LOGD(TAG, "keygen: %lld us (%d)", dt, ret);
 }
 
 static void handle_enc(pq_request_t *req) {
     int64_t t0 = esp_timer_get_time();
-    req->result = sntrup761_enc(req->enc.ct, req->enc.ss, req->enc.pk);
+    int ret = sntrup761_enc(req->enc.ct, req->enc.ss, req->enc.pk);
     int64_t dt = esp_timer_get_time() - t0;
-    ESP_LOGD(TAG, "enc: %lld us (%d)", dt, req->result);
+    if (req->result_ptr) *req->result_ptr = ret;
+    ESP_LOGD(TAG, "enc: %lld us (%d)", dt, ret);
 }
 
 static void handle_dec(pq_request_t *req) {
     int64_t t0 = esp_timer_get_time();
-    req->result = sntrup761_dec(req->dec.ss, req->dec.ct, req->dec.sk);
+    int ret = sntrup761_dec(req->dec.ss, req->dec.ct, req->dec.sk);
     int64_t dt = esp_timer_get_time() - t0;
-    ESP_LOGD(TAG, "dec: %lld us (%d)", dt, req->result);
+    if (req->result_ptr) *req->result_ptr = ret;
+    ESP_LOGD(TAG, "dec: %lld us (%d)", dt, ret);
 }
 
 static void handle_precompute(void) {
@@ -301,10 +304,14 @@ static esp_err_t submit_request(pq_request_t *req, uint32_t timeout_ms) {
         ESP_LOGE(TAG, "failed to create done semaphore");
         return ESP_ERR_NO_MEM;
     }
-    req->done_sem = done;
-    req->result = -1;
 
-    /* Queue the request */
+    /* Result lives on caller's stack. The pointer survives the queue copy
+     * because we block on the semaphore until crypto task writes through it. */
+    int result = -1;
+    req->done_sem = done;
+    req->result_ptr = &result;
+
+    /* Queue the request (copies struct by value, but result_ptr still valid) */
     if (xQueueSend(s_request_queue, req, pdMS_TO_TICKS(100)) != pdTRUE) {
         ESP_LOGE(TAG, "request queue full");
         vSemaphoreDelete(done);
@@ -320,7 +327,7 @@ static esp_err_t submit_request(pq_request_t *req, uint32_t timeout_ms) {
     }
 
     vSemaphoreDelete(done);
-    return (req->result == 0) ? ESP_OK : ESP_FAIL;
+    return (result == 0) ? ESP_OK : ESP_FAIL;
 }
 
 /* ---- Public API: blocking operations ---- */

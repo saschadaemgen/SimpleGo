@@ -231,7 +231,6 @@ static bool ratchet_decrypt_message(
 
     // Session 46 Teil E: Parse PQ KEM fields from decrypted header
     // and feed to ratchet state machine BEFORE body decrypt.
-    // pq_header_deserialize handles both 88-byte (non-PQ) and 2310-byte (PQ) headers.
     {
         parsed_msg_header_t pq_hdr;
         if (pq_header_deserialize(header_plain, eh_body_len, &pq_hdr) == 0) {
@@ -242,7 +241,6 @@ static bool ratchet_decrypt_message(
             }
         } else {
             ratchet_set_recv_pq(NULL);
-            ESP_LOGD(TAG, "PQ: header deserialize skipped (not PQ or parse error)");
         }
     }
 
