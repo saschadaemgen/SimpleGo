@@ -10,7 +10,11 @@
 
 dependencies:
   # libsodium - Cryptographic library (Ed25519, X25519)
-  # Used for: Signing commands, key exchange
-  # Why: SimpleX servers use crypton library (libsodium-compatible)
   espressif/libsodium: ^1.0.20
+
+  # wolfSSL - Used for X448 key exchange (WOLFCRYPT_ONLY mode)
   wolfssl/wolfssl: ^5.8.0
+
+  # LVGL - UI framework for T-Deck Plus display
+  # lv_conf.h is in main/ with LV_CONF_PATH set in CMakeLists.txt
+  lvgl/lvgl: ~9.2
