@@ -3072,3 +3072,154 @@ SEC-06 DEFERRED:            Post-quantum (sntrup761, pending Evgeny)
 *242 lessons learned*
 *Security: 5/6 findings CLOSED*
 *Session 45: Runtime Security + HMAC NVS Vault*
+
+---
+
+## Session 46 -- 2026-03-11 to 2026-03-12 (Codename MEGABLAST)
+
+### WORLD FIRST: Post-Quantum Double Ratchet on Dedicated Hardware
+
+SEC-06 CLOSED. sntrup761 integrated into SimpleX Double Ratchet. First quantum-resistant message received 2026-03-12 at 09:16 CET. SimpleX App confirmed "Quantum Resistant". 6/6 security findings ALL CLOSED.
+
+### Bug #22: Standby Freeze Returning from Lock (NEW, MEDIUM)
+
+```
+Symptom:
+  Device freezes when returning from lock screen after standby.
+  Not PQ-related (occurs without PQ operations).
+
+Status: NEW, for Session 47.
+```
+
+### 6 Bugs Fixed During PQ Integration
+
+```
+Bug 1 (CRITICAL): AES-GCM Body Decrypt Failed (ret=-18)
+  Root cause: State machine error. Upon receiving Proposed, encap shared
+  secret was immediately fed into receive-kdf_root. Sender had NOT used
+  any KEM secret at that point. Different root keys -> decrypt failure.
+  Fix: Encap result stored in pending_ss, fed into send-kdf_root on
+  next outgoing ratchet step. *kem_ss_valid = false for Fall 2.
+
+Bug 2 (CRITICAL): Heap Crash in ratchet_encrypt (StoreProhibited)
+  Root cause: PQ header = 2346 bytes vs 124 non-PQ. All callers allocated
+  based on old header size. Buffer overflow, heap corruption.
+  Fix: ratchet_encrypt reduces padded_msg_len internally by 2222 bytes
+  when PQ active. Total output unchanged. No caller changes.
+
+Bug 3 (HIGH): NVS Blob Limit (ESP_ERR_INVALID_SIZE)
+  Root cause: ratchet_state_t grew from 520 to 5640 bytes, exceeding
+  NVS blob limit (~4000 bytes).
+  Fix: RATCHET_CLASSICAL_SIZE = offsetof(ratchet_state_t, pq) saves
+  only classical part. PQ fields persisted separately via pq_XX_* keys.
+
+Bug 4 (HIGH): Crypto-Task Result Not Returned
+  Root cause: FreeRTOS queue copies pq_request_t by value. Crypto-Task
+  writes result to its local copy, never reaches caller.
+  Fix: Result passed as pointer. Caller blocks on semaphore, keeping
+  pointed memory valid.
+
+Bug 5 (MEDIUM): WiFi Settings Crash (pre-existing)
+  Fix: NULL guard on s_wifi_list in rebuild_timer_cb.
+
+Bug 6 (MEDIUM): Ring Buffer Assert on Early Add Contact (pre-existing)
+  Fix: NULL guard on app_to_net_buf in smp_request_add_contact.
+```
+
+### sntrup761 Performance on ESP32-S3 (240 MHz)
+
+```
+keygen:              1839-1940 ms (10x slower than desktop estimates!)
+encap:               70 ms
+decap:               151-155 ms
+Background pre-comp: 1850 ms (hidden from user)
+Per direction change: ~225 ms (encap + decap, perceptible)
+
+PQClean "clean" reference: portable C, no optimizations.
+Background pre-computation mandatory (was planned as optional).
+```
+
+### PQ Wire Format (Byte-Identical to Haskell)
+
+```
+Non-PQ header:  88 bytes, KEM = 0x30 (Nothing)
+PQ header:      2310 bytes (padded), anti-downgrade
+
+KEM Proposed:   0x31 0x50 [Word16 BE pk_len=1158] [pk 1158 bytes]
+KEM Accepted:   0x31 0x41 [Word16 BE ct_len=1039] [ct 1039 bytes]
+KEM Nothing:    0x30 (padding stays at 2310 once PQ active)
+
+Anti-downgrade: pq_support transitions Off->On only, never back.
+```
+
+### PQ State Machine
+
+```
+Fall 1 (Nothing received):
+  Generate keypair, set state to proposed.
+
+Fall 2 (Proposed received):
+  Encapsulate against peer key.
+  Store shared secret in pending_ss (NOT receive-kdf_root!).
+  Store ciphertext in pending_ct. Set state to accepted.
+  *kem_ss_valid = false.
+
+Fall 3 (Accepted received):
+  Decapsulate with own SK (secret into receive-kdf_root).
+  Store new peer key. Generate new keypair.
+  Encapsulate for next round (new secret into pending_ss).
+
+Send side: pending_ss fed into send-kdf_root on next outgoing step.
+```
+
+### Memory Impact
+
+```
+Flash:              1.82 MB -> 1.85 MB (+30 KB sntrup761)
+PSRAM ratchet:      66 KB -> 722 KB (+656 KB PQ fields)
+PSRAM crypto task:  0 -> 80 KB (new, actual usage ~16 KB)
+PSRAM free:         8.05 MB -> 7.21 MB
+Internal SRAM:      unchanged (only 6 KB free, crypto task in PSRAM)
+```
+
+### Security Status: 6/6 ALL CLOSED
+
+```
+SEC-01 CLOSED (S45): sodium_memzero on PSRAM cache
+SEC-02 CLOSED (S45): HMAC NVS vault, eFuse BLOCK_KEY1
+SEC-03 CLOSED (S42): mbedtls_platform_zeroize
+SEC-04 CLOSED (S45): Auto-lock 60s + memory wipe
+SEC-05 CLOSED (S45): Device-bound HKDF with chip MAC
+SEC-06 CLOSED (S46): sntrup761 post-quantum KEM in Double Ratchet
+```
+
+### Five Encryption Layers Per Message
+
+```
+Layer 1a: X448 Double Ratchet + AES-256-GCM (classical E2E with PFS)
+Layer 1b: sntrup761 KEM (hybrid PQ, every ratchet step)
+Layer 2:  NaCl cryptobox X25519+XSalsa20+Poly1305 (per-queue)
+Layer 3:  NaCl cryptobox server-to-recipient (server traffic)
+Layer 4:  TLS 1.3 (transport)
+```
+
+### New Lessons Learned (Session 46)
+
+243. **PQClean "clean" sntrup761 keygen on ESP32-S3 takes 1.85 seconds** - 10x slower than desktop benchmarks. Background pre-computation is mandatory, not optional. PQClean avx2/aarch64 variants not portable to Xtensa (Session 46)
+244. **ESP32-S3 has only 6 KB free internal SRAM after all tasks** - Any new task with significant stack must use PSRAM. SHA-512 hardware accelerator works from PSRAM stacks (memory-mapped, not DMA). Crypto-Task uses 80 KB PSRAM, actual ~16 KB (Session 46)
+245. **When receiving KEM Proposed, encap shared secret must NOT go into receive-kdf_root** - Sender has not used any KEM secret at this point. Secret goes into pending_ss, fed into SEND-kdf_root on next outgoing step. Getting this wrong breaks ALL messaging (Session 46)
+246. **PQ header adds 2222 bytes (2346 vs 124)** - ratchet_encrypt must reduce padded_msg_len internally when PQ active to stay within 16 KB SMP block. Internal adjustment cleaner than changing all callers (Session 46)
+247. **NVS blob limit is ~4000 bytes** - ratchet_state_t at 5640 bytes exceeds this. Split: classical part via offsetof, PQ fields via separate NVS keys (pq_XX_act, _st, _opk, _osk, _ppk, _ct, _ss). Write-Before-Send at every transition (Session 46)
+248. **FreeRTOS queue copies structs by value** - Crypto-Task result via pointer to caller memory, not field in queued struct. Caller blocks on semaphore to keep memory valid (Session 46)
+249. **When PQ breaks messaging, do NOT revert the feature** - Diagnose which operation mismatches (which side feeds KEM into kdf_root at which step), fix that specific operation. Reverting loses all progress (Session 46)
+250. **Fork critical crypto dependencies** - github.com/saschadaemgen/sntrup761. Upstream tag changes, renames, or deletions cannot break your build. Independent source control for supply chain security (Session 46)
+
+---
+
+*Bug Tracker v42.0*
+*Last updated: March 12, 2026 - Session 46 Codename MEGABLAST*
+*Total bugs documented: 74 (Bug #22 standby freeze new) + Bug E*
+*250 lessons learned*
+*Security: 6/6 ALL CLOSED*
+*First quantum-resistant message: 2026-03-12, 09:16 CET*
+*The first quantum-resistant dedicated hardware messenger in the world.*

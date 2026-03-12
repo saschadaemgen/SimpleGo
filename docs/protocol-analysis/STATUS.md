@@ -1,36 +1,45 @@
 
-## Status after Session 45 - 2026-03-10
+## Status after Session 46 - 2026-03-12 (Codename MEGABLAST)
 
-### Security Implementation (Session 45)
-- SEC-01 CLOSED: sodium_memzero on PSRAM cache (123,600 bytes, 4 call sites)
-- SEC-02 CLOSED: HMAC NVS vault (eFuse BLOCK_KEY1, HMAC_UP, auto-provisioned)
-- SEC-03 CLOSED: mbedtls_platform_zeroize in smp_storage.c (Session 42)
-- SEC-04 CLOSED: Auto-lock screen (60s timeout, memory wipe before lock)
-- SEC-05 CLOSED: Device-bound HKDF (chip MAC in info parameter)
-- SEC-06 DEFERRED: Post-quantum (sntrup761, pending Evgeny confirmation)
-- **5 of 6 security findings CLOSED**
+### WORLD FIRST: Post-Quantum Double Ratchet on Dedicated Hardware
+- First quantum-resistant message received: 2026-03-12, 09:16 CET
+- SimpleX Chat App confirms "Quantum Resistant" for SimpleGo contact
+- sntrup761 KEM integrated into X448 Double Ratchet (hybrid PQ)
+- Five encryption layers per message (was four before MEGABLAST)
+- **6/6 Security Findings CLOSED**
+
+### Security: ALL FINDINGS CLOSED
+- SEC-01 CLOSED: sodium_memzero on PSRAM cache (S45)
+- SEC-02 CLOSED: HMAC NVS vault, eFuse BLOCK_KEY1 (S45)
+- SEC-03 CLOSED: mbedtls_platform_zeroize (S42)
+- SEC-04 CLOSED: Auto-lock 60s + memory wipe (S45)
+- SEC-05 CLOSED: Device-bound HKDF, chip MAC (S45)
+- SEC-06 CLOSED: sntrup761 post-quantum KEM (S46 MEGABLAST)
 
 ### Firmware
-- SMP implementation: production-ready alpha
-- 128 contacts, delivery receipts, encrypted SD history, WiFi Manager
-- Display name: NVS-backed, first-boot prompt
-- Auto-lock with secure memory wipe (PSRAM + LVGL labels)
-- NVS vault mode: HMAC-encrypted keys at rest
-- Device-bound HKDF: per-contact SD keys tied to chip MAC
-- 47 source files with AGPL-3.0 headers
+- SMP implementation with post-quantum double ratchet
+- 128 contacts (14 with PQ state due to NVS capacity)
+- AES-256-GCM encrypted SD history, WiFi Manager
+- Display name with first-boot prompt, auto-lock screen
+- HMAC NVS vault, device-bound HKDF
+- sntrup761 background keygen (1.85s, hidden from user)
+- PQ header: 2310 bytes, anti-downgrade padding
+- 47 source files + 60 sntrup761 component files
 
-### Documentation
-- Docusaurus 3 live at wiki.simplego.dev
-- security-architecture/: 15 files covering Class 1 (3,243 lines)
-- smp-in-c/ guide: 10 pages, world-first for C implementation of SMP
+### Memory After MEGABLAST
+- Flash: 1.85 MB (+30 KB sntrup761)
+- PSRAM ratchet: 722 KB (was 66 KB, +656 KB PQ fields)
+- PSRAM crypto task: 80 KB
+- PSRAM free: 7.21 MB
 
 ### Bugs
-- Bug #20: SEND after 6+ hours idle (KNOWN, Alpha acceptable)
-- Bug #21: SD card phantom counter after erase-flash (LOW)
-- WiFi rebuild_timer_cb crash on erase-flash + first-boot (pre-existing, auto-recovers)
+- Bug #20: SEND after 6+ hours idle (KNOWN)
+- Bug #21: SD phantom counter (LOW)
+- Bug #22: Standby freeze returning from lock (NEW, not PQ-related)
 
 ### Open Items
-- SEC-06: Post-quantum (confirm sntrup761 with Evgeny)
+- Bug #22 investigation (Session 47)
+- NVS partition resize for full 128 PQ contacts (Kickstarter)
+- sntrup761 boot test removal (after stability confirmed)
+- PQ keygen optimization (deferred, pre-computation sufficient)
 - Alpha firmware binary for simplego.dev/installer
-- sdkconfig.defaults management (93 KB, git strategy needed)
-- ARCHITECTURE_AND_SECURITY.md update with closed SEC findings

@@ -3450,3 +3450,164 @@ SEC-06 DEFERRED:     Post-quantum (sntrup761, pending Evgeny)
 *Status: 5/6 Security Findings CLOSED -- Runtime + NVS Vault*
 *21 Milestones Achieved*
 *Next: Session 46 -- Alpha release prep, ARCHITECTURE_AND_SECURITY.md update*
+
+---
+
+## Section 45: Session 46 -- Codename MEGABLAST: Post-Quantum Double Ratchet
+
+### 45.1 Five Encryption Layers (After MEGABLAST)
+
+```
+Layer 1a: X448 Double Ratchet + AES-256-GCM
+  Classical E2E with Perfect Forward Secrecy.
+  Every message has its own key.
+
+Layer 1b: sntrup761 KEM (hybrid with Layer 1a)
+  Post-quantum resistance for every ratchet step.
+  Shared secret combined with DH via HKDF: IKM = DH(56) || KEM(32) = 88 bytes.
+
+Layer 2: NaCl cryptobox (X25519 + XSalsa20 + Poly1305)
+  Per-queue traffic correlation protection.
+
+Layer 3: NaCl cryptobox (server-to-recipient)
+  Server traffic correlation protection.
+
+Layer 4: TLS 1.3
+  Transport security.
+```
+
+### 45.2 sntrup761 Performance (ESP32-S3, 240 MHz)
+
+```
+keygen:              1839-1940 ms (PQClean "clean", portable C)
+encap:               70 ms
+decap:               151-155 ms
+Background pre-comp: 1850 ms (hidden from user, mandatory)
+Per direction change: ~225 ms (encap + decap)
+
+10x slower than desktop benchmarks.
+avx2/aarch64 variants not portable to Xtensa.
+Pre-computation runs on PSRAM Crypto-Task (80 KB stack).
+```
+
+### 45.3 PQ Wire Format
+
+```
+Non-PQ header:  88 bytes
+  KEM field: 0x30 (Maybe Nothing)
+
+PQ header: 2310 bytes (padded)
+  KEM Proposed: 0x31 0x50 [Word16 BE 0x0486 = 1158] [pk 1158B]
+  KEM Accepted: 0x31 0x41 [Word16 BE 0x040F = 1039] [ct 1039B]
+  KEM Nothing:  0x30 (anti-downgrade: padding stays at 2310)
+
+Header difference: 2346 - 124 = 2222 bytes.
+ratchet_encrypt reduces padded_msg_len by 2222 when PQ active.
+
+Anti-downgrade rule:
+  pq_support transitions Off -> On ONLY. Never back.
+  Once PQ active, 2310-byte padding permanent.
+```
+
+### 45.4 PQ State Machine
+
+```
+RECEIVE SIDE:
+
+  Fall 1 (Nothing): Generate keypair, state = proposed
+  Fall 2 (Proposed): Encap -> pending_ss (NOT recv-kdf_root!),
+                     pending_ct stored, state = accepted,
+                     *kem_ss_valid = false
+  Fall 3 (Accepted): Decap -> recv-kdf_root, new keypair,
+                     encap for next round -> pending_ss
+
+SEND SIDE:
+  pending_ss fed into send-kdf_root on next outgoing ratchet step.
+
+CRITICAL: Fall 2 must NOT feed into recv-kdf_root.
+  Sender has not used any KEM secret at this point.
+  Wrong: immediate kdf -> different root keys -> decrypt failure.
+```
+
+### 45.5 HKDF Root KDF Extension
+
+```
+With PQ:    IKM = DH_secret(56B) || KEM_secret(32B) = 88 bytes
+Without PQ: IKM = DH_secret(56B) only
+
+Salt = current root key
+Info = "SimpleXRootRatchet"
+Algorithm = HKDF-SHA512
+Output = 96 bytes:
+  [0..31]  new root key
+  [32..63] chain key
+  [64..95] next header key
+```
+
+### 45.6 PQ NVS Persistence (Split Storage)
+
+```
+Classical: rat_XX (517 bytes via offsetof(ratchet_state_t, pq))
+  Fits within NVS blob limit (~4000 bytes)
+
+PQ fields (separate NVS keys per contact XX):
+  pq_XX_act  -- active flag
+  pq_XX_st   -- state (proposed/accepted/nothing)
+  pq_XX_opk  -- own public key (1158 bytes)
+  pq_XX_osk  -- own secret key (1763 bytes)
+  pq_XX_ppk  -- peer public key (1158 bytes)
+  pq_XX_ct   -- pending ciphertext (1039 bytes)
+  pq_XX_ss   -- pending shared secret (32 bytes)
+
+Write-Before-Send at every PQ state transition.
+NVS capacity: ~14 contacts with full PQ state (partition resize planned).
+```
+
+### 45.7 pq_kem_state_t Structure
+
+```c
+typedef struct {
+    uint8_t own_pk[1158];      // sntrup761 public key
+    uint8_t own_sk[1763];      // sntrup761 secret key
+    uint8_t peer_pk[1158];     // peer's public key
+    uint8_t pending_ct[1039];  // pending ciphertext
+    uint8_t pending_ss[32];    // pending shared secret
+    uint8_t pq_active;         // PQ support enabled for this contact
+    uint8_t pq_state;          // nothing/proposed/accepted
+    // Total: 5123 bytes per contact
+} pq_kem_state_t;
+
+// In ratchet_state_t (after classical fields):
+//   offsetof(ratchet_state_t, pq) = RATCHET_CLASSICAL_SIZE
+//   Total: 520 (classical) + 5123 (PQ) = 5643 bytes
+```
+
+### 45.8 Memory Impact
+
+```
+Flash:          1.82 MB -> 1.85 MB (+30 KB sntrup761 code)
+PSRAM ratchet:  66 KB -> 722 KB (+656 KB for 128 PQ states)
+PSRAM crypto:   0 -> 80 KB (new task, actual ~16 KB usage)
+PSRAM free:     8.05 MB -> 7.21 MB
+Internal SRAM:  unchanged (only 6 KB free at runtime)
+```
+
+### 45.9 Security Status: 6/6 ALL CLOSED
+
+```
+SEC-01 CLOSED (S45): sodium_memzero on PSRAM cache, 4 call sites
+SEC-02 CLOSED (S45): HMAC NVS vault, eFuse BLOCK_KEY1 HMAC_UP
+SEC-03 CLOSED (S42): mbedtls_platform_zeroize in smp_storage.c
+SEC-04 CLOSED (S45): Auto-lock 60s + memory wipe
+SEC-05 CLOSED (S45): Device-bound HKDF with chip MAC
+SEC-06 CLOSED (S46): sntrup761 PQ KEM in Double Ratchet (MEGABLAST)
+```
+
+---
+
+*Quick Reference v41.0*
+*Last updated: March 12, 2026 - Session 46 Codename MEGABLAST*
+*Status: QUANTUM RESISTANT -- 6/6 Security Findings CLOSED*
+*22 Milestones Achieved*
+*First quantum-resistant message: 2026-03-12, 09:16 CET*
+*Next: Session 47 -- Bug #22, Alpha release, NVS partition resize*

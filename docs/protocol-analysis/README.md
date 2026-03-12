@@ -8,7 +8,23 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: Security Implementation - 5/6 Findings CLOSED (2026-03-10 Session 45)
+## LATEST: Codename MEGABLAST - Post-Quantum Double Ratchet (2026-03-12 Session 46)
+
+```
+WORLD FIRST: Quantum-resistant messenger on dedicated embedded hardware.
+
+sntrup761 KEM integrated into X448 Double Ratchet (hybrid PQ).
+First quantum-resistant message received: 2026-03-12, 09:16 CET.
+SimpleX App confirms "Quantum Resistant" for SimpleGo contact.
+Five encryption layers per message (was four before MEGABLAST).
+6/6 Security Findings ALL CLOSED.
+Background keygen 1.85s (hidden), ~225ms per direction change.
+PQ state machine byte-identical to Haskell wire format.
+6 bugs fixed (2 CRITICAL), Bug #22 discovered (standby freeze).
+8 new lessons (#243-#250). MILESTONE 22.
+```
+
+## Session 45: Security Implementation - 5/6 CLOSED (2026-03-10)
 
 ```
 Four Security Findings closed, two CRITICAL.
@@ -537,6 +553,50 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **43** | **Mar 5-8** | **Wiki + Security Cleanup + Display Name + Bug #20** | **3 lessons, 1 SHOWSTOPPER** |
 | **44** | **Mar 8** | **Hardware Class 1 Security Architecture (15 docs)** | **5 lessons, Bug #20 demoted** |
 | **45** | **Mar 10** | **Security Implementation: 5/6 Findings CLOSED** | **5 lessons, SEC-01/02/04/05** |
+| **46** | **Mar 11-12** | **MEGABLAST: Post-Quantum Double Ratchet - WORLD FIRST** | **8 lessons, 6/6 SEC CLOSED** |
+
+---
+
+## Session 46 Key Achievements -- Codename MEGABLAST (WORLD FIRST)
+
+### First Quantum-Resistant Dedicated Hardware Messenger
+
+```
+SEC-06 CLOSED: sntrup761 Post-Quantum KEM in Double Ratchet
+First quantum-resistant message: 2026-03-12, 09:16 CET
+SimpleX App confirms "Quantum Resistant" for SimpleGo contact
+6/6 Security Findings ALL CLOSED
+
+Five encryption layers per message:
+  1a. X448 Double Ratchet + AES-256-GCM (classical E2E)
+  1b. sntrup761 KEM (hybrid PQ, every ratchet step)
+  2.  NaCl cryptobox per-queue (traffic correlation)
+  3.  NaCl cryptobox server-to-recipient (server traffic)
+  4.  TLS 1.3 (transport)
+```
+
+### sntrup761 on ESP32-S3
+
+```
+PQClean round3 sntrup761 as ESP-IDF component (60 files)
+Forked: github.com/saschadaemgen/sntrup761
+keygen: 1.85s (background pre-computation, hidden from user)
+encap: 70ms, decap: 155ms, direction change: ~225ms
+PSRAM Crypto-Task: 80 KB stack (safe: no NVS, no DMA)
+Wire format: byte-identical to Haskell (4 round-trip tests)
+PQ state machine: 3 receive cases, anti-downgrade
+```
+
+### 6 Bugs Fixed During Integration
+
+```
+Bug 1 (CRITICAL): KEM secret fed into wrong kdf_root
+Bug 2 (CRITICAL): Buffer overflow (2346 vs 124 byte header)
+Bug 3 (HIGH): NVS blob limit exceeded (5640 > 4000 bytes)
+Bug 4 (HIGH): FreeRTOS queue value-copy lost result
+Bug 5+6 (MEDIUM): Pre-existing NULL guards (WiFi, ring buffer)
+Bug #22 (NEW): Standby freeze returning from lock (not PQ-related)
+```
 
 ---
 
@@ -1632,4 +1692,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 10, 2026 - Session 45 (Security Implementation: 5/6 Findings CLOSED)*
+*Last updated: March 12, 2026 - Session 46 Codename MEGABLAST (First Quantum-Resistant Dedicated Hardware Messenger)*

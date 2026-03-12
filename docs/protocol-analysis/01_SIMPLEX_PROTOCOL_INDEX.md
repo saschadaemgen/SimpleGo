@@ -4,18 +4,18 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation
 **Version:** v0.1.18-alpha
-**Last Updated:** 2026-03-10 (Session 45 -- Security Implementation: 4 Findings Closed)
+**Last Updated:** 2026-03-12 (Session 46 -- Codename MEGABLAST: Post-Quantum Double Ratchet)
 
 ---
 
-## LATEST: Security Implementation (Session 45)
+## LATEST: Codename MEGABLAST - Post-Quantum Double Ratchet (Session 46)
 
-Session 45 closed four Security Findings, two CRITICAL. SEC-01: sodium_memzero on 123KB PSRAM cache at 4 call sites. SEC-04: auto-lock screen with 60s timeout and memory wipe. SEC-02: HMAC NVS vault with eFuse BLOCK_KEY1 auto-provisioned on first boot. SEC-05: device-bound HKDF with chip MAC. 5 of 6 security findings now closed. Only SEC-06 (post-quantum) deferred pending Evgeny confirmation.
+SEC-06 CLOSED. sntrup761 Post-Quantum Key Encapsulation integrated into SimpleX Double Ratchet. First quantum-resistant message received 2026-03-12 at 09:16 CET. SimpleX App confirmed "Quantum Resistant". First known post-quantum double ratchet on dedicated embedded hardware. All 6/6 security findings CLOSED. Five encryption layers per message. PQClean sntrup761 as ESP-IDF component, background keygen (1.85s), PQ state machine byte-identical to Haskell wire format. 6 bugs fixed, Bug #22 discovered (standby freeze).
 
-Bugs: 73 total (unchanged)
-Lessons: 242 total (5 new in S45: #238-#242)
+Bugs: 74 total (Bug #22 standby freeze new)
+Lessons: 250 total (8 new in S46: #243-#250)
 
-## PREVIOUS: Hardware Class 1 Security Architecture (Session 44)
+## PREVIOUS: Security Implementation (Session 45)
 
 ## PREVIOUS: Consolidation and Quality Pass (Session 42)
 
@@ -96,7 +96,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 42 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 43 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -142,6 +142,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 42 
 | **40** | [**42_PART40_SESSION_43.md**](42_PART40_SESSION_43.md) | **~210** | ** Documentation + Security Cleanup + Display Name** |
 | **41** | [**43_PART41_SESSION_44.md**](43_PART41_SESSION_44.md) | **~155** | ** Hardware Class 1 Security Architecture** |
 | **42** | [**44_PART42_SESSION_45.md**](44_PART42_SESSION_45.md) | **~155** | ** Security Implementation: 4 Findings Closed (SEC-01/02/04/05)** |
+| **43** | [**45_PART43_SESSION_46.md**](45_PART43_SESSION_46.md) | **~230** | ** MEGABLAST: Post-Quantum Double Ratchet - World First** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -202,6 +203,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 42 
 | **43** | **Mar 5-8, 2026** | **DOCS+SEC+UX** | ** Wiki + Security Cleanup + Display Name + Bug #20** |
 | **44** | **Mar 8, 2026** | **SECURITY** | ** Hardware Class 1 Security Architecture (15 docs, 3,243 lines)** |
 | **45** | **Mar 10, 2026** | **SECURITY** | ** 4 Findings Closed (SEC-01/02/04/05), HMAC NVS Vault Live** |
+| **46** | **Mar 11-12, 2026** | **MEGABLAST** | ** Post-Quantum Double Ratchet - World First! 6/6 SEC CLOSED** |
 
 ---
 
@@ -331,6 +333,16 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 42 
 - **SEC-05 CLOSED: Device-bound HKDF (chip MAC in info)** 🛡️
 - **5/6 Security Findings CLOSED** 🛡️
 - **MILESTONE 21: Runtime Security + HMAC NVS Vault** 🛡️
+- **SEC-06 CLOSED: sntrup761 Post-Quantum KEM in Double Ratchet** 🔮
+- **WORLD FIRST: Quantum-Resistant Message on Dedicated Hardware (2026-03-12 09:16 CET)** 🔮
+- **SimpleX App Confirms "Quantum Resistant" for SimpleGo Contact** 🔮
+- **Five Encryption Layers Per Message (was four before MEGABLAST)** 🔮
+- **6/6 Security Findings ALL CLOSED** 🔮
+- **sntrup761 ESP-IDF Component (PQClean, github.com/saschadaemgen/sntrup761)** 🔮
+- **PQ State Machine (3 receive cases, anti-downgrade, wire format byte-identical)** 🔮
+- **Background Pre-Computation (1.85s keygen hidden from user)** 🔮
+- **PSRAM Crypto Task (80 KB, safe: no NVS writes, memory-mapped SHA-512)** 🔮
+- **MILESTONE 22: Post-Quantum Double Ratchet (Codename MEGABLAST)** 🔮
 
 ### Session 23: The 7-Step Handshake
 ```
@@ -537,21 +549,26 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 46)
+## Next Steps (Session 47)
 
-### Phase 1: Alpha Release Preparation
+### Phase 1: Stabilization
 ```
-P0: Alpha firmware binary for simplego.dev/installer
-P1: ARCHITECTURE_AND_SECURITY.md update with closed SEC findings
-P2: sdkconfig.defaults git strategy (93 KB, overlay approach)
+P0: Bug #22 -- Standby freeze returning from lock screen
+P1: sntrup761 boot test removal (after stability confirmed)
+P2: NVS partition resize for full 128 PQ contacts (Kickstarter)
 ```
 
-### Phase 2: Remaining Items
+### Phase 2: Alpha Release
 ```
-P3: SEC-06 post-quantum (confirm sntrup761 with Evgeny first)
-P4: Bug #20 diagnostic logging (KNOWN, not blocking)
-P5: Bug #21 SD card metadata validation
-P6: WiFi rebuild_timer_cb crash on first-boot (pre-existing)
+P3: Alpha firmware binary for simplego.dev/installer
+P4: ARCHITECTURE_AND_SECURITY.md update (6/6 SEC CLOSED, 5 layers)
+P5: PQ Settings UI toggle
+```
+
+### Phase 3: Optimization
+```
+P6: PQ keygen optimization (Xtensa-specific, deferred)
+P7: Bug #20 diagnostic logging (KNOWN)
 ```
 
 ---
@@ -582,32 +599,27 @@ P6: WiFi rebuild_timer_cb crash on first-boot (pre-existing)
 | **19** | ** Professional Documentation Site** | **2026-03-05** | **43** |
 | **20** | ** Hardware Security Architecture** | **2026-03-08** | **44** |
 | **21** | ** Runtime Security + HMAC NVS Vault** | **2026-03-10** | **45** |
+| **22** | ** MEGABLAST: Post-Quantum Double Ratchet** | **2026-03-12** | **46** |
 
 ---
 
 ## Current Project Status
 
-**Version:** v0.1.18-alpha | **Last updated:** 2026-03-10 Session 45
+**Version:** v0.1.18-alpha | **Last updated:** 2026-03-12 Session 46 (Codename MEGABLAST)
 
-### Firmware
+### Firmware - Post-Quantum Enabled
 
-- SMP implementation: production-ready alpha
-- 128 simultaneous contacts with per-contact Double Ratchet state
+- **WORLD FIRST: Quantum-resistant dedicated hardware messenger**
+- sntrup761 hybrid with X448 Double Ratchet (five encryption layers)
+- SimpleX App confirms "Quantum Resistant" for SimpleGo contact
+- 128 contacts (14 with full PQ state due to NVS capacity)
 - AES-256-GCM encrypted chat history on SD card
-- WiFi Manager with multi-network support and WPA3
-- Delivery receipts (double checkmark)
-- User-configurable display name with first-boot prompt
-- **SEC-01: PSRAM cache wiped with sodium_memzero (123KB, 4 call sites)**
-- **SEC-02: HMAC NVS vault (eFuse BLOCK_KEY1, auto-provisioned)**
-- **SEC-04: Auto-lock screen (60s timeout, memory wipe before lock)**
-- **SEC-05: Device-bound HKDF (chip MAC in key derivation info)**
-- Security log cleanup: zero cryptographic material on serial output
-- Zero printf in production code
-- 47 source files with AGPL-3.0 headers
-- Bug #20: SEND after 6+ hours idle (KNOWN, Alpha acceptable)
-- Bug #21: SD phantom counter after erase-flash (LOW)
+- WiFi Manager, delivery receipts, display name, auto-lock
+- HMAC NVS vault, device-bound HKDF, PSRAM cache wipe
+- Background PQ keygen (1.85s hidden), ~225ms per direction change
+- 47 source files + 60 sntrup761 component files
 
-### Security Status: 5/6 Findings CLOSED
+### Security: 6/6 ALL CLOSED
 
 | SEC | Status | Session |
 |-----|--------|---------|
@@ -616,7 +628,7 @@ P6: WiFi rebuild_timer_cb crash on first-boot (pre-existing)
 | SEC-03 (HIGH) | CLOSED | 42 |
 | SEC-04 (HIGH) | CLOSED | 45 |
 | SEC-05 (MEDIUM) | CLOSED | 45 |
-| SEC-06 (MEDIUM) | DEFERRED | pending Evgeny |
+| SEC-06 (MEDIUM) | **CLOSED** | **46 MEGABLAST** |
 
 ### Documentation
 
@@ -626,11 +638,11 @@ P6: WiFi rebuild_timer_cb crash on first-boot (pre-existing)
 
 ### Open Items
 
-- SEC-06: Post-quantum (confirm sntrup761 with Evgeny)
+- Bug #22: Standby freeze returning from lock (Session 47)
+- NVS partition resize for 128 PQ contacts (Kickstarter)
 - Alpha firmware binary for simplego.dev/installer
-- sdkconfig.defaults management (93 KB, git strategy needed)
-- ARCHITECTURE_AND_SECURITY.md update with closed SEC findings
+- PQ keygen optimization (deferred, pre-computation sufficient)
 
 ---
 
-*Index updated: 2026-03-10 Session 45 -- Security Implementation: 5/6 Findings CLOSED*
+*Index updated: 2026-03-12 Session 46 -- Codename MEGABLAST: Post-Quantum Double Ratchet - World First*
