@@ -7,15 +7,25 @@ cmake_minimum_required(VERSION 3.16)
 # Target: ESP32-S3 (LilyGo T-Deck Plus)
 set(IDF_TARGET "esp32s3")
 
+# Ensure wolfssl finds user_settings.h for HAVE_CURVE448
+# Must be set BEFORE include(project.cmake) so wolfssl sees it during configure
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/components/wolfssl_config/include" CACHE STRING "" FORCE)
+
 # Include ESP-IDF CMake functions
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 # Project name
 project(simplex_client)
 
-# Ensure wolfssl component finds user_settings.h from wolfssl_config
-# Required for HAVE_CURVE448 and other crypto defines
+# Copy user_settings.h into managed wolfssl component (fresh clone builds)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/managed_components/wolfssl__wolfssl")
+    file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/components/wolfssl_config/include/user_settings.h"
+         DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/managed_components/wolfssl__wolfssl/include/")
+    message(STATUS "SimpleGo: copied user_settings.h into managed wolfssl component")
+endif()
+
+# Fallback: target include for local component builds
 if(TARGET __idf_wolfssl__wolfssl)
     target_include_directories(__idf_wolfssl__wolfssl PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/components/wolfssl_config/include)
+        "${CMAKE_CURRENT_SOURCE_DIR}/components/wolfssl_config/include")
 endif()
