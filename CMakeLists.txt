@@ -1,4 +1,4 @@
-# SimpleGo - Native SimpleX SMP Client for ESP32
+﻿# SimpleGo - Native SimpleX SMP Client for ESP32
 # Part of the Sentinel Secure Messenger Suite
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
@@ -12,3 +12,10 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 # Project name
 project(simplex_client)
+
+# Ensure wolfssl component finds user_settings.h from wolfssl_config
+# Required for HAVE_CURVE448 and other crypto defines
+if(TARGET __idf_wolfssl__wolfssl)
+    target_include_directories(__idf_wolfssl__wolfssl PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/components/wolfssl_config/include)
+endif()
