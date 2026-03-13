@@ -214,13 +214,15 @@ uint64_t handshake_get_last_msg_id(void);
 
 /**
  * Retry sending the last failed message after reconnect.
- * Uses saved encrypted payload - no re-encryption, no ratchet mutation.
+ * Re-signs with new session_id - no re-encryption, no ratchet mutation.
  *
- * @param ssl    New SSL context (after reconnect)
- * @param block  SMP block buffer (SMP_BLOCK_SIZE)
+ * @param ssl            New SSL context (after reconnect)
+ * @param block          SMP block buffer (SMP_BLOCK_SIZE)
+ * @param new_session_id New 32-byte session ID from reconnected peer
  * @return true if retry succeeded
  */
-bool handshake_retry_send(mbedtls_ssl_context *ssl, uint8_t *block);
+bool handshake_retry_send(mbedtls_ssl_context *ssl, uint8_t *block,
+                          const uint8_t *new_session_id);
 
 /**
  * Check if a retry buffer is pending (write failed, waiting for reconnect).

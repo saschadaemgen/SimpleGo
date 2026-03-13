@@ -45,10 +45,12 @@ static uint8_t active_handshake_idx = 0;
 
 // Retry buffer: holds encrypted transmission after write failure.
 // Needed because ratchet has already advanced - re-encryption would desync.
+// After reconnect, session_id changes - signature must be re-computed.
 typedef struct {
     uint8_t *transmission;      // encrypted payload (PSRAM)
     size_t   transmission_len;  // payload length
     uint8_t  prev_msg_hash[32]; // SHA-256 of plaintext, for handshake_save_state after retry
+    uint8_t  snd_auth_private[64]; // Ed25519 signing key for re-signing after reconnect
     uint8_t  contact_slot;      // which contact this belongs to
     bool     pending;           // retry waiting?
 } retry_buffer_t;
@@ -771,6 +773,9 @@ static bool encrypt_and_send_agent_msg(
     free(send_body);
     
     uint8_t signature[64];
+    // DEBUG Bug#21: dump session_id and first 8 bytes of signing key
+    ESP_LOG_BUFFER_HEX("SIG_SESS", session_id, 32);
+    ESP_LOG_BUFFER_HEX("SIG_AUTH", snd_auth_private, 8);
     crypto_sign_detached(signature, NULL, authorized, ap, snd_auth_private);
     
     ESP_LOGD(TAG, "   [%s] Signed SEND (%d bytes)", label, ap);
@@ -817,6 +822,7 @@ static bool encrypt_and_send_agent_msg(
             memcpy(s_retry.transmission, transmission, tp);
             s_retry.transmission_len = tp;
             memcpy(s_retry.prev_msg_hash, pre_msg_hash, 32);
+            memcpy(s_retry.snd_auth_private, snd_auth_private, 64);
             s_retry.contact_slot = active_handshake_idx;
             s_retry.pending = true;
             ESP_LOGI(TAG, "   [%s] Retry buffer: %d bytes saved in PSRAM", label, tp);
@@ -1185,7 +1191,8 @@ uint64_t handshake_get_last_msg_id(void) {
  * @param block  SMP block buffer (SMP_BLOCK_SIZE)
  * @return true if retry succeeded
  */
-bool handshake_retry_send(mbedtls_ssl_context *ssl, uint8_t *block) {
+bool handshake_retry_send(mbedtls_ssl_context *ssl, uint8_t *block,
+                          const uint8_t *new_session_id) {
     if (!s_retry.pending || !s_retry.transmission || s_retry.transmission_len == 0) {
         ESP_LOGD(TAG, "No pending retry");
         return false;
@@ -1193,9 +1200,43 @@ bool handshake_retry_send(mbedtls_ssl_context *ssl, uint8_t *block) {
 
     ESP_LOGI(TAG, "Retrying failed send: %zu bytes", s_retry.transmission_len);
 
-    int ret = smp_write_command_block(ssl, block,
-                                       s_retry.transmission,
-                                       s_retry.transmission_len);
+    // Transmission layout:
+    //   [0]      sigLen = 64 (0x40)
+    //   [1-64]   signature (64 bytes)
+    //   [65]     sessIdLen = 32 (0x20)
+    //   [66-97]  sessionId (32 bytes)
+    //   [98+]    send_body (corrId + entityId + SEND + encrypted msg)
+    //
+    // After reconnect, the server has a NEW session_id.
+    // The old signature covers the OLD session_id - ERR AUTH guaranteed.
+    // Fix: replace session_id, re-sign, then send.
+
+    uint8_t *tx = s_retry.transmission;
+    size_t tx_len = s_retry.transmission_len;
+
+    // Sanity check: sigLen must be 64, sessIdLen must be 32
+    if (tx_len < 99 || tx[0] != 64 || tx[65] != 32) {
+        ESP_LOGE(TAG, "Retry buffer format invalid: sigLen=%d sessIdLen=%d len=%zu",
+                 tx[0], tx[65], tx_len);
+        return false;
+    }
+
+    // 1. Replace session_id at offset 66-97
+    memcpy(&tx[66], new_session_id, 32);
+    ESP_LOG_BUFFER_HEX("RETRY_NEW_SESS", new_session_id, 32);
+
+    // 2. Re-sign: "authorized" = everything from offset 65 onward (sessIdLen + sessionId + send_body)
+    size_t authorized_len = tx_len - 65;
+    uint8_t new_signature[64];
+    crypto_sign_detached(new_signature, NULL, &tx[65], authorized_len, s_retry.snd_auth_private);
+
+    // 3. Replace signature at offset 1-64
+    memcpy(&tx[1], new_signature, 64);
+
+    ESP_LOGI(TAG, "Retry: session_id replaced + re-signed (%zu bytes authorized)", authorized_len);
+
+    // 4. Send
+    int ret = smp_write_command_block(ssl, block, tx, tx_len);
     if (ret != 0) {
         ESP_LOGE(TAG, "Retry write ALSO failed: %d - keeping buffer", ret);
         return false;
@@ -1248,6 +1289,7 @@ void handshake_clear_retry(void) {
     s_retry.transmission_len = 0;
     s_retry.pending = false;
     sodium_memzero(s_retry.prev_msg_hash, 32);
+    sodium_memzero(s_retry.snd_auth_private, 64);
     s_retry.contact_slot = 0;
 }
 

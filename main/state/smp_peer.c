@@ -187,6 +187,7 @@ bool peer_connect(const char *host, int port) {
     }
 
     ESP_LOGI(TAG, "   ✅ SMP Handshake complete!");
+    ESP_LOG_BUFFER_HEX("PEER_SESS", peer_state.session_id, 32);  // DEBUG Bug#21
     peer_state.connected = true;
 
     // Update global peer_conn for compatibility
@@ -872,6 +873,7 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
             return false;
         }
         ESP_LOGI(TAG, "   ✅ Peer reconnected!");
+        ESP_LOG_BUFFER_HEX("NEW_SESS", peer_state.session_id, 32);  // DEBUG Bug#21
     }
 
     if (!pending_peer.valid || !pending_peer.has_dh) {
@@ -925,7 +927,7 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
 
         if (peer_connect(peer_state.last_host, peer_state.last_port)) {
             ESP_LOGI(TAG, "Reconnected! Retrying failed send...");
-            ok = handshake_retry_send(&peer_state.ssl, block);
+            ok = handshake_retry_send(&peer_state.ssl, block, peer_state.session_id);
 
             if (ok) {
                 ESP_LOGI(TAG, "Retry successful!");
@@ -1019,7 +1021,7 @@ bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8
 
         if (peer_connect(peer_state.last_host, peer_state.last_port)) {
             ESP_LOGI(TAG, "Reconnected! Retrying failed receipt...");
-            ok = handshake_retry_send(&peer_state.ssl, block);
+            ok = handshake_retry_send(&peer_state.ssl, block, peer_state.session_id);
 
             if (ok) {
                 ESP_LOGI(TAG, "Receipt retry successful!");
