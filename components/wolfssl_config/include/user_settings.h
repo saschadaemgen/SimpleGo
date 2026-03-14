@@ -12,6 +12,12 @@
 #define NO_WOLFSSL_SERVER
 #define NO_WOLFSSL_CLIENT
 
+/* Prevent symbol collisions with mbedTLS (CRITICAL for Linux builds) */
+#define NO_OLD_WC_NAMES
+#define NO_OLD_SSL_NAMES
+#define NO_OLD_RNGNAME
+#define NO_OLD_SHA_NAMES
+
 /* X448/Curve448 - SimpleX E2E Double Ratchet */
 #define HAVE_CURVE448
 #define CURVE448_SMALL
