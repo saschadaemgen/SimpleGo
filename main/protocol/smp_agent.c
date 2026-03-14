@@ -7,6 +7,7 @@
  */
 
 #include "smp_agent.h"
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include "esp_log.h"
@@ -167,7 +168,7 @@ static bool ratchet_parse_msg_header(const uint8_t *header_plain,
     *ns = (header_plain[mhp] << 24) | (header_plain[mhp + 1] << 16) |
           (header_plain[mhp + 2] << 8) | header_plain[mhp + 3];
 
-    ESP_LOGD(TAG, "PN=%u, Ns=%u", *pn, *ns);
+    ESP_LOGD(TAG, "PN=%" PRIu32 ", Ns=%" PRIu32 "", *pn, *ns);
     return true;
 }
 

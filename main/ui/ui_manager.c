@@ -95,7 +95,7 @@ static void lock_timer_cb(lv_timer_t *timer)
     uint32_t inactive = lv_disp_get_inactive_time(disp);
     if (inactive >= LOCK_TIMEOUT_MS) {
         ESP_LOGI(TAG, "SEC-04: Inactivity %u ms >= %u ms, locking",
-                 (unsigned)inactive, LOCK_TIMEOUT_MS);
+                 (unsigned)inactive, (unsigned)LOCK_TIMEOUT_MS);
         ui_manager_lock();
     }
 }
