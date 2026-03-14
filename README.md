@@ -2,8 +2,6 @@
   <img src=".github/assets/simplego_banner.png" alt="SimpleGo" width="1500" height="230">
 </p>
 
-<h1 align="center">SimpleGo</h1>
-
 <p align="center">
   <strong>The world's first native C implementation of the SimpleX Messaging Protocol.</strong><br>
   Encrypted communication and IoT on dedicated hardware. No smartphone, no cloud, no compromises.
@@ -12,7 +10,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License"></a>
   <a href="#license"><img src="https://img.shields.io/badge/Hardware-CERN--OHL--W--2.0-green.svg" alt="Hardware License"></a>
-  <a href="#status"><img src="https://img.shields.io/badge/version-0.1.18--alpha-orange.svg" alt="Version"></a>
+  <a href="#status"><img src="https://img.shields.io/badge/version-0.1.17--alpha-orange.svg" alt="Version"></a>
   <a href="#getting-started"><img src="https://img.shields.io/badge/platform-ESP32--S3-lightgrey.svg" alt="Platform"></a>
   <a href="https://wiki.simplego.dev"><img src="https://img.shields.io/badge/docs-wiki.simplego.dev-blue.svg" alt="Documentation"></a>
 </p>
@@ -66,61 +64,151 @@ Post-quantum key exchange using **sntrup761** (Streamlined NTRU Prime) is integr
 
 ## Getting Started
 
-SimpleGo runs on the [LilyGo T-Deck Plus](https://www.lilygo.cc/products/t-deck-plus), available for $50-70.
+### What you need
 
-### Requirements
+| Item | Details |
+|:-----|:--------|
+| **LilyGo T-Deck Plus** | Available for $50-70 from [lilygo.cc](https://www.lilygo.cc/products/t-deck-plus) or AliExpress |
+| **MicroSD card** | Any size, formatted as **FAT32**. Required for encrypted chat history storage. |
+| **USB-C cable** | For flashing and serial monitoring |
+| **ESP-IDF 5.5.2** | Espressif IoT Development Framework ([download](https://docs.espressif.com/projects/esp-idf/en/v5.5.2/esp32s3/get-started/)) |
 
-- **ESP-IDF 5.5.2** or later ([Installation Guide](https://docs.espressif.com/projects/esp-idf/en/v5.5.2/esp32s3/get-started/))
-- Python 3.9+, CMake 3.16+ (included with ESP-IDF)
-- Git
+---
 
-### Install ESP-IDF
+### Installation on Windows
 
-**Linux / macOS:**
-```bash
-mkdir -p ~/esp && cd ~/esp
-git clone -b v5.5.2 --recursive https://github.com/espressif/esp-idf.git
-cd esp-idf && ./install.sh esp32s3 && source export.sh
-```
+**1. Install ESP-IDF**
 
-**Windows:** Download the [ESP-IDF Offline Installer](https://dl.espressif.com/dl/esp-idf/) (v5.5.2). After installation, use "ESP-IDF 5.5 PowerShell" from the Start menu.
+Download and run the [ESP-IDF Offline Installer](https://dl.espressif.com/dl/esp-idf/) for version 5.5.2. After installation, open **"ESP-IDF 5.5 PowerShell"** from the Start menu. All following commands are entered there.
 
-### Clone, Patch, Build, Flash
+**2. Clone the repository**
 
-```bash
+```powershell
+cd C:\Espressif\projects
 git clone https://github.com/saschadaemgen/SimpleGo.git
 cd SimpleGo
-
-# Apply required mbedTLS patches (see patches/README.md for details)
-chmod +x patches/apply_patches.sh && ./patches/apply_patches.sh    # Linux/macOS
-# .\patches\apply_patches.ps1                                      # Windows
-
-# Build and flash
-idf.py build
-idf.py flash -p /dev/ttyACM0          # Linux (check your port)
-# idf.py flash -p COM6                # Windows (check your port)
 ```
 
-WiFi credentials are configured on the device display at first boot. No menuconfig required.
+**3. Apply mbedTLS patches**
 
-> **Why patches?** SimpleX relay servers use ED25519 certificates. ESP-IDF's mbedTLS does not support ED25519 natively. The patches add compatibility without reducing security - server identity is verified through key hash pinning at the protocol level, not through the TLS certificate chain. See [patches/README.md](patches/README.md) for the full explanation.
+SimpleX relay servers use ED25519 certificates which ESP-IDF's mbedTLS does not support natively. These patches are required for the TLS connection to work. See [patches/README.md](patches/README.md) for details.
+
+```powershell
+.\patches\apply_patches.ps1
+```
+
+**4. Build**
+
+```powershell
+idf.py build
+```
+
+**5. Flash**
+
+Connect the T-Deck Plus via USB-C. Check which COM port it uses in the Device Manager.
+
+```powershell
+idf.py flash monitor -p COM6
+```
+
+Replace `COM6` with your actual port.
+
+**6. First boot**
+
+The device shows a WiFi setup screen. Select your network and enter the password using the keyboard. After connecting, the main screen appears. Insert a FAT32-formatted MicroSD card for encrypted message storage.
+
+---
+
+### Installation on Linux
+
+**1. Install ESP-IDF**
+
+```bash
+sudo apt update && sudo apt install -y git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
+mkdir -p ~/esp && cd ~/esp
+git clone -b v5.5.2 --recursive https://github.com/espressif/esp-idf.git
+cd esp-idf
+./install.sh esp32s3
+source export.sh
+```
+
+Note: You need to run `source ~/esp/esp-idf/export.sh` in every new terminal session.
+
+**2. Clone the repository**
+
+```bash
+cd ~
+git clone https://github.com/saschadaemgen/SimpleGo.git
+cd SimpleGo
+```
+
+**3. Apply mbedTLS patches**
+
+SimpleX relay servers use ED25519 certificates which ESP-IDF's mbedTLS does not support natively. These patches are required for the TLS connection to work. See [patches/README.md](patches/README.md) for details.
+
+```bash
+chmod +x patches/apply_patches.sh
+./patches/apply_patches.sh
+```
+
+**4. Build**
+
+```bash
+idf.py build
+```
+
+**5. Set serial port permissions**
+
+```bash
+sudo usermod -a -G dialout $USER
+```
+
+Log out and log back in for this to take effect.
+
+**6. Flash**
+
+Connect the T-Deck Plus via USB-C. Find the port:
+
+```bash
+ls /dev/ttyACM* /dev/ttyUSB*
+```
+
+Flash and monitor:
+
+```bash
+idf.py flash monitor -p /dev/ttyACM0
+```
+
+Replace `/dev/ttyACM0` with your actual port.
+
+**7. First boot**
+
+The device shows a WiFi setup screen. Select your network and enter the password using the keyboard. After connecting, the main screen appears. Insert a FAT32-formatted MicroSD card for encrypted message storage.
 
 ---
 
 ## Security Modes
 
-SimpleGo supports three security configurations using ESP32-S3 hardware security features.
+SimpleGo supports three security configurations using ESP32-S3 hardware security features. All three modes build on top of the base configuration (`sdkconfig.defaults`). The Open and Vault configs are overlays that enable additional security features.
 
-| Mode | Config | What it does |
-|:-----|:-------|:-------------|
-| **Default** | `sdkconfig.defaults` | Standard build. No eFuse. Unlimited reflash. For development and testing. |
-| **Open** | `sdkconfig.defaults.open` | Basic eFuse configuration. Open developer mode. |
-| **Vault** | `sdkconfig.defaults.vault` | Secure Boot v2, Flash Encryption, NVS Encryption, JTAG disabled. Signed firmware only. |
+| Mode | What it does |
+|:-----|:-------------|
+| **Default** | Standard build. No eFuse. Unlimited reflash. For development and testing. |
+| **Open** | NVS encryption and eFuse auto-provisioning disabled. Basic developer mode. |
+| **Vault** | NVS encryption with HMAC eFuse key protection. Auto eFuse provisioning enabled. |
 
+**Windows:**
+```powershell
+idf.py build                                                                                    # Default
+idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.open" build                 # Open
+idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.vault" build                # Vault
+```
+
+**Linux:**
 ```bash
-idf.py build                                                        # Default mode
-idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.open" build       # Open mode
-idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.vault" build      # Vault mode
+idf.py build                                                                                    # Default
+idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.open" build                 # Open
+idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.vault" build                # Vault
 ```
 
 | Feature | Default | Open | Vault |
@@ -129,10 +217,8 @@ idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.vault" build      # Vault mode
 | SD card encryption (AES-256-GCM) | Yes | Yes | Yes |
 | Post-quantum key exchange | Yes | Yes | Yes |
 | NVS encryption (eFuse-backed) | - | - | Yes |
-| Flash encryption | - | - | Yes |
-| Secure Boot v2 | - | - | Yes |
-| JTAG disabled | - | - | Yes |
-| Reflash | Unlimited | Limited | Signed only |
+| eFuse auto-provisioning | - | - | Yes |
+| Reflash | Unlimited | Unlimited | Limited |
 | Estimated physical attack cost | ~$15 | ~$15 | ~$30,000 |
 
 > **Warning:** Vault mode permanently burns eFuse fuses on the ESP32-S3. This is irreversible. A wrong configuration will brick the device. Read the full documentation at [wiki.simplego.dev/security](https://wiki.simplego.dev/security) before using Vault mode.
