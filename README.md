@@ -191,13 +191,13 @@ The device shows a WiFi setup screen. Select your network and enter the password
 
 ## Security Modes
 
-SimpleGo supports three security configurations using ESP32-S3 hardware security features. All three modes build on top of the base configuration (`sdkconfig.defaults`). The Open and Vault configs are overlays that enable additional security features.
+SimpleGo supports three security configurations using ESP32-S3 hardware security features. The base configuration (`sdkconfig.defaults`) already includes NVS encryption and eFuse auto-provisioning. The Open and Vault configs are overlays that modify these settings.
 
 | Mode | What it does |
 |:-----|:-------------|
-| **Default** | Standard build. No eFuse. Unlimited reflash. For development and testing. |
-| **Open** | NVS encryption and eFuse auto-provisioning disabled. Basic developer mode. |
-| **Vault** | NVS encryption with HMAC eFuse key protection. Auto eFuse provisioning enabled. |
+| **Default** | Full build with NVS encryption and eFuse auto-provisioning enabled. Production-ready security out of the box. |
+| **Open** | Disables NVS encryption and eFuse auto-provisioning. For development and debugging where you need unlimited reflash and NVS access. |
+| **Vault** | NVS encryption with HMAC-based eFuse key protection (BLOCK_KEY1). The strongest hardware-backed configuration. |
 
 **Windows:**
 ```powershell
@@ -218,8 +218,8 @@ idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.vault" build
 | Encrypted messaging (4 layers) | Yes | Yes | Yes |
 | SD card encryption (AES-256-GCM) | Yes | Yes | Yes |
 | Post-quantum key exchange | Yes | Yes | Yes |
-| NVS encryption (eFuse-backed) | - | - | Yes |
-| eFuse auto-provisioning | - | - | Yes |
+| NVS encryption | Yes | No | Yes (HMAC) |
+| eFuse auto-provisioning | Yes | No | Yes |
 | Reflash | Unlimited | Unlimited | Limited |
 | Estimated physical attack cost | ~$15 | ~$15 | ~$30,000 |
 
