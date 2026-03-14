@@ -7,6 +7,7 @@
  */
 
 #include "smp_ratchet.h"
+#include <inttypes.h>
 #include "smp_x448.h"
 #include "smp_crypto.h"
 #include "smp_storage.h"
@@ -412,7 +413,7 @@ int pq_header_serialize(uint8_t *buf, size_t buf_size,
     /* Pad with '#' to target size */
     memset(&buf[p], '#', padded_len - p);
 
-    ESP_LOGD(TAG, "pq_header_serialize: content=%" PRIu32 ", padded=%zu, pq=%d, kem_state=%d",
+    ESP_LOGD(TAG, "pq_header_serialize: content=%u, padded=%zu, pq=%d, kem_state=%d",
              content_len, padded_len, is_pq ? 1 : 0,
              (pq && is_pq) ? pq->pq_kem_state : -1);
 
@@ -434,7 +435,7 @@ int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
 
     /* Bounds check: content must fit in buffer */
     if ((size_t)(content_len + 2) > buf_len) {
-        ESP_LOGE(TAG, "pq_header_deserialize: content_len %" PRIu32 " exceeds buf %zu", content_len, buf_len);
+        ESP_LOGE(TAG, "pq_header_deserialize: content_len %u exceeds buf %zu", content_len, buf_len);
         return -2;
     }
 
@@ -444,7 +445,7 @@ int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
     /* msgDHRs: 1 byte length + SPKI DER */
     uint8_t key_len = buf[p++];
     if (key_len != 68) {
-        ESP_LOGE(TAG, "pq_header_deserialize: unexpected key_len %" PRIu32 " (expected 68)", key_len);
+        ESP_LOGE(TAG, "pq_header_deserialize: unexpected key_len %u (expected 68)", key_len);
         return -3;
     }
     /* Skip 12-byte SPKI header, extract 56-byte raw X448 key */
@@ -463,7 +464,7 @@ int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
                 out->kem_tag = PQ_KEM_PROPOSED;
                 uint16_t pk_len = (buf[p] << 8) | buf[p + 1]; p += 2;
                 if (pk_len != SNTRUP761_PUBLICKEYBYTES) {
-                    ESP_LOGE(TAG, "pq_header_deserialize: bad PK len %" PRIu32 "", pk_len);
+                    ESP_LOGE(TAG, "pq_header_deserialize: bad PK len %u", pk_len);
                     return -4;
                 }
                 memcpy(out->kem_pk, &buf[p], SNTRUP761_PUBLICKEYBYTES);
@@ -473,7 +474,7 @@ int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
                 out->kem_tag = PQ_KEM_ACCEPTED;
                 uint16_t ct_len = (buf[p] << 8) | buf[p + 1]; p += 2;
                 if (ct_len != SNTRUP761_CIPHERTEXTBYTES) {
-                    ESP_LOGE(TAG, "pq_header_deserialize: bad CT len %" PRIu32 "", ct_len);
+                    ESP_LOGE(TAG, "pq_header_deserialize: bad CT len %u", ct_len);
                     return -5;
                 }
                 memcpy(out->kem_ct, &buf[p], SNTRUP761_CIPHERTEXTBYTES);
@@ -481,7 +482,7 @@ int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
                 out->kem_ct_valid = true;
                 uint16_t pk_len = (buf[p] << 8) | buf[p + 1]; p += 2;
                 if (pk_len != SNTRUP761_PUBLICKEYBYTES) {
-                    ESP_LOGE(TAG, "pq_header_deserialize: bad PK len %" PRIu32 " in Accepted", pk_len);
+                    ESP_LOGE(TAG, "pq_header_deserialize: bad PK len %u in Accepted", pk_len);
                     return -6;
                 }
                 memcpy(out->kem_pk, &buf[p], SNTRUP761_PUBLICKEYBYTES);
@@ -507,7 +508,7 @@ int pq_header_deserialize(const uint8_t *buf, size_t buf_len,
               ((uint32_t)buf[p + 2] << 8) | (uint32_t)buf[p + 3];
     p += 4;
 
-    ESP_LOGD(TAG, "pq_header_deserialize: v=%" PRIu32 ", kem=0x%02x, pn=%" PRIu32 ", ns=%" PRIu32 ", content=%" PRIu32 "",
+    ESP_LOGD(TAG, "pq_header_deserialize: v=%u, kem=0x%02x, pn=%" PRIu32 ", ns=%" PRIu32 ", content=%u",
              out->version, out->kem_tag, out->pn, out->ns, content_len);
 
     return 0;
@@ -532,7 +533,7 @@ void pq_header_test(void) {
     uint8_t hdr_nopq[MSG_HEADER_PADDED_LEN];
     ret = pq_header_serialize(hdr_nopq, sizeof(hdr_nopq), fake_dh, NULL, 5, 10);
     cl = (hdr_nopq[0] << 8) | hdr_nopq[1];
-    ESP_LOGI(TAG, "[1] Non-PQ: size=%d, content_len=%" PRIu32 ", kem=0x%02x",
+    ESP_LOGI(TAG, "[1] Non-PQ: size=%d, content_len=%u, kem=0x%02x",
              ret, cl, hdr_nopq[73]);
     ESP_LOGI(TAG, "    first 16:");
     ESP_LOG_BUFFER_HEX_LEVEL(TAG, hdr_nopq, 16, ESP_LOG_INFO);
@@ -540,11 +541,11 @@ void pq_header_test(void) {
     ret = pq_header_deserialize(hdr_nopq, sizeof(hdr_nopq), &parsed);
     if (ret != 0 || parsed.version != RATCHET_VERSION || parsed.pn != 5 ||
         parsed.ns != 10 || parsed.kem_tag != PQ_KEM_NOTHING || cl != 80) {
-        ESP_LOGE(TAG, "    FAIL: deser ret=%d v=%" PRIu32 " pn=%" PRIu32 " ns=%" PRIu32 " kem=0x%02x cl=%" PRIu32 "",
+        ESP_LOGE(TAG, "    FAIL: deser ret=%d v=%u pn=%" PRIu32 " ns=%" PRIu32 " kem=0x%02x cl=%u",
                  ret, parsed.version, parsed.pn, parsed.ns, parsed.kem_tag, cl);
         pass = false;
     } else {
-        ESP_LOGI(TAG, "    PASS: round-trip OK (v=%" PRIu32 " pn=%" PRIu32 " ns=%" PRIu32 ")", parsed.version, parsed.pn, parsed.ns);
+        ESP_LOGI(TAG, "    PASS: round-trip OK (v=%u pn=%" PRIu32 " ns=%" PRIu32 ")", parsed.version, parsed.pn, parsed.ns);
     }
 
     /* ---- Test 2: PQ Proposed (2310 bytes, content=1241) ---- */
@@ -558,7 +559,7 @@ void pq_header_test(void) {
 
     ret = pq_header_serialize(hdr_prop, MSG_HEADER_PQ_PADDED_LEN, fake_dh, &pq_prop, 3, 7);
     cl = (hdr_prop[0] << 8) | hdr_prop[1];
-    ESP_LOGI(TAG, "[2] Proposed: size=%d, content_len=%" PRIu32 "", ret, cl);
+    ESP_LOGI(TAG, "[2] Proposed: size=%d, content_len=%u", ret, cl);
     ESP_LOGI(TAG, "    KEM area [73..77]: %02x %02x %02x %02x %02x",
              hdr_prop[73], hdr_prop[74], hdr_prop[75], hdr_prop[76], hdr_prop[77]);
 
@@ -566,7 +567,7 @@ void pq_header_test(void) {
     if (ret != 0 || parsed.kem_tag != PQ_KEM_PROPOSED || !parsed.kem_pk_valid ||
         parsed.pn != 3 || parsed.ns != 7 || cl != 1241 ||
         parsed.kem_pk[0] != 0xBB) {
-        ESP_LOGE(TAG, "    FAIL: ret=%d kem=0x%02x pk_v=%d pk[0]=0x%02x cl=%" PRIu32 "",
+        ESP_LOGE(TAG, "    FAIL: ret=%d kem=0x%02x pk_v=%d pk[0]=0x%02x cl=%u",
                  ret, parsed.kem_tag, parsed.kem_pk_valid, parsed.kem_pk[0], cl);
         pass = false;
     } else {
@@ -586,7 +587,7 @@ void pq_header_test(void) {
 
     ret = pq_header_serialize(hdr_acc, MSG_HEADER_PQ_PADDED_LEN, fake_dh, &pq_acc, 1, 0);
     cl = (hdr_acc[0] << 8) | hdr_acc[1];
-    ESP_LOGI(TAG, "[3] Accepted: size=%d, content_len=%" PRIu32 "", ret, cl);
+    ESP_LOGI(TAG, "[3] Accepted: size=%d, content_len=%u", ret, cl);
     ESP_LOGI(TAG, "    KEM area [73..77]: %02x %02x %02x %02x %02x",
              hdr_acc[73], hdr_acc[74], hdr_acc[75], hdr_acc[76], hdr_acc[77]);
 
@@ -594,7 +595,7 @@ void pq_header_test(void) {
     if (ret != 0 || parsed.kem_tag != PQ_KEM_ACCEPTED || !parsed.kem_pk_valid ||
         !parsed.kem_ct_valid || parsed.pn != 1 || parsed.ns != 0 || cl != 2282 ||
         parsed.kem_pk[0] != 0xCC || parsed.kem_ct[0] != 0xDD) {
-        ESP_LOGE(TAG, "    FAIL: ret=%d kem=0x%02x pk_v=%d ct_v=%d cl=%" PRIu32 "",
+        ESP_LOGE(TAG, "    FAIL: ret=%d kem=0x%02x pk_v=%d ct_v=%d cl=%u",
                  ret, parsed.kem_tag, parsed.kem_pk_valid, parsed.kem_ct_valid, cl);
         pass = false;
     } else {
@@ -613,7 +614,7 @@ void pq_header_test(void) {
 
     ret = pq_header_serialize(hdr_pqnone, MSG_HEADER_PQ_PADDED_LEN, fake_dh, &pq_none, 0, 0);
     cl = (hdr_pqnone[0] << 8) | hdr_pqnone[1];
-    ESP_LOGI(TAG, "[4] PQ-active Nothing: size=%d, content_len=%" PRIu32 ", kem=0x%02x",
+    ESP_LOGI(TAG, "[4] PQ-active Nothing: size=%d, content_len=%u, kem=0x%02x",
              ret, cl, hdr_pqnone[73]);
 
     if (ret != MSG_HEADER_PQ_PADDED_LEN || cl != 80 || hdr_pqnone[73] != PQ_KEM_NOTHING) {
@@ -1021,7 +1022,7 @@ int ratchet_self_decrypt_test(const uint8_t *ciphertext, size_t ct_len,
     int p = 0;
     uint16_t em_hdr_len = (ciphertext[0] << 8) | ciphertext[1];
     if (em_hdr_len != 124) {
-        ESP_LOGE(TAG, "   [FAIL] Expected emHeader len 124 (0x007C), got %" PRIu32 " (0x%04x)", em_hdr_len, em_hdr_len);
+        ESP_LOGE(TAG, "   [FAIL] Expected emHeader len 124 (0x007C), got %u (0x%04x)", em_hdr_len, em_hdr_len);
         return -1;
     }
     p = 2;
@@ -1076,10 +1077,10 @@ int ratchet_decrypt(const uint8_t *ciphertext, size_t ct_len,
         em_header_len = 123;
         p = 1;
     } else {
-        ESP_LOGW(TAG, "   [WARN] Unexpected emHeader len: %" PRIu32 " (0x%04x) - trying as v3", em_header_len, em_header_len);
+        ESP_LOGW(TAG, "   [WARN] Unexpected emHeader len: %u (0x%04x) - trying as v3", em_header_len, em_header_len);
     }
 
-    ESP_LOGI(TAG, "   emHeader length: %" PRIu32 ", starting at offset %d", em_header_len, p);
+    ESP_LOGI(TAG, "   emHeader length: %u, starting at offset %d", em_header_len, p);
     
     const uint8_t *em_header = &ciphertext[p];
     p += em_header_len;
@@ -1425,7 +1426,7 @@ int ratchet_decrypt_body(ratchet_decrypt_mode_t mode,
     uint16_t actual_len = (plaintext[0] << 8) | plaintext[1];
 
     if (actual_len > em_body_len - 2) {
-        ESP_LOGE(TAG, "unPad length invalid! %" PRIu32 " > %zu", actual_len, em_body_len - 2);
+        ESP_LOGE(TAG, "unPad length invalid! %u > %zu", actual_len, em_body_len - 2);
         return -6;
     }
 
@@ -1600,7 +1601,7 @@ bool pq_nvs_save(uint8_t contact_idx) {
     }
 
     if (ok) {
-        ESP_LOGI(TAG, "PQ NVS saved: [%02x] active=%" PRIu32 " state=%" PRIu32 " own=%" PRIu32 " peer=%" PRIu32 " ct=%" PRIu32 " ss=%" PRIu32 "",
+        ESP_LOGI(TAG, "PQ NVS saved: [%02x] active=%u state=%u own=%u peer=%u ct=%u ss=%u",
                  contact_idx, pq->pq_active, pq->pq_kem_state,
                  pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid,
                  pq->pending_ss_valid);
@@ -1660,7 +1661,7 @@ bool pq_nvs_load(uint8_t contact_idx) {
         pq->pending_ss_valid = 1;
     }
 
-    ESP_LOGI(TAG, "PQ NVS loaded: [%02x] active=%" PRIu32 " state=%" PRIu32 " own=%" PRIu32 " peer=%" PRIu32 " ct=%" PRIu32 " ss=%" PRIu32 "",
+    ESP_LOGI(TAG, "PQ NVS loaded: [%02x] active=%u state=%u own=%u peer=%u ct=%u ss=%u",
              contact_idx, pq->pq_active, pq->pq_kem_state,
              pq->own_kem_valid, pq->peer_kem_valid, pq->pending_ct_valid,
              pq->pending_ss_valid);
@@ -1685,7 +1686,7 @@ uint8_t smp_settings_get_pq_enabled(void) {
         smp_storage_save_blob_sync("pq_enabled", &val, sizeof(val));
         ESP_LOGI(TAG, "PQ setting: created with default ON");
     } else {
-        ESP_LOGI(TAG, "PQ setting: loaded from NVS = %" PRIu32 "", val);
+        ESP_LOGI(TAG, "PQ setting: loaded from NVS = %u", val);
     }
 
     s_pq_enabled = val;
@@ -1698,7 +1699,7 @@ void smp_settings_set_pq_enabled(uint8_t val) {
     s_pq_enabled = val;
     s_pq_loaded = true;
     smp_storage_save_blob_sync("pq_enabled", &val, sizeof(val));
-    ESP_LOGI(TAG, "PQ setting: saved to NVS = %" PRIu32 "", val);
+    ESP_LOGI(TAG, "PQ setting: saved to NVS = %u", val);
 }
 
 // ============== Getters ==============
