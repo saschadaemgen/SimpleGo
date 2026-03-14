@@ -2,6 +2,8 @@
   <img src=".github/assets/simplego_banner.png" alt="SimpleGo" width="1500" height="230">
 </p>
 
+<h1 align="center">SimpleGo</h1>
+
 <p align="center">
   <strong>The world's first native C implementation of the SimpleX Messaging Protocol.</strong><br>
   Encrypted communication and IoT on dedicated hardware. No smartphone, no cloud, no compromises.
