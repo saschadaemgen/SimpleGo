@@ -79,10 +79,11 @@ Deploy environmental sensors or communication relays in regions where monitoring
 
 ### Security
 - Multiple independent encryption layers per message
+- Post-quantum key exchange (sntrup761 Streamlined NTRU Prime)
 - All traffic padded to fixed block size (no metadata leakage)
 - Keys stored on-device with hardware-backed encryption (production release)
 - Bare-metal firmware with no OS, no browser, no background services
-- 22,000 lines of C across 47 source files (fully auditable)
+- 22,000+ lines of C across 47 source files (fully auditable)
 - Open source under AGPL-3.0
 
 ## Getting Started
@@ -91,29 +92,87 @@ SimpleGo runs on the [LilyGo T-Deck Plus](https://www.lilygo.cc/products/t-deck-
 
 ### Prerequisites
 
-- [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/get-started/) 5.5.2 or later
-- Python 3.8+
-- CMake 3.16+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| ESP-IDF | 5.5.2 (recommended) or 5.5.3 | [Installation Guide](https://docs.espressif.com/projects/esp-idf/en/v5.5.2/esp32s3/get-started/) |
+| Python | 3.9+ | Required by ESP-IDF |
+| CMake | 3.16+ | Included with ESP-IDF |
+| Git | Any recent version | For cloning the repository |
 
-### Build and Flash
+### Step 1: Install ESP-IDF
 
+Follow the [official ESP-IDF installation guide](https://docs.espressif.com/projects/esp-idf/en/v5.5.2/esp32s3/get-started/) for your platform.
+
+**Linux / macOS:**
 ```bash
-git clone https://github.com/saschadaemgen/SimpleGo.git
-cd SimpleGo
-
-# Set up ESP-IDF environment
-. $HOME/esp/esp-idf/export.sh          # Linux/macOS
-%IDF_PATH%\export.bat                   # Windows
-
-# Configure
-idf.py menuconfig
-
-# Build, flash, and run
-idf.py build flash monitor -p /dev/ttyUSB0    # Linux
-idf.py build flash monitor -p COM6            # Windows
+mkdir -p ~/esp && cd ~/esp
+git clone -b v5.5.2 --recursive https://github.com/espressif/esp-idf.git
+cd esp-idf
+./install.sh esp32s3
+source export.sh
 ```
 
-All settings including WiFi credentials, server configuration, and security options are managed through menuconfig.
+**Windows:**
+
+Download and run the [ESP-IDF Offline Installer](https://dl.espressif.com/dl/esp-idf/) for version 5.5.2. After installation, open "ESP-IDF 5.5 PowerShell" from the Start menu.
+
+### Step 2: Apply mbedTLS Patches (Required)
+
+SimpleX relay servers use ED25519 certificates. The ESP-IDF version of mbedTLS does not support ED25519 natively. SimpleGo includes patches that add compatibility. This step is required for TLS connections to work.
+
+**Linux / macOS:**
+```bash
+cd SimpleGo
+chmod +x patches/apply_patches.sh
+./patches/apply_patches.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+cd SimpleGo
+.\patches\apply_patches.ps1
+```
+
+See [patches/README.md](patches/README.md) for details on what the patches change and why.
+
+### Step 3: Build and Flash
+
+**Linux / macOS:**
+```bash
+cd SimpleGo
+idf.py build
+idf.py flash -p /dev/ttyACM0
+idf.py monitor -p /dev/ttyACM0
+```
+
+**Windows (ESP-IDF PowerShell):**
+```powershell
+cd SimpleGo
+idf.py build
+idf.py flash monitor -p COM6
+```
+
+WiFi credentials are entered on the device itself at first boot. No menuconfig required.
+
+### Tested Build Environments
+
+| OS | ESP-IDF | Compiler | Status |
+|----|---------|----------|--------|
+| Windows 11 | 5.5.2 | xtensa-esp-elf-gcc 14.2.0 | Working |
+| Ubuntu 24.04 (WSL2) | 5.5.2 | xtensa-esp-elf-gcc 14.2.0 | Working |
+| Ubuntu (native) | 5.5.2 | xtensa-esp-elf-gcc 14.2.0 | Working |
+| Ubuntu (native) | 5.5.3 | xtensa-esp-elf-gcc 14.2.0 | Working (with patches) |
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| TLS handshake failed: -0x7780 | mbedTLS patches not applied. Run the apply_patches script. |
+| wolfssl_config not found | Update your clone. Run `git pull` and rebuild. |
+| ui/widgets does not exist | Update your clone. Run `git pull` and rebuild. |
+| LVGL not found | LVGL is downloaded automatically on first build via ESP-IDF component manager. |
+| Serial port busy or not found | Close other terminals. Check port with device manager (Windows) or `ls /dev/ttyACM*` (Linux). |
+| Linux: format specifier errors | Update your clone. All `%u` / PRIu32 issues have been fixed. |
 
 ## Hardware
 
@@ -152,24 +211,40 @@ Custom PCB designs with hardware secure elements, LoRa connectivity, and optiona
 +---------------+---------------+---------------+---------------+
 ```
 
+## Encryption Stack
+
+Every message passes through four independent encryption layers:
+
+| Layer | Algorithm | Purpose |
+|-------|-----------|---------|
+| 1. End-to-End | X3DH (X448) + Double Ratchet + AES-256-GCM | Perfect forward secrecy, post-compromise security |
+| 2. Per-Queue | X25519 + XSalsa20 + Poly1305 | Prevents traffic correlation between queues |
+| 3. Server-to-Recipient | NaCl cryptobox | Prevents correlation of incoming/outgoing server traffic |
+| 4. Transport | TLS 1.3 (mbedTLS) | Network-level protection |
+
+Post-quantum key exchange using sntrup761 (Streamlined NTRU Prime) is integrated and active, providing quantum-resistant encryption from the first message.
+
 ## Project Structure
 
 ```
 SimpleGo/
 +-- main/
-|   +-- core/           # Protocol implementation
-|   +-- crypto/         # Cryptographic operations
+|   +-- core/           # Task architecture, frame pool
+|   +-- crypto/         # X448, AES-GCM, NaCl, sntrup761
 |   +-- hal/            # HAL interface headers
-|   +-- net/            # Network and TLS transport
-|   +-- protocol/       # Protocol encoding/decoding
-|   +-- state/          # Persistent state management
-|   +-- ui/             # User interface
+|   +-- include/        # Shared header files
+|   +-- net/            # Network, TLS, WiFi manager
+|   +-- protocol/       # SMP protocol, ratchet, handshake
+|   +-- state/          # Contacts, history, peer connections
+|   +-- ui/             # LVGL screens, themes, fonts
 |   +-- util/           # Shared utilities
 +-- devices/
-|   +-- t_deck_plus/    # LilyGo T-Deck Plus HAL
+|   +-- t_deck_plus/    # LilyGo T-Deck Plus HAL implementation
 |   +-- template/       # Template for new device ports
-+-- components/         # External libraries
++-- components/         # External libraries (sntrup761, zstd, wolfssl_config)
++-- patches/            # mbedTLS ED25519 compatibility patches
 +-- docs/               # Documentation
++-- wiki/               # Docusaurus wiki source
 ```
 
 ## Status
@@ -180,14 +255,16 @@ This is alpha software under active development. The core messaging stack is fun
 |-----------|--------|
 | Encrypted messaging | Working |
 | Multi-contact (128) | Working |
+| Post-quantum key exchange (sntrup761) | Working |
 | Delivery receipts | Working |
 | WiFi manager | Working |
-| Encrypted data storage | Working |
-| Persistent crypto state | Working |
+| Encrypted data storage (AES-256-GCM) | Working |
+| Screen lock (60s inactivity) | Working |
+| Cross-platform build (Windows + Linux) | Working |
 | IoT sensor channels | Design phase |
 | Remote device control | Design phase |
 | LoRa connectivity | Planned |
-| Post-quantum key exchange | Planned |
+| Web Serial Installer | Planned |
 
 ## Documentation
 
@@ -195,11 +272,12 @@ This is alpha software under active development. The core messaging stack is fun
 - [Architecture](https://wiki.simplego.dev/architecture) - System design
 - [Security](https://wiki.simplego.dev/security) - Security model
 - [Hardware](https://wiki.simplego.dev/hardware) - Device specifications and porting
+- [patches/README.md](patches/README.md) - mbedTLS patch documentation
 - [Protocol Analysis](docs/protocol-analysis/) - Implementation journal
 
 ## Contributing
 
-See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for build instructions and [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. All code must build on both Windows and Linux (see [CODING_RULES.md](CODING_RULES.md)).
 
 Security vulnerabilities should be reported privately via GitHub's vulnerability reporting feature.
 
@@ -217,6 +295,7 @@ Security vulnerabilities should be reported privately via GitHub's vulnerability
 - [mbedTLS](https://github.com/Mbed-TLS/mbedtls) for TLS and cryptography
 - [wolfSSL](https://www.wolfssl.com/) for X448 key agreement
 - [libsodium](https://doc.libsodium.org/) for NaCl cryptographic operations
+- [PQClean](https://github.com/PQClean/PQClean) for sntrup761 post-quantum cryptography
 
 ---
 
