@@ -18,6 +18,7 @@
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
+#include <string.h>
 
 static const char *TAG = "UI_DEV";
 
