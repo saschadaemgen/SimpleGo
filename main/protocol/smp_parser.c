@@ -57,7 +57,7 @@ static char* extract_full_invitation_uri(const uint8_t *data, int data_len, int 
 
 static void parse_e2e_params(const char *uri) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "      🔐 PARSING E2E RATCHET PARAMETERS...");
+    ESP_LOGI(TAG, "      [LOCK] PARSING E2E RATCHET PARAMETERS...");
     
     // Find e2e version (e2e=v=2-3 or after decode)
     const char *e2e_v = strstr(uri, "e2e=v=");
@@ -81,18 +81,18 @@ static void parse_e2e_params(const char *uri) {
     // Find x3dh= directly in the (decoded) URI
     const char *x3dh = strstr(uri, "x3dh=");
     if (!x3dh) {
-        ESP_LOGW(TAG, "      ⚠️ No x3dh= parameter found!");
+        ESP_LOGW(TAG, "      [WARN] No x3dh= parameter found!");
         return;
     }
     
     x3dh += 5;  // skip "x3dh="
     
-    ESP_LOGI(TAG, "      🔑 X3DH Keys found!");
+    ESP_LOGI(TAG, "      [KEY] X3DH Keys found!");
     
     // Find comma separator between two keys
     const char *comma = strchr(x3dh, ',');
     if (!comma) {
-        ESP_LOGW(TAG, "      ⚠️ No comma found in x3dh - expected two keys!");
+        ESP_LOGW(TAG, "      [WARN] No comma found in x3dh - expected two keys!");
         return;
     }
     
@@ -121,15 +121,15 @@ static void parse_e2e_params(const char *uri) {
                 key1_spki[4] == 0x06 && key1_spki[5] == 0x03 &&
                 key1_spki[6] == 0x2b && key1_spki[7] == 0x65 && key1_spki[8] == 0x6f) {
                 
-                ESP_LOGI(TAG, "      ✅ Key1 is X448 (OID 1.3.101.111)!");
+                ESP_LOGI(TAG, "      [OK] Key1 is X448 (OID 1.3.101.111)!");
                 memcpy(pending_peer.e2e_key1, key1_spki + 12, 56);
                 pending_peer.has_e2e = 1;
                 
             } else {
-                ESP_LOGW(TAG, "      ⚠️ Key1 format unexpected (not X448 SPKI?)");
+                ESP_LOGW(TAG, "      [WARN] Key1 format unexpected (not X448 SPKI?)");
             }
         } else {
-            ESP_LOGW(TAG, "      ❌ Key1 decode FAILED! Check base64url_decode");
+            ESP_LOGW(TAG, "      [FAIL] Key1 decode FAILED! Check base64url_decode");
             // Show first and last chars of the base64 for debugging
             ESP_LOGW(TAG, "         First 20 chars: %.20s", key1_b64);
             ESP_LOGW(TAG, "         Last 10 chars: %s", key1_b64 + (key1_len > 10 ? key1_len - 10 : 0));
@@ -165,27 +165,27 @@ static void parse_e2e_params(const char *uri) {
                 key2_spki[4] == 0x06 && key2_spki[5] == 0x03 &&
                 key2_spki[6] == 0x2b && key2_spki[7] == 0x65 && key2_spki[8] == 0x6f) {
                 
-                ESP_LOGI(TAG, "      ✅ Key2 is X448 (OID 1.3.101.111)!");
+                ESP_LOGI(TAG, "      [OK] Key2 is X448 (OID 1.3.101.111)!");
                 memcpy(pending_peer.e2e_key2, key2_spki + 12, 56);
                 
             } else {
-                ESP_LOGW(TAG, "      ⚠️ Key2 format unexpected");
+                ESP_LOGW(TAG, "      [WARN] Key2 format unexpected");
             }
         } else {
-            ESP_LOGW(TAG, "      ❌ Key2 decode FAILED!");
+            ESP_LOGW(TAG, "      [FAIL] Key2 decode FAILED!");
         }
     }
     
     // Check for kem_key (PQ encryption)
     if (strstr(uri, "kem_key=")) {
-        ESP_LOGI(TAG, "      🔒 KEM key found (Post-Quantum encryption!)");
+        ESP_LOGI(TAG, "      [SEC] KEM key found (Post-Quantum encryption!)");
     }
     
     if (pending_peer.has_e2e) {
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "      ✅ E2E KEYS EXTRACTED SUCCESSFULLY!");
-        ESP_LOGI(TAG, "      ⚠️  NOTE: X448 crypto not yet implemented!");
-        ESP_LOGI(TAG, "      ⚠️  Need wolfSSL for X448 DH operations.");
+        ESP_LOGI(TAG, "      [OK] E2E KEYS EXTRACTED SUCCESSFULLY!");
+        ESP_LOGI(TAG, "      [WARN]  NOTE: X448 crypto not yet implemented!");
+        ESP_LOGI(TAG, "      [WARN]  Need wolfSSL for X448 DH operations.");
     }
 }
 
@@ -208,7 +208,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
     }
     
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "      📊 Raw message structure (first 64 bytes):");
+    ESP_LOGI(TAG, "      [DATA] Raw message structure (first 64 bytes):");
     printf("         ");
     for (int i = 0; i < 64 && i < content_len; i++) {
         printf("%02x ", content[i]);
@@ -228,7 +228,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
             
             sender_key_offset = i;
             ESP_LOGI(TAG, "");
-            ESP_LOGI(TAG, "      🔑 Found X25519 SPKI at offset %d!", i);
+            ESP_LOGI(TAG, "      [KEY] Found X25519 SPKI at offset %d!", i);
             
             memcpy(sender_key_raw, &content[i + 12], 32);
             break;
@@ -236,7 +236,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
     }
     
     if (sender_key_offset < 0) {
-        ESP_LOGW(TAG, "      ⚠️ No X25519 SPKI found in message!");
+        ESP_LOGW(TAG, "      [WARN] No X25519 SPKI found in message!");
         return;
     }
     
@@ -244,14 +244,14 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
     int after_key_len = content_len - after_key_offset;
     
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "      📦 Data after SPKI key (%d bytes):", after_key_len);
+    ESP_LOGI(TAG, "      [PKG] Data after SPKI key (%d bytes):", after_key_len);
     if (after_key_len > 0) {
     }
     
     // Try DH decryption
     if (after_key_len > 40) {
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "      🔐 Attempting DH decryption on post-key data...");
+        ESP_LOGI(TAG, "      [LOCK] Attempting DH decryption on post-key data...");
         
         uint8_t *decrypted = malloc(after_key_len);
         if (decrypted) {
@@ -261,7 +261,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                              decrypted);
             
             if (dec_len > 0) {
-                ESP_LOGI(TAG, "      ✅ DH Decryption SUCCESS! (%d bytes)", dec_len);
+                ESP_LOGI(TAG, "      [OK] DH Decryption SUCCESS! (%d bytes)", dec_len);
                 
                 if (dec_len >= 6) {
                     int toff = -1;
@@ -274,22 +274,22 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                     char type = decrypted[toff + 3];
                     
                     ESP_LOGI(TAG, "");
-                    ESP_LOGI(TAG, "      📦 Agent Version: %d", ver);
-                    ESP_LOGI(TAG, "      📬 Message Type: '%c' (0x%02x)", 
+                    ESP_LOGI(TAG, "      [PKG] Agent Version: %d", ver);
+                    ESP_LOGI(TAG, "      [MSG] Message Type: '%c' (0x%02x)", 
                              (type >= 32 && type < 127) ? type : '?', type);
                     
                     if (type == 'C') {
-                        ESP_LOGI(TAG, "      🎉 CONFIRMATION received!");
+                        ESP_LOGI(TAG, "      [OK] CONFIRMATION received!");
                     }
                     else if (type == 'I') {
-                        ESP_LOGI(TAG, "      🎉 INVITATION received!");
+                        ESP_LOGI(TAG, "      [OK] INVITATION received!");
                         
                         int uri_len = 0;
                         char *full_uri = extract_full_invitation_uri(decrypted, dec_len, &uri_len);
                         
                         if (full_uri) {
                             ESP_LOGI(TAG, "");
-                            ESP_LOGI(TAG, "      📋 FULL INVITATION URI (%d chars):", uri_len);
+                            ESP_LOGI(TAG, "      [INFO] FULL INVITATION URI (%d chars):", uri_len);
                             
                             for (int pass = 0; pass < 4; pass++) {
                                 if (!strchr(full_uri, '%')) break;
@@ -323,21 +323,21 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                     uri_end_in_dec++;
 }
                                 
-                                ESP_LOGI(TAG, "      📋 URI in decrypted: offset %d-%d", 
+                                ESP_LOGI(TAG, "      [INFO] URI in decrypted: offset %d-%d", 
                                          uri_start_in_dec, uri_end_in_dec);
                                 
                                 // DEBUG: Show bytes AFTER URI
-                                ESP_LOGI(TAG, "      📋 Bytes after URI (offset %d+):", uri_end_in_dec);
+                                ESP_LOGI(TAG, "      [INFO] Bytes after URI (offset %d+):", uri_end_in_dec);
                                 printf("         ");
                                 for (int i = uri_end_in_dec; i < uri_end_in_dec + 80 && i < dec_len; i++) {
                                     printf("%02x ", decrypted[i]);
                                     if ((i - uri_end_in_dec + 1) % 16 == 0) printf("\n         ");
                                 }
                                 printf("\n");
-                                ESP_LOGI(TAG, "      📋 Remaining bytes after URI: %d", dec_len - uri_end_in_dec);
+                                ESP_LOGI(TAG, "      [INFO] Remaining bytes after URI: %d", dec_len - uri_end_in_dec);
 
                                 // Search for ALL X25519 SPKI in entire message
-                                ESP_LOGI(TAG, "      🔍 Searching ALL X25519 SPKI in decrypted:");
+                                ESP_LOGI(TAG, "      [FIND] Searching ALL X25519 SPKI in decrypted:");
                                 int found_count = 0;
                                 for (int i = 0; i < dec_len - 44; i++) {
                                     if (decrypted[i] == 0x30 && decrypted[i+1] == 0x2a) {
@@ -347,13 +347,13 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                                  found_count, i, key[0], key[1], key[2], key[3]);
                                     }
                                 }
-                                ESP_LOGI(TAG, "      📊 Total X25519 keys found: %d", found_count);
+                                ESP_LOGI(TAG, "      [DATA] Total X25519 keys found: %d", found_count);
                                 
                                 // Search for X25519 SPKI AFTER the URI - DON'T SET reply_queue_e2e_peer_public here!
                                 // The correct E2E key is extracted in main.c from the PubHeader SPKI
                                 for (int i = uri_end_in_dec; i < dec_len - 44; i++) {
                                     if (decrypted[i] == 0x30 && decrypted[i+1] == 0x2a) {
-                                        ESP_LOGI(TAG, "      🔑 Found X25519 SPKI at offset %d!", i);
+                                        ESP_LOGI(TAG, "      [KEY] Found X25519 SPKI at offset %d!", i);
                                         uint8_t *key = &decrypted[i + 12];
                                         ESP_LOGI(TAG, "         Key: %02x%02x%02x%02x...", 
                                                  key[0], key[1], key[2], key[3]);
@@ -400,7 +400,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                         memcpy(qid_b64, slash + 1, qlen);
                                         pending_peer.queue_id_len = base64url_decode(
                                             qid_b64, pending_peer.queue_id, 32);
-                                        ESP_LOGI(TAG, "      📮 Queue ID: %s (%d bytes)", 
+                                        ESP_LOGI(TAG, "      [MAIL] Queue ID: %s (%d bytes)", 
                                                  qid_b64, pending_peer.queue_id_len);
                                     }
                                 }
@@ -435,7 +435,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                             // memcpy(reply_queue_e2e_peer_public, pending_peer.dh_public, 32);
                                             // reply_queue_e2e_peer_valid = true;
                                             
-                                            ESP_LOGI(TAG, "      🔑 SMP DH Key: %02x%02x%02x%02x... ✅ (server-level only)",
+                                            ESP_LOGI(TAG, "      [KEY] SMP DH Key: %02x%02x%02x%02x... [OK] (server-level only)",
                                                      pending_peer.dh_public[0], pending_peer.dh_public[1],
                                                      pending_peer.dh_public[2], pending_peer.dh_public[3]);
                                         }
@@ -451,13 +451,13 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                             
                             if (pending_peer.valid && pending_peer.has_dh) {
                                 ESP_LOGI(TAG, "");
-                                ESP_LOGI(TAG, "      ╔══════════════════════════════════════╗");
+                                ESP_LOGI(TAG, "      +----------------------------------------+");
                                 if (pending_peer.has_e2e) {
-                                    ESP_LOGI(TAG, "      ║  🎯 READY! (with E2E Ratchet keys)  ║");
+                                    ESP_LOGI(TAG, "      |  🎯 READY! (with E2E Ratchet keys)  |");
                                 } else {
-                                    ESP_LOGI(TAG, "      ║  ⚠️  READY! (NO E2E keys found!)    ║");
+                                    ESP_LOGI(TAG, "      |  [WARN]  READY! (NO E2E keys found!)    |");
                                 }
-                                ESP_LOGI(TAG, "      ╚══════════════════════════════════════╝");
+                                ESP_LOGI(TAG, "      +----------------------------------------+");
                                 
                                 ESP_LOGI(TAG, "");
                                 ESP_LOGI(TAG, "      🚀 Auto-connecting to peer...");
@@ -474,13 +474,13 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                             
                             free(full_uri);
                         } else {
-                            ESP_LOGW(TAG, "      ⚠️ Could not extract invitation URI!");
+                            ESP_LOGW(TAG, "      [WARN] Could not extract invitation URI!");
                         }
                     }
                 }
                 
                 ESP_LOGI(TAG, "");
-                ESP_LOGI(TAG, "      📝 Decrypted text (first 500 chars):");
+                ESP_LOGI(TAG, "      [NOTE] Decrypted text (first 500 chars):");
                 printf("         \"");
                 for (int i = 0; i < dec_len && i < 500; i++) {
                     char c = decrypted[i];
@@ -496,7 +496,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
     
     if (sender_key_offset > 0) {
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "      📋 Data BEFORE SPKI key (%d bytes):", sender_key_offset);
+        ESP_LOGI(TAG, "      [INFO] Data BEFORE SPKI key (%d bytes):", sender_key_offset);
         
         printf("         Text: \"");
         for (int i = 0; i < sender_key_offset; i++) {
@@ -508,7 +508,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
         
         for (int i = 0; i < sender_key_offset - 1; i++) {
             if (content[i] >= '1' && content[i] <= '9' && content[i+1] == ',') {
-                ESP_LOGI(TAG, "      📌 Version '%c' found at offset %d", content[i], i);
+                ESP_LOGI(TAG, "      [PIN] Version '%c' found at offset %d", content[i], i);
             }
         }
     }
@@ -545,13 +545,13 @@ static int skip_len_prefixed(const uint8_t *data, int offset, int max_len) {
  * Format: 'D' + list_len + SMPQueueInfo[] + connInfo
  */
 static int parse_conn_info_reply(const uint8_t *data, size_t len, uint8_t *dh_public_out) {
-    ESP_LOGI(TAG, "   📋 Parsing AgentConnInfoReply (%zu bytes)...", len);
+    ESP_LOGI(TAG, "   [INFO] Parsing AgentConnInfoReply (%zu bytes)...", len);
     
     if (len < 3 || data[0] != 'D') {
-        ESP_LOGE(TAG, "      ❌ Expected 'D', got 0x%02x", data[0]);
+        ESP_LOGE(TAG, "      [FAIL] Expected 'D', got 0x%02x", data[0]);
         return -1;
     }
-    ESP_LOGI(TAG, "      ✅ Tag = 'D' (AgentConnInfoReply)");
+    ESP_LOGI(TAG, "      [OK] Tag = 'D' (AgentConnInfoReply)");
     
     // Search for X25519 SPKI header in the data
     ESP_LOGI(TAG, "      🔎 Searching for X25519 SPKI (30 2a 30 05 06 03 2b 65 6e)...");
@@ -563,16 +563,16 @@ static int parse_conn_info_reply(const uint8_t *data, size_t len, uint8_t *dh_pu
             data[i+6] == 0x2b && data[i+7] == 0x65 &&
             data[i+8] == 0x6e) {
             
-            ESP_LOGI(TAG, "      ✅ Found X25519 SPKI at offset %zu", i);
+            ESP_LOGI(TAG, "      [OK] Found X25519 SPKI at offset %zu", i);
             memcpy(dh_public_out, &data[i + 12], 32);
-            ESP_LOGI(TAG, "      🔑 dhPublicKey: %02x%02x%02x%02x%02x%02x%02x%02x...",
+            ESP_LOGI(TAG, "      [KEY] dhPublicKey: %02x%02x%02x%02x%02x%02x%02x%02x...",
                      dh_public_out[0], dh_public_out[1], dh_public_out[2], dh_public_out[3],
                      dh_public_out[4], dh_public_out[5], dh_public_out[6], dh_public_out[7]);
             return 0;
         }
     }
     
-    ESP_LOGE(TAG, "      ❌ X25519 SPKI not found!");
+    ESP_LOGE(TAG, "      [FAIL] X25519 SPKI not found!");
     return -1;
 }
 
@@ -583,15 +583,15 @@ static int parse_conn_info_reply(const uint8_t *data, size_t len, uint8_t *dh_pu
  */
 int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  📬 PARSING AGENT CONFIRMATION                               ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [MSG] PARSING AGENT CONFIRMATION                               |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     
     int offset = 0;
     
     // ========== 1. Parse PrivHeader ==========
     if (cm_plain_len < 1) {
-        ESP_LOGE(TAG, "   ❌ Empty ClientMessage");
+        ESP_LOGE(TAG, "   [FAIL] Empty ClientMessage");
         return -1;
     }
     
@@ -605,18 +605,18 @@ int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
         // PHConfirmation - skip senderKey (length-prefixed SPKI)
         offset = skip_len_prefixed(cm_plain, offset, cm_plain_len);
         if (offset < 0) {
-            ESP_LOGE(TAG, "   ❌ Failed to skip senderKey");
+            ESP_LOGE(TAG, "   [FAIL] Failed to skip senderKey");
             return -1;
         }
         ESP_LOGI(TAG, "      Skipped senderKey, now at offset %d", offset);
     } else if (priv_header_tag != '_') {
-        ESP_LOGE(TAG, "   ❌ Unknown PrivHeader: 0x%02x", priv_header_tag);
+        ESP_LOGE(TAG, "   [FAIL] Unknown PrivHeader: 0x%02x", priv_header_tag);
         return -1;
     }
     
     // ========== 2. Parse AgentMsgEnvelope header ==========
     if (offset + 3 > cm_plain_len) {
-        ESP_LOGE(TAG, "   ❌ Not enough data for AgentConfirmation");
+        ESP_LOGE(TAG, "   [FAIL] Not enough data for AgentConfirmation");
         return -1;
     }
     
@@ -632,7 +632,7 @@ int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
     
     // ========== 3. Parse Maybe e2eEncryption_ ==========
     if (offset >= cm_plain_len) {
-        ESP_LOGE(TAG, "   ❌ Not enough data for e2eEncryption_");
+        ESP_LOGE(TAG, "   [FAIL] Not enough data for e2eEncryption_");
         return -1;
     }
     
@@ -662,10 +662,10 @@ int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
             
             if (maybe_kem == '1') {
                 // Has KEM - search for EncRatchetMessage start
-                ESP_LOGI(TAG, "      ⚠️  KEM present, searching for encConnInfo...");
+                ESP_LOGI(TAG, "      [WARN]  KEM present, searching for encConnInfo...");
                 for (int i = offset; i < cm_plain_len - 4; i++) {
                     if (cm_plain[i] == 0x7b && cm_plain[i+1] == 0x00 && cm_plain[i+2] == 0x02) {
-                        ESP_LOGI(TAG, "      ✅ Found EncRatchetMessage at offset %d", i);
+                        ESP_LOGI(TAG, "      [OK] Found EncRatchetMessage at offset %d", i);
                         offset = i;
                         break;
                     }
@@ -673,7 +673,7 @@ int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
             }
         }
     } else if (maybe_e2e != ',') {
-        ESP_LOGE(TAG, "   ❌ Unknown Maybe: 0x%02x", maybe_e2e);
+        ESP_LOGE(TAG, "   [FAIL] Unknown Maybe: 0x%02x", maybe_e2e);
         return -1;
     }
     
@@ -688,13 +688,13 @@ int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
     
     // ========== 5. Double Ratchet decrypt encConnInfo ==========
     if (!ratchet_is_initialized()) {
-        ESP_LOGE(TAG, "   ❌ Ratchet not initialized!");
+        ESP_LOGE(TAG, "   [FAIL] Ratchet not initialized!");
         return -1;
     }
     
     uint8_t *conn_info_plain = malloc(enc_conn_info_len);
     if (!conn_info_plain) {
-        ESP_LOGE(TAG, "   ❌ malloc failed");
+        ESP_LOGE(TAG, "   [FAIL] malloc failed");
         return -1;
     }
     
@@ -705,12 +705,12 @@ int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
                                     conn_info_plain, &conn_info_plain_len);
     
     if (rc_result != 0) {
-        ESP_LOGE(TAG, "   ❌ Ratchet decrypt FAILED (code %d)", rc_result);
+        ESP_LOGE(TAG, "   [FAIL] Ratchet decrypt FAILED (code %d)", rc_result);
         free(conn_info_plain);
         return -1;
     }
     
-    ESP_LOGI(TAG, "   ✅ Ratchet decrypt SUCCESS! (%zu bytes)", conn_info_plain_len);
+    ESP_LOGI(TAG, "   [OK] Ratchet decrypt SUCCESS! (%zu bytes)", conn_info_plain_len);
     ESP_LOGI(TAG, "      First 32:");
     printf("         ");
     for (size_t i = 0; i < 32 && i < conn_info_plain_len; i++) {
@@ -745,10 +745,10 @@ int parse_agent_confirmation(const uint8_t *cm_plain, int cm_plain_len) {
         }
         
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-        ESP_LOGI(TAG, "║  🎉 REPLY QUEUE E2E KEY EXTRACTED!                           ║");
-        ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
-        ESP_LOGI(TAG, "   🔑 reply_queue_e2e_peer_public: %02x%02x%02x%02x%02x%02x%02x%02x...",
+        ESP_LOGI(TAG, "+----------------------------------------+");
+        ESP_LOGI(TAG, "|  [OK] REPLY QUEUE E2E KEY EXTRACTED!                           |");
+        ESP_LOGI(TAG, "+----------------------------------------+");
+        ESP_LOGI(TAG, "   [KEY] reply_queue_e2e_peer_public: %02x%02x%02x%02x%02x%02x%02x%02x...",
                  reply_queue_e2e_peer_public[0], reply_queue_e2e_peer_public[1],
                  reply_queue_e2e_peer_public[2], reply_queue_e2e_peer_public[3],
                  reply_queue_e2e_peer_public[4], reply_queue_e2e_peer_public[5],

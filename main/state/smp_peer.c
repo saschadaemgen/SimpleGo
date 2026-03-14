@@ -66,7 +66,7 @@ bool peer_connect(const char *host, int port) {
     int ret;
 
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "🔗 CONNECTING TO PEER SERVER...");
+    ESP_LOGI(TAG, "[CONN] CONNECTING TO PEER SERVER...");
     ESP_LOGI(TAG, "   Host: %s:%d", host, port);
 
     // Save for reconnect
@@ -83,14 +83,14 @@ bool peer_connect(const char *host, int port) {
     ret = mbedtls_ctr_drbg_seed(&peer_state.ctr_drbg, mbedtls_entropy_func,
                                 &peer_state.entropy, NULL, 0);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ DRBG seed failed");
+        ESP_LOGE(TAG, "   [FAIL] DRBG seed failed");
         return false;
     }
 
     // TCP connect
     peer_state.sock = smp_tcp_connect(host, port);
     if (peer_state.sock < 0) {
-        ESP_LOGE(TAG, "   ❌ TCP connect failed");
+        ESP_LOGE(TAG, "   [FAIL] TCP connect failed");
         return false;
     }
 
@@ -124,24 +124,24 @@ bool peer_connect(const char *host, int port) {
     // TLS handshake
     while ((ret = mbedtls_ssl_handshake(&peer_state.ssl)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-            ESP_LOGE(TAG, "   ❌ TLS handshake failed: -0x%04X", -ret);
+            ESP_LOGE(TAG, "   [FAIL] TLS handshake failed: -0x%04X", -ret);
             close(peer_state.sock);
             return false;
         }
     }
-    ESP_LOGI(TAG, "   ✅ TLS OK!");
+    ESP_LOGI(TAG, "   [OK] TLS OK!");
 
     // Allocate block buffer
     uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
     if (!block) {
-        ESP_LOGE(TAG, "   ❌ Block alloc failed");
+        ESP_LOGE(TAG, "   [FAIL] Block alloc failed");
         return false;
     }
 
     // Wait for ServerHello
     int content_len = smp_read_block(&peer_state.ssl, block, 30000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "   ❌ No ServerHello");
+        ESP_LOGE(TAG, "   [FAIL] No ServerHello");
         free(block);
         return false;
     }
@@ -149,7 +149,7 @@ bool peer_connect(const char *host, int port) {
     uint8_t *hello = block + 2;
     uint8_t sess_id_len = hello[4];
     if (sess_id_len != 32) {
-        ESP_LOGE(TAG, "   ❌ Bad sessionId length");
+        ESP_LOGE(TAG, "   [FAIL] Bad sessionId length");
         free(block);
         return false;
     }
@@ -182,11 +182,11 @@ bool peer_connect(const char *host, int port) {
     free(block);
 
     if (ret2 != 0) {
-        ESP_LOGE(TAG, "   ❌ ClientHello failed");
+        ESP_LOGE(TAG, "   [FAIL] ClientHello failed");
         return false;
     }
 
-    ESP_LOGI(TAG, "   ✅ SMP Handshake complete!");
+    ESP_LOGI(TAG, "   [OK] SMP Handshake complete!");
     ESP_LOG_BUFFER_HEX("PEER_SESS", peer_state.session_id, 32);  // DEBUG Bug#21
     peer_state.connected = true;
 
@@ -208,7 +208,7 @@ void peer_disconnect(void) {
         peer_state.connected = false;
         peer_state.initialized = false;
         peer_conn.connected = false;
-        ESP_LOGI(TAG, "   🔌 Peer connection closed");
+        ESP_LOGI(TAG, "   [DISC] Peer connection closed");
     }
 }
 
@@ -269,14 +269,14 @@ static bool peer_prepare_for_contact(contact_t *contact) {
 
 bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     if (!peer_state.connected || !pending_peer.valid || !pending_peer.has_dh) {
-        ESP_LOGE(TAG, "❌ Cannot send CONF: not ready");
+        ESP_LOGE(TAG, "[FAIL] Cannot send CONF: not ready");
         return false;
     }
 
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  📤 SENDING AGENT CONFIRMATION (v0.1.14 Format)              ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [SEND] SENDING AGENT CONFIRMATION (v0.1.14 Format)              |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     ESP_LOGI(TAG, "   To queue: %02x%02x%02x%02x... (%d bytes)",
              pending_peer.queue_id[0], pending_peer.queue_id[1],
              pending_peer.queue_id[2], pending_peer.queue_id[3],
@@ -298,13 +298,13 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         display_name);
     const char *conn_info_json = conn_info_buf;    int json_len = (int)strlen(conn_info_json);
 
-    ESP_LOGI(TAG, "   📋 ConnInfo JSON (%d bytes):", json_len);
+    ESP_LOGI(TAG, "   [INFO] ConnInfo JSON (%d bytes):", json_len);
     ESP_LOGI(TAG, "      %s", conn_info_json);
 
     // ========== Build AgentConnInfoReply ==========
     // Format: 'D' + smpQueues (NonEmpty SMPQueueInfo) + connInfo (Tail)
     if (!our_queue.valid) {
-        ESP_LOGE(TAG, "❌ Our queue not created! Call queue_create() first!");
+        ESP_LOGE(TAG, "[FAIL] Our queue not created! Call queue_create() first!");
         free(block);
         return false;
     }
@@ -324,7 +324,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     int peer_contact_idx = contact_idx;
     if (peer_contact_idx < 0 || peer_contact_idx >= MAX_CONTACTS ||
         !contacts_db.contacts[peer_contact_idx].active) {
-        ESP_LOGE(TAG, "❌ Invalid contact_idx %d, falling back to 0", contact_idx);
+        ESP_LOGE(TAG, "[FAIL] Invalid contact_idx %d, falling back to 0", contact_idx);
         peer_contact_idx = 0;
     }
     ESP_LOGI(TAG, "peer_contact_idx = %d (EXPLICIT from caller)", peer_contact_idx);
@@ -352,7 +352,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         ESP_LOGW(TAG, "Fallback to legacy our_queue for CONFIRMATION (contact 0)");
     }
     if (queue_info_len < 0) {
-        ESP_LOGE(TAG, "❌ Failed to encode queue info!");
+        ESP_LOGE(TAG, "[FAIL] Failed to encode queue info!");
         free(block);
         return false;
     }
@@ -361,18 +361,18 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         memcpy(&agent_conn_info[aci_len], conn_info_json, (size_t)json_len);
         aci_len += json_len;
 
-        ESP_LOGI(TAG, "   📦 AgentConnInfoReply: %d bytes (tag='D' + queue + JSON)", aci_len);
+        ESP_LOGI(TAG, "   [PKG] AgentConnInfoReply: %d bytes (tag='D' + queue + JSON)", aci_len);
 
     // ========== Generate E2E Ratchet Parameters ==========
     e2e_params_t *e2e_params = (e2e_params_t *)heap_caps_malloc(sizeof(e2e_params_t), MALLOC_CAP_8BIT);
     if (!e2e_params) {
-        ESP_LOGE(TAG, "❌ Failed to allocate e2e_params!");
+        ESP_LOGE(TAG, "[FAIL] Failed to allocate e2e_params!");
         free(block);
         return false;
     }
 
     if (!e2e_generate_params(e2e_params)) {
-        ESP_LOGE(TAG, "❌ Failed to generate E2E params!");
+        ESP_LOGE(TAG, "[FAIL] Failed to generate E2E params!");
         free(e2e_params);
         free(block);
         return false;
@@ -381,7 +381,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     // Encode E2E params (SndE2ERatchetParams format)
     uint8_t e2e_encoded[1800];
     int e2e_len = e2e_encode_params(e2e_params, e2e_encoded);
-    ESP_LOGI(TAG, "   🔐 E2E params: %d bytes", e2e_len);
+    ESP_LOGI(TAG, "   [LOCK] E2E params: %d bytes", e2e_len);
 
     // ========== X3DH + Ratchet Encryption ==========
     // Set active ratchet/handshake slot BEFORE X3DH
@@ -389,11 +389,11 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     if (peer_contact_idx >= 0) {
         ratchet_set_active((uint8_t)peer_contact_idx);
         handshake_set_active((uint8_t)peer_contact_idx);
-        ESP_LOGI(TAG, "🔄 Set active ratchet+handshake to slot [%d]", peer_contact_idx);
+        ESP_LOGI(TAG, "[SYNC] Set active ratchet+handshake to slot [%d]", peer_contact_idx);
     }
 
     if (!pending_peer.has_e2e) {
-        ESP_LOGE(TAG, "❌ No E2E keys from peer!");
+        ESP_LOGE(TAG, "[FAIL] No E2E keys from peer!");
         free(e2e_params);
         free(block);
         return false;
@@ -401,7 +401,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 
     // X3DH sender
     if (!ratchet_x3dh_sender(pending_peer.e2e_key1, pending_peer.e2e_key2, &e2e_params->key1, &e2e_params->key2)) {
-        ESP_LOGE(TAG, "❌ X3DH failed!");
+        ESP_LOGE(TAG, "[FAIL] X3DH failed!");
         free(e2e_params);
         free(block);
         return false;
@@ -409,7 +409,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 
     // Ratchet init (global state)
     if (!ratchet_init_sender(pending_peer.e2e_key2, &e2e_params->key2)) {
-        ESP_LOGE(TAG, "❌ Ratchet init failed!");
+        ESP_LOGE(TAG, "[FAIL] Ratchet init failed!");
         free(e2e_params);
         free(block);
         return false;
@@ -419,7 +419,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     #define ENC_CONN_INFO_SIZE (1 + 123 + 16 + 14832 + 100)  // ~15072 bytes
     uint8_t *enc_conn_info = malloc(ENC_CONN_INFO_SIZE);
     if (!enc_conn_info) {
-        ESP_LOGE(TAG, "❌ Failed to allocate enc_conn_info!");
+        ESP_LOGE(TAG, "[FAIL] Failed to allocate enc_conn_info!");
         free(e2e_params);
         free(block);
         return false;
@@ -427,7 +427,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     size_t enc_conn_info_len = 0;
 
     if (ratchet_encrypt(agent_conn_info, (size_t)aci_len, enc_conn_info, &enc_conn_info_len, 14832) != 0) {
-        ESP_LOGE(TAG, "❌ Ratchet encrypt failed!");
+        ESP_LOGE(TAG, "[FAIL] Ratchet encrypt failed!");
         free(enc_conn_info);
         free(e2e_params);
         free(block);
@@ -441,12 +441,12 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     // dh_peer, triggering a spurious ratchet step that overwrote the keys
     // needed to decrypt incoming messages from the peer.
 
-    ESP_LOGI(TAG, "   🔒 encConnInfo encrypted: %d bytes", (int)enc_conn_info_len);
+    ESP_LOGI(TAG, "   [SEC] encConnInfo encrypted: %d bytes", (int)enc_conn_info_len);
 
     // ========== Build AgentConfirmation ==========
     uint8_t *agent_msg = malloc(20000);
     if (!agent_msg) {
-        ESP_LOGE(TAG, "❌ Failed to allocate agent_msg!");
+        ESP_LOGE(TAG, "[FAIL] Failed to allocate agent_msg!");
         free(enc_conn_info);
         free(e2e_params);
         free(block);
@@ -472,13 +472,13 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     memcpy(&agent_msg[amp], enc_conn_info, enc_conn_info_len);
     amp += (int)enc_conn_info_len;
 
-    ESP_LOGI(TAG, "    📨 AgentConfirmation: %d bytes", amp);
+    ESP_LOGI(TAG, "    [MSG] AgentConfirmation: %d bytes", amp);
 
     // ========== Build ClientMessage Plaintext ==========
     // PrivHeader for Confirmation = 'K' + Length + Ed25519 SPKI
     uint8_t *plaintext = malloc(20000);
     if (!plaintext) {
-        ESP_LOGE(TAG, "❌ Failed to allocate plaintext!");
+        ESP_LOGE(TAG, "[FAIL] Failed to allocate plaintext!");
         free(agent_msg);
         free(enc_conn_info);
         free(e2e_params);
@@ -515,7 +515,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     memcpy(&plaintext[pp], agent_msg, (size_t)amp);
     pp += amp;
 
-    ESP_LOGI(TAG, "   📝 ClientMessage plaintext: %d bytes (PrivHeader + AgentMsg)", pp);
+    ESP_LOGI(TAG, "   [NOTE] ClientMessage plaintext: %d bytes (PrivHeader + AgentMsg)", pp);
 
     // ========== Encrypt with Peer's DH Key (crypto_box) ==========
     uint8_t nonce[24];
@@ -527,7 +527,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     
     uint8_t *padded = malloc(E2E_ENC_CONFIRMATION_LENGTH);
     if (!padded) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate padding buffer!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate padding buffer!");
         free(e2e_params);
         free(block);
         return false;
@@ -550,7 +550,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 // crypto_box with PADDED plaintext
     uint8_t *encrypted = malloc(24 + E2E_ENC_CONFIRMATION_LENGTH + crypto_box_MACBYTES);
     if (!encrypted) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate encrypted buffer!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate encrypted buffer!");
         free(padded);
         free(e2e_params);
         free(block);
@@ -559,7 +559,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     memcpy(encrypted, nonce, 24);
     if (crypto_box_easy(&encrypted[24], padded, (unsigned long long)padded_len, nonce,
                         pending_peer.dh_public, contact->rcv_dh_secret) != 0) {
-        ESP_LOGE(TAG, "   ❌ Encryption failed!");
+        ESP_LOGE(TAG, "   [FAIL] Encryption failed!");
         free(padded);
         free(encrypted);
         free(e2e_params);
@@ -571,14 +571,14 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 
     // IMPORTANT: encrypted_len must use padded_len!
     int encrypted_len = 24 + padded_len + crypto_box_MACBYTES;
-    ESP_LOGI(TAG, "   🔐 Encrypted: %d bytes (nonce + ciphertext + MAC)", encrypted_len);
+    ESP_LOGI(TAG, "   [LOCK] Encrypted: %d bytes (nonce + ciphertext + MAC)", encrypted_len);
 
     // ========== Wrap in SMP ClientMsgEnvelope ==========
     // PubHeader = [Version (2B BE)][Maybe '1'][len=44][X25519 SPKI]
     // Body = [nonce+ciphertext+mac]
     uint8_t *client_msg = malloc(24 + E2E_ENC_CONFIRMATION_LENGTH + crypto_box_MACBYTES + 100);
     if (!client_msg) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate client_msg buffer!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate client_msg buffer!");
         free(encrypted);
         free(e2e_params);
         free(block);
@@ -611,12 +611,12 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     memcpy(&client_msg[cmp], &encrypted[24], (size_t)(encrypted_len - 24));
     cmp += (encrypted_len - 24);
 
-    ESP_LOGI(TAG, "   📦 Client message: %d bytes (PubHeader + encrypted)", cmp);
+    ESP_LOGI(TAG, "   [PKG] Client message: %d bytes (PubHeader + encrypted)", cmp);
 
     #define SEND_BUFFER_SIZE (E2E_ENC_CONFIRMATION_LENGTH + 200)
     uint8_t *send_body = malloc(SEND_BUFFER_SIZE);
     if (!send_body) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate send_body!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate send_body!");
         free(client_msg);
         free(encrypted);
         free(e2e_params);
@@ -649,12 +649,12 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     memcpy(&send_body[sbp], client_msg, (size_t)cmp);
     sbp += cmp;
 
-    ESP_LOGI(TAG, "   📮 SEND body: %d bytes", sbp);
+    ESP_LOGI(TAG, "   [MAIL] SEND body: %d bytes", sbp);
 
     // ========== Build Transmission ==========
     uint8_t *transmission = malloc(SEND_BUFFER_SIZE + 100);
     if (!transmission) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate transmission!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate transmission!");
         free(send_body);
         free(client_msg);
         free(encrypted);
@@ -676,12 +676,12 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     memcpy(&transmission[tp], send_body, (size_t)sbp);
     tp += sbp;
 
-    ESP_LOGI(TAG, "   📡 Transmission: %d bytes", tp);
+    ESP_LOGI(TAG, "   [NET] Transmission: %d bytes", tp);
 
     // ========== Send ==========
     int ret = smp_write_command_block(&peer_state.ssl, block, transmission, tp);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ Send failed!");
+        ESP_LOGE(TAG, "   [FAIL] Send failed!");
         free(transmission);
         free(send_body);
         free(client_msg);
@@ -691,14 +691,14 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
         return false;
     }
 
-    ESP_LOGI(TAG, "   📤 SEND command sent! Waiting for response...");
+    ESP_LOGI(TAG, "   [SEND] SEND command sent! Waiting for response...");
 
     // Wait for response
     int content_len = smp_read_block(&peer_state.ssl, block, 10000);
     if (content_len >= 0) {
         uint8_t *resp = block + 2;
 
-        ESP_LOGI(TAG, "   📥 Response (%d bytes)", content_len);
+        ESP_LOGI(TAG, "   [RECV] Response (%d bytes)", content_len);
 
         // Parse response (lightweight, best-effort)
         int p = 0;
@@ -716,15 +716,15 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 
             if (p + 1 < content_len && resp[p] == 'O' && resp[p + 1] == 'K') {
                 ESP_LOGI(TAG, "");
-                ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-                ESP_LOGI(TAG, "║   🎉🎉🎉 CONFIRMATION ACCEPTED BY SERVER! 🎉🎉🎉            ║");
-                ESP_LOGI(TAG, "║                                                              ║");
-                ESP_LOGI(TAG, "║   Server accepted our message.                               ║");
-                ESP_LOGI(TAG, "║   Now waiting for SimpleX App to process it...               ║");
-                ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+                ESP_LOGI(TAG, "+----------------------------------------+");
+                ESP_LOGI(TAG, "|   [SUCCESS] CONFIRMATION ACCEPTED BY SERVER! [SUCCESS]            |");
+                ESP_LOGI(TAG, "|                                                              |");
+                ESP_LOGI(TAG, "|   Server accepted our message.                               |");
+                ESP_LOGI(TAG, "|   Now waiting for SimpleX App to process it...               |");
+                ESP_LOGI(TAG, "+----------------------------------------+");
 
                 ESP_LOGI(TAG, "");
-                ESP_LOGI(TAG, "   📤 Starting HELLO handshake...");
+                ESP_LOGI(TAG, "   [SEND] Starting HELLO handshake...");
 
                 if (pending_peer.has_dh && pending_peer.valid) {
                     uint8_t our_dh_private[32];
@@ -746,12 +746,12 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
                     );
 
                     if (hello_ok) {
-                        ESP_LOGI(TAG, "   ✅ HELLO handshake complete!");
+                        ESP_LOGI(TAG, "   [OK] HELLO handshake complete!");
                     } else {
-                        ESP_LOGW(TAG, "   ⚠️  HELLO handshake failed (connection may still work)");
+                        ESP_LOGW(TAG, "   [WARN]  HELLO handshake failed (connection may still work)");
                     }
                 } else {
-                    ESP_LOGW(TAG, "   ⚠️  No peer DH key available, skipping HELLO");
+                    ESP_LOGW(TAG, "   [WARN]  No peer DH key available, skipping HELLO");
                 }
 
                 // Persist peer state after successful handshake
@@ -766,11 +766,11 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
                 return true;
 
             } else if (p + 2 < content_len && resp[p] == 'E' && resp[p + 1] == 'R' && resp[p + 2] == 'R') {
-                ESP_LOGE(TAG, "   ❌ Server error: %.*s", 30, &resp[p]);
+                ESP_LOGE(TAG, "   [FAIL] Server error: %.*s", 30, &resp[p]);
             }
         }
     } else {
-        ESP_LOGW(TAG, "   ⚠️ No response received (timeout or error)");
+        ESP_LOGW(TAG, "   [WARN] No response received (timeout or error)");
     }
 
     free(transmission);
@@ -787,33 +787,33 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
 bool peer_send_hello(contact_t *contact) {
     // Load correct peer state for THIS contact
     if (!peer_prepare_for_contact(contact)) {
-        ESP_LOGE(TAG, "❌ peer_send_hello: peer_prepare failed!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_hello: peer_prepare failed!");
         return false;
     }
 
     // Reconnect to peer if connection was closed
     if (!peer_state.connected) {
         if (peer_state.last_host[0] == '\0' || peer_state.last_port == 0) {
-            ESP_LOGE(TAG, "❌ peer_send_hello: no saved peer host/port!");
+            ESP_LOGE(TAG, "[FAIL] peer_send_hello: no saved peer host/port!");
             return false;
         }
-        ESP_LOGI(TAG, "   🔄 Reconnecting to peer server %s:%d...", 
+        ESP_LOGI(TAG, "   [SYNC] Reconnecting to peer server %s:%d...", 
                  peer_state.last_host, peer_state.last_port);
         if (!peer_connect(peer_state.last_host, peer_state.last_port)) {
-            ESP_LOGE(TAG, "❌ peer_send_hello: reconnect failed!");
+            ESP_LOGE(TAG, "[FAIL] peer_send_hello: reconnect failed!");
             return false;
         }
-        ESP_LOGI(TAG, "   ✅ Peer reconnected!");
+        ESP_LOGI(TAG, "   [OK] Peer reconnected!");
     }
 
     if (!pending_peer.valid || !pending_peer.has_dh) {
-        ESP_LOGE(TAG, "❌ peer_send_hello: no pending peer data!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_hello: no pending peer data!");
         return false;
     }
 
     uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
     if (!block) {
-        ESP_LOGE(TAG, "❌ peer_send_hello: malloc failed!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_hello: malloc failed!");
         return false;
     }
 
@@ -856,34 +856,34 @@ bool peer_send_hello(contact_t *contact) {
 bool peer_send_chat_message(contact_t *contact, const char *message) {
     // Load correct peer state for THIS contact
     if (!peer_prepare_for_contact(contact)) {
-        ESP_LOGE(TAG, "❌ peer_send_chat_message: peer_prepare failed!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_chat_message: peer_prepare failed!");
         return false;
     }
 
     // Reconnect to peer if needed
     if (!peer_state.connected) {
         if (peer_state.last_host[0] == '\0' || peer_state.last_port == 0) {
-            ESP_LOGE(TAG, "❌ peer_send_chat_message: no saved peer host/port!");
+            ESP_LOGE(TAG, "[FAIL] peer_send_chat_message: no saved peer host/port!");
             return false;
         }
-        ESP_LOGI(TAG, "   🔄 Reconnecting to peer server %s:%d...",
+        ESP_LOGI(TAG, "   [SYNC] Reconnecting to peer server %s:%d...",
                  peer_state.last_host, peer_state.last_port);
         if (!peer_connect(peer_state.last_host, peer_state.last_port)) {
-            ESP_LOGE(TAG, "❌ peer_send_chat_message: reconnect failed!");
+            ESP_LOGE(TAG, "[FAIL] peer_send_chat_message: reconnect failed!");
             return false;
         }
-        ESP_LOGI(TAG, "   ✅ Peer reconnected!");
+        ESP_LOGI(TAG, "   [OK] Peer reconnected!");
         ESP_LOG_BUFFER_HEX("NEW_SESS", peer_state.session_id, 32);  // DEBUG Bug#21
     }
 
     if (!pending_peer.valid || !pending_peer.has_dh) {
-        ESP_LOGE(TAG, "❌ peer_send_chat_message: no pending peer data!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_chat_message: no pending peer data!");
         return false;
     }
 
     uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
     if (!block) {
-        ESP_LOGE(TAG, "❌ peer_send_chat_message: malloc failed!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_chat_message: malloc failed!");
         return false;
     }
 
@@ -946,37 +946,37 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
 // ============== Send Delivery Receipt ==============
 
 bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8_t *msg_hash) {
-    ESP_LOGI(TAG, "📬 SENDING DELIVERY RECEIPT (A_RCVD)");
+    ESP_LOGI(TAG, "[MSG] SENDING DELIVERY RECEIPT (A_RCVD)");
     
     // Load correct peer state for THIS contact
     if (!peer_prepare_for_contact(contact)) {
-        ESP_LOGE(TAG, "❌ peer_send_receipt: peer_prepare failed!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_receipt: peer_prepare failed!");
         return false;
     }
 
     // Reconnect to peer if needed
     if (!peer_state.connected) {
         if (peer_state.last_host[0] == '\0' || peer_state.last_port == 0) {
-            ESP_LOGE(TAG, "❌ peer_send_receipt: no saved peer host/port!");
+            ESP_LOGE(TAG, "[FAIL] peer_send_receipt: no saved peer host/port!");
             return false;
         }
-        ESP_LOGI(TAG, "   🔄 Reconnecting to peer server %s:%d...",
+        ESP_LOGI(TAG, "   [SYNC] Reconnecting to peer server %s:%d...",
                  peer_state.last_host, peer_state.last_port);
         if (!peer_connect(peer_state.last_host, peer_state.last_port)) {
-            ESP_LOGE(TAG, "❌ peer_send_receipt: reconnect failed!");
+            ESP_LOGE(TAG, "[FAIL] peer_send_receipt: reconnect failed!");
             return false;
         }
-        ESP_LOGI(TAG, "   ✅ Peer reconnected!");
+        ESP_LOGI(TAG, "   [OK] Peer reconnected!");
     }
 
     if (!pending_peer.valid || !pending_peer.has_dh) {
-        ESP_LOGE(TAG, "❌ peer_send_receipt: no pending peer data!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_receipt: no pending peer data!");
         return false;
     }
 
     uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
     if (!block) {
-        ESP_LOGE(TAG, "❌ peer_send_receipt: malloc failed!");
+        ESP_LOGE(TAG, "[FAIL] peer_send_receipt: malloc failed!");
         return false;
     }
 
@@ -1051,11 +1051,11 @@ bool peer_save_state(uint8_t contact_idx) {
 
     esp_err_t ret = smp_storage_save_blob_sync(key, &pending_peer, sizeof(peer_queue_t));
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "❌ peer_save_state('%s') FAILED: %s", key, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "[FAIL] peer_save_state('%s') FAILED: %s", key, esp_err_to_name(ret));
         return false;
     }
 
-    ESP_LOGI(TAG, "💾 Peer state saved: '%s' (%zu bytes)", key, sizeof(peer_queue_t));
+    ESP_LOGI(TAG, "[SAVE] Peer state saved: '%s' (%zu bytes)", key, sizeof(peer_queue_t));
     ESP_LOGI(TAG, "   host: %s:%d, queueId: %02x%02x%02x%02x... (%d)",
              pending_peer.host, pending_peer.port,
              pending_peer.queue_id[0], pending_peer.queue_id[1],
@@ -1084,25 +1084,25 @@ bool peer_load_state(uint8_t contact_idx) {
     peer_queue_t loaded;
     esp_err_t ret = smp_storage_load_blob(key, &loaded, sizeof(peer_queue_t), &loaded_len);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "❌ peer_load_state('%s') FAILED: %s", key, esp_err_to_name(ret));
+        ESP_LOGE(TAG, "[FAIL] peer_load_state('%s') FAILED: %s", key, esp_err_to_name(ret));
         return false;
     }
 
     if (loaded_len != sizeof(peer_queue_t)) {
-        ESP_LOGE(TAG, "❌ peer_load_state: size mismatch! got %zu, expected %zu",
+        ESP_LOGE(TAG, "[FAIL] peer_load_state: size mismatch! got %zu, expected %zu",
                  loaded_len, sizeof(peer_queue_t));
         return false;
     }
     if (!loaded.valid) {
-        ESP_LOGW(TAG, "❌ peer_load_state: loaded state has valid=false!");
+        ESP_LOGW(TAG, "[FAIL] peer_load_state: loaded state has valid=false!");
         return false;
     }
     if (loaded.host[0] == '\0' || loaded.port == 0) {
-        ESP_LOGW(TAG, "❌ peer_load_state: host or port empty!");
+        ESP_LOGW(TAG, "[FAIL] peer_load_state: host or port empty!");
         return false;
     }
     if (loaded.queue_id_len <= 0 || loaded.queue_id_len > 32) {
-        ESP_LOGW(TAG, "❌ peer_load_state: invalid queue_id_len=%d", loaded.queue_id_len);
+        ESP_LOGW(TAG, "[FAIL] peer_load_state: invalid queue_id_len=%d", loaded.queue_id_len);
         return false;
     }
 
@@ -1114,14 +1114,14 @@ bool peer_load_state(uint8_t contact_idx) {
     peer_state.last_host[sizeof(peer_state.last_host) - 1] = '\0';
     peer_state.last_port = pending_peer.port;
 
-    ESP_LOGI(TAG, "📂 Peer state restored: '%s' (%zu bytes)", key, loaded_len);
+    ESP_LOGI(TAG, "[LOAD] Peer state restored: '%s' (%zu bytes)", key, loaded_len);
     ESP_LOGI(TAG, "   host: %s:%d, queueId: %02x%02x%02x%02x... (%d)",
              pending_peer.host, pending_peer.port,
              pending_peer.queue_id[0], pending_peer.queue_id[1],
              pending_peer.queue_id[2], pending_peer.queue_id[3],
              pending_peer.queue_id_len);
     ESP_LOGI(TAG, "   dh: %s, e2e: %s",
-             pending_peer.has_dh ? "✅" : "❌",
-             pending_peer.has_e2e ? "✅" : "❌");
+             pending_peer.has_dh ? "[OK]" : "[FAIL]",
+             pending_peer.has_e2e ? "[OK]" : "[FAIL]");
     return true;
 }

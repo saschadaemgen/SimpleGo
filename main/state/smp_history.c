@@ -13,8 +13,8 @@
  * All functions MUST be called from App Task (Internal SRAM stack)
  * because NVS writes crash with PSRAM stack (SPI Flash cache conflict).
  *
- * Session 37 — Auftrag von Prinzessin Mausi
- * Session 37b — SD Mutex + DMA hint (Mausi Architektur-Entscheidung)
+ * Session 37 - Auftrag von Prinzessin Mausi
+ * Session 37b - SD Mutex + DMA hint (Mausi Architektur-Entscheidung)
  * SPDX-License-Identifier: AGPL-3.0
  */
 
@@ -42,12 +42,12 @@ static uint8_t s_master_key[HISTORY_MASTER_KEY_LEN];
 static bool s_initialized = false;
 
 /*
- * SPI2 Bus Lock — Display and SD card share SPI2_HOST.
+ * SPI2 Bus Lock - Display and SD card share SPI2_HOST.
  *
  * We use the LVGL recursive mutex as the SPI2 bus serialization mechanism:
- *   - LVGL task holds it during lv_timer_handler() → flush_cb → SPI2 display
- *   - App Task takes it before SD file I/O → blocks LVGL rendering
- *   - LVGL context (on_contact_click → smp_history_delete): recursive take OK
+ *   - LVGL task holds it during lv_timer_handler() -> flush_cb -> SPI2 display
+ *   - App Task takes it before SD file I/O -> blocks LVGL rendering
+ *   - LVGL context (on_contact_click -> smp_history_delete): recursive take OK
  *
  * This replaces the original sd_mutex. No separate mutex needed because
  * ALL SPI2 contention goes through the same LVGL lock.
@@ -58,7 +58,7 @@ static bool s_initialized = false;
  * Session 37b: Root cause was spi_tx_color failures from bus contention.
  */
 
-/* Timeout for bus lock — generous for slow SD + display flush overlap */
+/* Timeout for bus lock - generous for slow SD + display flush overlap */
 #define SPI2_BUS_TIMEOUT_MS  3000
 
 static inline bool sd_lock(void)
@@ -148,7 +148,7 @@ esp_err_t smp_history_init(void)
 {
     if (s_initialized) return ESP_OK;
 
-    // Session 37b: No mutex creation needed — we use tdeck_lvgl_lock()
+    // Session 37b: No mutex creation needed - we use tdeck_lvgl_lock()
     // which is already initialized before smp_history_init() is called.
 
     // Load master key from NVS
@@ -205,8 +205,8 @@ esp_err_t smp_history_init(void)
  * Append: Encrypt and append one message to the history file
  *
  * Session 40a: Crypto separated from SPI mutex.
- *   Existing file: Pass 1 (read header) → CPU crypto → Pass 2 (write)
- *   New file:      CPU crypto → single Pass (write header + record)
+ *   Existing file: Pass 1 (read header) -> CPU crypto -> Pass 2 (write)
+ *   New file:      CPU crypto -> single Pass (write header + record)
  *
  * NOTE: Between Pass 1 (read msg_count) and Pass 2 (write),
  * another append could theoretically change msg_count and cause
@@ -423,7 +423,7 @@ esp_err_t smp_history_append(uint8_t slot, const history_message_t *msg)
  *
  * Session 40a: Crypto separated from SPI mutex.
  *   CPU:    derive_key (no mutex)
- *   Pass 1: sd_lock → read header + skip + read ALL raw records → sd_unlock
+ *   Pass 1: sd_lock -> read header + skip + read ALL raw records -> sd_unlock
  *   CPU:    decrypt all records, parse, truncate text (no mutex)
  *   Free:   PSRAM buffer
  * ============================================================ */

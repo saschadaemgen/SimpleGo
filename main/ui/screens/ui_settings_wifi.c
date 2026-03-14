@@ -3,7 +3,7 @@
  * @brief Settings Screen - WIFI Tab (Scan, Connect, Password Overlay)
  *
  * Session 39c: Extracted from monolithic ui_settings.c
- * Session 39d: Mausi Fixes — lv_async_call, object reduction, timing
+ * Session 39d: Mausi Fixes - lv_async_call, object reduction, timing
  *
  * SimpleGo UI
  * Copyright (c) 2025-2026 Sascha
@@ -68,7 +68,7 @@ static void anim_dots_cb(lv_timer_t *t);
  * Deferred Tab Rebuild (Session 39d Fix 1: avoids re-entrancy)
  *
  * CRITICAL: Never call settings_switch_tab() from inside a
- * timer callback or event handler — it deletes timers from
+ * timer callback or event handler - it deletes timers from
  * within their own callback, causing undefined behavior.
  * Always use lv_async_call(deferred_wifi_rebuild, NULL).
  * ================================================================ */
@@ -395,7 +395,7 @@ static void wifi_scan_poll_cb(lv_timer_t *t)
 static void wifi_conn_poll_cb(lv_timer_t *t)
 {
     (void)t;
-    /* Don't interfere while scan is running — ESP-IDF channel-hops
+    /* Don't interfere while scan is running - ESP-IDF channel-hops
      * during scan, which can briefly make us appear disconnected */
     if (s_scan_in_progress) return;
     wifi_status_t ws = wifi_manager_get_status();
@@ -427,7 +427,7 @@ static void wifi_conn_poll_cb(lv_timer_t *t)
         s_connecting_ssid[0] = '\0';
 
         /* Session 39d Fix 1: NEVER call settings_switch_tab() here!
-         * We are inside a timer callback — deferred rebuild avoids
+         * We are inside a timer callback - deferred rebuild avoids
          * deleting this timer from its own callback (re-entrancy). */
         lv_async_call(deferred_wifi_rebuild, NULL);
     }
@@ -649,7 +649,7 @@ void settings_create_wifi(lv_obj_t *parent)
 
     s_wifi_scan_timer = lv_timer_create(wifi_scan_poll_cb, 100, NULL);
 
-    /* Poll connection status every 2s — detects reconnect and network switch */
+    /* Poll connection status every 2s - detects reconnect and network switch */
     wifi_status_t ws2 = wifi_manager_get_status();
     s_wifi_was_connected = ws2.connected;
     if (ws2.connected) {

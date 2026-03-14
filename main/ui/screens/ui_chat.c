@@ -3,14 +3,14 @@
  * @brief Chat Screen - Cyberpunk Messenger (Mockup v5)
  *
  * Layout (320×240, edge-to-edge):
- *   ┌──────────────────────────────────┐
+ *   ┌------------------------------------┐
  *   │ Status Bar  16px                 │
  *   │ Glow Line    1px                 │
  *   │ Chat Header 26px                 │
  *   │ Dim Line     1px                 │
  *   │ Messages   160px (scrollable)    │
  *   │ Input Bar   36px                 │
- *   └──────────────────────────────────┘
+ *   └------------------------------------┘
  *   Total: 16+1+26+1+160+36 = 240 ✓
  *
  * Bubble rendering extracted to ui_chat_bubble.c
@@ -471,7 +471,7 @@ static void truncate_chat_name(char *dst, const char *src, size_t dst_size)
     }
 }
 
-/* ============== Public API — Thin Wrappers ============== */
+/* ============== Public API - Thin Wrappers ============== */
 
 void ui_chat_set_contact(const char *name)
 {

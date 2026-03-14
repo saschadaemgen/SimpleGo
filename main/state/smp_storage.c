@@ -4,8 +4,8 @@
  * v0.1.17-alpha
  *
  * Two-Step Init Architecture:
- *   Step 1: smp_storage_init()    → NVS only (before display, no SPI)
- *   Step 2: smp_storage_init_sd() → SD card on existing SPI bus (after display)
+ *   Step 1: smp_storage_init()    -> NVS only (before display, no SPI)
+ *   Step 2: smp_storage_init_sd() -> SD card on existing SPI bus (after display)
  *
  * The T-Deck display owns SPI2_HOST. We share that bus for SD card
  * with a separate CS pin. Never call spi_bus_initialize() ourselves.
@@ -42,7 +42,7 @@ static const char *TAG = "SMP_STOR";
 // SD_PIN_CS per device_config.h
 
 #define SD_PIN_CS       GPIO_NUM_39
-#define SD_SPI_HOST     SPI2_HOST       // Same bus as display — DO NOT re-initialize!
+#define SD_SPI_HOST     SPI2_HOST       // Same bus as display - DO NOT re-initialize!
 
 // ============== Internal State ==============
 
@@ -94,7 +94,7 @@ esp_err_t smp_storage_init(void) {
         return ret;
     }
     storage.nvs_ready = true;
-    ESP_LOGI(TAG, "NVS namespace '%s' opened — ready for Write-Before-Send", SMP_STORAGE_NVS_NAMESPACE);
+    ESP_LOGI(TAG, "NVS namespace '%s' opened - ready for Write-Before-Send", SMP_STORAGE_NVS_NAMESPACE);
     ESP_LOGI(TAG, "");
 
     return ESP_OK;
@@ -121,7 +121,7 @@ esp_err_t smp_storage_init_sd(void) {
         .allocation_unit_size = 16 * 1024
     };
 
-    // Use existing SPI bus from display — DO NOT call spi_bus_initialize()!
+    // Use existing SPI bus from display - DO NOT call spi_bus_initialize()!
     // Display already initialized SPI2_HOST with SCLK=40, MOSI=41, MISO=38
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.slot = SD_SPI_HOST;
@@ -140,7 +140,7 @@ esp_err_t smp_storage_init_sd(void) {
 
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SD card not available: %s", esp_err_to_name(ret));
-        ESP_LOGW(TAG, "  (This is OK — message history will use NVS fallback)");
+        ESP_LOGW(TAG, "  (This is OK - message history will use NVS fallback)");
         storage.sd_mounted = false;
     } else {
         storage.sd_mounted = true;
@@ -313,7 +313,7 @@ esp_err_t smp_storage_save_blob_sync(const char *key, const void *data, size_t l
 
 esp_err_t smp_storage_sd_write(const char *path, const void *data, size_t len) {
     if (!storage.sd_mounted) {
-        ESP_LOGW(TAG, "SD write skipped — no SD card");
+        ESP_LOGW(TAG, "SD write skipped - no SD card");
         return ESP_ERR_NOT_FOUND;
     }
     if (!path || !data || len == 0) return ESP_ERR_INVALID_ARG;
@@ -587,9 +587,9 @@ test_b:
         if (elapsed < 5000) {
             ESP_LOGI(TAG, "     Excellent: <5ms");
         } else if (elapsed < 20000) {
-            ESP_LOGI(TAG, "     Good: <20ms — acceptable for Write-Before-Send");
+            ESP_LOGI(TAG, "     Good: <20ms - acceptable for Write-Before-Send");
         } else {
-            ESP_LOGW(TAG, "     Slow: %lldms — may impact real-time feel", elapsed / 1000);
+            ESP_LOGW(TAG, "     Slow: %lldms - may impact real-time feel", elapsed / 1000);
         }
     }
 

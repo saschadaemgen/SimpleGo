@@ -33,15 +33,15 @@ static const char *TAG = "UI_BUBBLE";
 #define BUBBLE_PAD_R        8
 #define BUBBLE_BORDER_W     1
 
-/* Bubble colors — extremely subtle tint, barely visible */
+/* Bubble colors - extremely subtle tint, barely visible */
 #define BUBBLE_BG_OUT       lv_color_hex(0x000C00)  /* pure dark green, no red */
 #define BUBBLE_BG_IN        lv_color_hex(0x000010)  /* pure dark blue, no red  */
 
-/* Border opacities — more neon glow */
-#define BORDER_OPA_OUT      ((lv_opa_t)120)  /* ~47% green — more neon */
-#define BORDER_OPA_IN       ((lv_opa_t)105)  /* ~41% cyan  — more neon */
+/* Border opacities - more neon glow */
+#define BORDER_OPA_OUT      ((lv_opa_t)120)  /* ~47% green - more neon */
+#define BORDER_OPA_IN       ((lv_opa_t)105)  /* ~41% cyan  - more neon */
 
-/* Delivery status text — LVGL symbols rendered at Font 12
+/* Delivery status text - LVGL symbols rendered at Font 12
  * (Font 10 clips the symbol glyphs at the top) */
 #define ST_SENDING          "..."
 #define ST_SENT             LV_SYMBOL_OK
@@ -118,7 +118,7 @@ static void format_history_timestamp(int64_t ts, char *buf, size_t len)
 }
 
 /* ============================================================
- * CUSTOM DRAW CALLBACK — sharp corner via draw pipeline
+ * CUSTOM DRAW CALLBACK - sharp corner via draw pipeline
  *
  * Strategy:
  *   1. LVGL draws the bubble as a fully-rounded rectangle (all 4 corners)
@@ -155,7 +155,7 @@ static void bubble_draw_cb(lv_event_t *e)
     int R = BUBBLE_RADIUS;
     /* How far the padding+border zone extends inward */
     int pad_b = BUBBLE_PAD_B + BUBBLE_BORDER_W;   /* 3px from bottom edge */
-    int pad_side = BUBBLE_BORDER_W + 2;            /* 3px — covers border curve */
+    int pad_side = BUBBLE_BORDER_W + 2;            /* 3px - covers border curve */
 
     /* --- L-shaped fill: two strips that ONLY cover the
      *     border/padding zone, never the content area ---
@@ -257,9 +257,9 @@ static void bubble_draw_cb(lv_event_t *e)
  * ui_chat_add_history_message() into a single function.
  *
  * delivery_status controls behavior:
- *   -1  = LIVE    → show "...", track for updates
- *    0  = HISTORY → show single check (sent)
- *    1+ = HISTORY → show double check (delivered)
+ *   -1  = LIVE    -> show "...", track for updates
+ *    0  = HISTORY -> show single check (sent)
+ *    1+ = HISTORY -> show double check (delivered)
  * ============================================================ */
 
 static void create_bubble_internal(lv_obj_t *container, const char *text,
@@ -340,7 +340,7 @@ static void create_bubble_internal(lv_obj_t *container, const char *text,
                         LV_EVENT_DRAW_TASK_ADDED,
                         (void *)(uintptr_t)is_outgoing);
 
-    /* ---- Message text (Font 12 — between SM and LG) ---- */
+    /* ---- Message text (Font 12 - between SM and LG) ---- */
     lv_obj_t *label = lv_label_create(bubble);
     lv_label_set_text(label, label_text);  /* uses truncated text */
     lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);

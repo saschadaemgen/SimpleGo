@@ -82,7 +82,7 @@ lv_font_t simplego_font_10;
 // Auftrag 50b: Session restoration flag (set in app_main, read in smp_connect)
 static bool session_restored = false;
 
-// Keyboard → SMP thread communication via FreeRTOS Queue
+// Keyboard -> SMP thread communication via FreeRTOS Queue
 static QueueHandle_t kbd_msg_queue = NULL;   // char[256] messages from kbd task
 
 // Chat send callback (LVGL thread -> kbd_msg_queue -> smp_app_run)
@@ -106,9 +106,9 @@ static volatile bool s_show_qr_pending = false;
 // Session 39k: Auto-launch WiFi setup when no credentials exist
 static volatile bool s_wifi_setup_pending = false;
 
-// Session 37b: Progressive history rendering — 3 messages per timer tick
-#define HISTORY_CHUNK_SIZE  3   // messages per 50ms tick — smooth UX
-// Session 40c: MAX_VISIBLE_BUBBLES removed — replaced by BUBBLE_WINDOW_SIZE in ui_chat.c
+// Session 37b: Progressive history rendering - 3 messages per timer tick
+#define HISTORY_CHUNK_SIZE  3   // messages per 50ms tick - smooth UX
+// Session 40c: MAX_VISIBLE_BUBBLES removed - replaced by BUBBLE_WINDOW_SIZE in ui_chat.c
 static int  s_hist_render_idx   = 0;     // current position in batch
 static int  s_hist_render_end   = 0;     // Session 40c: stop index (window end)
 static bool s_hist_rendering    = false; // true while progressively rendering
@@ -117,7 +117,7 @@ static void ui_poll_timer_cb(lv_timer_t *t)
 {
     (void)t;
 
-    // Session 37b: Progressive history rendering — 3 messages per tick
+    // Session 37b: Progressive history rendering - 3 messages per tick
     // Session 40c: Renders only the window portion [window_start..window_end)
     if (s_hist_rendering && smp_history_batch && smp_history_batch_count > 0) {
         int end = s_hist_render_idx + HISTORY_CHUNK_SIZE;
@@ -232,7 +232,7 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                              smp_history_batch_count,
                              s_hist_render_idx, s_hist_render_end);
                 } else {
-                    // Empty history (new contact) — just hide loading
+                    // Empty history (new contact) - just hide loading
                     ui_chat_hide_loading();
                 }
                 break;
@@ -365,7 +365,7 @@ static void smp_connect(void) {
         ESP_LOGW(TAG, "      Clearing old contacts for fresh test...");
         clear_all_contacts();
     } else {
-        ESP_LOGI(TAG, "      Session restored — keeping persisted contacts");
+        ESP_LOGI(TAG, "      Session restored - keeping persisted contacts");
     }
 
     load_contacts_from_nvs();
@@ -546,7 +546,7 @@ void app_main(void) {
                 lv_indev_t *kb_indev = tdeck_keyboard_register_lvgl();
                 if (kb_indev) {
                     ui_chat_set_keyboard_indev(kb_indev);
-                    ESP_LOGI(TAG, "Keyboard -> LVGL -> Chat linked! ⌨️");
+                    ESP_LOGI(TAG, "Keyboard -> LVGL -> Chat linked! [KB]");
                 }
             } else {
                 ESP_LOGW(TAG, "Keyboard init failed - continuing without keyboard");
@@ -658,9 +658,9 @@ void app_main(void) {
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========
     if (smp_storage_exists("rat_00") && smp_storage_exists("queue_our")) {
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-        ESP_LOGI(TAG, "║  📂 RESTORING PREVIOUS SESSION                               ║");
-        ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+        ESP_LOGI(TAG, "+----------------------------------------+");
+        ESP_LOGI(TAG, "|  [LOAD] RESTORING PREVIOUS SESSION                               |");
+        ESP_LOGI(TAG, "+----------------------------------------+");
         ESP_LOGI(TAG, "");
 
         bool ratchet_ok = ratchet_load_state(0);
@@ -670,9 +670,9 @@ void app_main(void) {
 
         if (ratchet_ok && queue_ok) {
             session_restored = true;
-            ESP_LOGI(TAG, "✅ Session restored! Skipping queue creation. (peer=%s, hand=%s)",
-                     peer_ok ? "✅" : "⚠️",
-                     hand_ok ? "✅" : "⚠️");
+            ESP_LOGI(TAG, "[OK] Session restored! Skipping queue creation. (peer=%s, hand=%s)",
+                     peer_ok ? "[OK]" : "[WARN]",
+                     hand_ok ? "[OK]" : "[WARN]");
 
             // Session 34 Phase 6: Load per-contact reply queues
             int rq_loaded = reply_queues_load_all();
@@ -683,12 +683,12 @@ void app_main(void) {
                 ESP_LOGI(TAG, "SEC-06: PQ state restored from NVS");
             }
         } else {
-            ESP_LOGW(TAG, "⚠️ Partial restore failed (ratchet=%d, queue=%d) — fresh start",
+            ESP_LOGW(TAG, "[WARN] Partial restore failed (ratchet=%d, queue=%d) - fresh start",
                      ratchet_ok, queue_ok);
             session_restored = false;
         }
     } else {
-        ESP_LOGI(TAG, "No previous session found — fresh start");
+        ESP_LOGI(TAG, "No previous session found - fresh start");
         session_restored = false;
     }
 

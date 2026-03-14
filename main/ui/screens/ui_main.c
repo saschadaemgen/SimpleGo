@@ -1,15 +1,15 @@
 /**
  * @file ui_main.c
- * @brief Main Screen — Unread Chats Dashboard
+ * @brief Main Screen - Unread Chats Dashboard
  *
  * Shows contacts with unread messages in compact row style.
  * If no unread messages exist, shows "No new messages" hint.
  *
  * Session 39c: Redesigned to match contacts/settings architecture
- * Session 39e: Row object reduction (6→3), status bar added
+ * Session 39e: Row object reduction (6->3), status bar added
  * Session 40:  Combined single bar replaces status bar + header
  *   - One 26px bar: [GO] [unread count] ... [12:00] [WiFi] [Bat]
- *   - "SimpleGo" title removed — only "GO" remains
+ *   - "SimpleGo" title removed - only "GO" remains
  *   - Content gains ~19px (177px vs 158px)
  *   - WiFi/Battery pixel-art from ui_create_status_bar() inlined
  * Session 41:  Icons redrawn all-cyan, bottom bar 3 zones, gear long-press WiFi
@@ -40,7 +40,7 @@ static lv_timer_t *gear_lp_timer = NULL;
 static lv_timer_t *s_hdr_refresh_timer = NULL;
 
 /* ================================================================
- * Layout — Session 40: Combined single bar
+ * Layout - Session 40: Combined single bar
  * ================================================================
  *
  *  Combined Bar  26px  [GO] 3 unread    [12:00] [WiFi] [Bat]
@@ -62,7 +62,7 @@ static lv_timer_t *s_hdr_refresh_timer = NULL;
 #define BAR_BTN_W       (UI_SCREEN_W / 3)               /* 106 */
 #define BAR_BTN_W_LAST  (UI_SCREEN_W - BAR_BTN_W * 2)  /* 108 remainder */
 
-/* Row styling — matches ui_contacts.c */
+/* Row styling - matches ui_contacts.c */
 #define ROW_H           28
 #define ROW_GAP         2
 #define ROW_BG          lv_color_hex(0x000810)
@@ -173,7 +173,7 @@ static lv_obj_t *create_unread_row(lv_obj_t *parent, int idx, contact_t *c,
     lv_obj_set_style_pad_right(row, 8, 0);
     lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* Child 0: Name + checkmark (green — these all have unread) */
+    /* Child 0: Name + checkmark (green - these all have unread) */
     char display_name[40];
     truncate_name(c->name, display_name, sizeof(display_name));
     strncat(display_name, " " LV_SYMBOL_OK,
@@ -237,7 +237,7 @@ static void _sty_reset(lv_obj_t *o)
  * 26px: [GO] [3 unread]          [12:00] [WiFi▂▃▅▇] [▯▯|]
  *
  * Replaces separate status bar (16px) + header (26px) = 44px
- * Now only 26px + 1px glow = 27px total → +17px for content
+ * Now only 26px + 1px glow = 27px total -> +17px for content
  * ================================================================ */
 
 static void create_main_bar(lv_obj_t *parent)
@@ -477,7 +477,7 @@ lv_obj_t *ui_main_create(void)
 }
 
 /* ================================================================
- * Refresh — Scan for Unread
+ * Refresh - Scan for Unread
  * ================================================================ */
 
 void ui_main_refresh(void)

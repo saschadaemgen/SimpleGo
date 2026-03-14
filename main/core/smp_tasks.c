@@ -294,7 +294,7 @@ static void network_task(void *arg)
                 }
             }
         } else if (content_len == -2) {
-            // Timeout — log every 30th
+            // Timeout - log every 30th
             if (loop_count % 30 == 0) {
                 ESP_LOGD(TAG, "NET: timeout (loop %d)", loop_count);
             }
@@ -883,13 +883,13 @@ static void app_process_keyboard_queue(QueueHandle_t kbd_queue)
         contact_t *msg_contact = &contacts_db.contacts[s_active_contact_idx];
 
         if (!msg_contact->active) {
-            ESP_LOGE(TAG_APP, "   ❌ Active contact [%d] is not active!", s_active_contact_idx);
+            ESP_LOGE(TAG_APP, "   [FAIL] Active contact [%d] is not active!", s_active_contact_idx);
             smp_notify_ui_delivery_status(seq, MSG_STATUS_FAILED);
             continue;
         }
 
         if (peer_send_chat_message(msg_contact, kbd_msg)) {
-            ESP_LOGI(TAG_APP, "   ✅ Message sent! seq=%lu", (unsigned long)seq);
+            ESP_LOGI(TAG_APP, "   [OK] Message sent! seq=%lu", (unsigned long)seq);
             smp_notify_ui_delivery_status(seq, MSG_STATUS_SENT);
             uint64_t sent_msg_id = handshake_get_last_msg_id();
             smp_register_msg_mapping(seq, sent_msg_id);
@@ -985,7 +985,7 @@ static void app_handle_reply_queue_msg(
         mark_42d_done(hs_contact);
         ratchet_set_active(hs_contact);
         handshake_set_active(hs_contact);
-        ESP_LOGI(TAG_APP, "APP: 42d — Starting for contact [%d] (ratchet+handshake set)", hs_contact);
+        ESP_LOGI(TAG_APP, "APP: 42d - Starting for contact [%d] (ratchet+handshake set)", hs_contact);
 
         // 1. Send KEY via Network Task (async, on main SSL)
         {

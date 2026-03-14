@@ -134,7 +134,7 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
     ui_screen_t prev = current_screen;
     current_screen = screen;
     
-    // Always load directly — screens handle their own animations
+    // Always load directly - screens handle their own animations
     lv_scr_load(screens[screen]);
 
     /* Delete previous screen to free LVGL pool (MAIN stays permanent) */

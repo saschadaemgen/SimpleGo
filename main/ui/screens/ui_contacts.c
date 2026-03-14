@@ -14,7 +14,7 @@
  *   Total: 18+1+26+1+158+36 = 240
  *
  * Session 39f: Split into 3 modules:
- *   - ui_contacts.c      (this file — screen, header, bar, search, events)
+ *   - ui_contacts.c      (this file - screen, header, bar, search, events)
  *   - ui_contacts_row.c  (6-object row rendering)
  *   - ui_contacts_popup.c (delete/info popups)
  *

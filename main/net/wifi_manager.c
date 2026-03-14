@@ -204,7 +204,7 @@ void wifi_manager_init(void)
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
         esp_wifi_connect();
     } else {
-        ESP_LOGI(TAG, "No saved network — waiting for setup");
+        ESP_LOGI(TAG, "No saved network - waiting for setup");
     }
 }
 

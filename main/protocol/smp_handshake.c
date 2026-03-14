@@ -214,12 +214,12 @@ static int build_agent_msg_envelope(
     // encAgentMessage (Tail = no length prefix!)
     size_t enc_len = 0;
     if (ratchet_encrypt(plaintext, plain_len, &output[p], &enc_len, 15840) != 0) {
-        ESP_LOGE(TAG, "   ❌ Ratchet encryption failed!");
+        ESP_LOGE(TAG, "   [FAIL] Ratchet encryption failed!");
         return -1;
     }
     p += enc_len;
     
-    ESP_LOGI(TAG, "   📦 AgentMsgEnvelope: %d bytes", p);
+    ESP_LOGI(TAG, "   [PKG] AgentMsgEnvelope: %d bytes", p);
     return p;
 }
 
@@ -242,9 +242,9 @@ bool send_skey_command(
     const uint8_t *our_auth_public  // Ed25519 public key (32 bytes raw)
 ) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  🔐 SENDING SKEY COMMAND (Secure Queue)                      ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [LOCK] SENDING SKEY COMMAND (Secure Queue)                      |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     
     // Build SKEY command body
     // Format: [corrId][entityId=peer_queue_id]SKEY [authKey]
@@ -294,16 +294,16 @@ bool send_skey_command(
     // Send
     int ret = smp_write_command_block(ssl, block, transmission, tp);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ Send SKEY failed: %d", ret);
+        ESP_LOGE(TAG, "   [FAIL] Send SKEY failed: %d", ret);
         return false;
     }
     
-    ESP_LOGI(TAG, "   📤 SKEY sent! Waiting for response...");
+    ESP_LOGI(TAG, "   [SEND] SKEY sent! Waiting for response...");
     
     // Wait for OK response
     int content_len = smp_read_block(ssl, block, 10000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "   ❌ No response!");
+        ESP_LOGE(TAG, "   [FAIL] No response!");
         return false;
     }
     
@@ -312,7 +312,7 @@ bool send_skey_command(
     // Look for OK
     for (int i = 0; i < content_len - 1; i++) {
         if (resp[i] == 'O' && resp[i+1] == 'K') {
-            ESP_LOGI(TAG, "   ✅ SKEY accepted! Queue secured.");
+            ESP_LOGI(TAG, "   [OK] SKEY accepted! Queue secured.");
             return true;
         }
     }
@@ -323,7 +323,7 @@ bool send_skey_command(
     // Check for specific errors
     for (int i = 0; i < content_len - 3; i++) {
         if (resp[i] == 'E' && resp[i+1] == 'R' && resp[i+2] == 'R' && resp[i+3] == ' ') {
-            ESP_LOGW(TAG, "   ⚠️  Server returned error (queue may already be secured)");
+            ESP_LOGW(TAG, "   [WARN]  Server returned error (queue may already be secured)");
             return true;  // Continue anyway - might already be secured
         }
     }
@@ -352,9 +352,9 @@ bool send_hello_message(
     const uint8_t *snd_auth_private  // NEW!
 ) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  📤 SENDING HELLO MESSAGE                                    ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [SEND] SENDING HELLO MESSAGE                                    |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     
     handshake_state.ratchet = ratchet;
     
@@ -362,7 +362,7 @@ bool send_hello_message(
     uint8_t hello_plain[300];
     int hello_plain_len = build_hello_message(hello_plain, sizeof(hello_plain));
     if (hello_plain_len < 0) {
-        ESP_LOGE(TAG, "   ❌ Failed to build HELLO message!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to build HELLO message!");
         return false;
     }
     
@@ -373,7 +373,7 @@ bool send_hello_message(
     
     uint8_t *agent_envelope = malloc(HELLO_BUFFER_SIZE);
     if (!agent_envelope) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate agent_envelope!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate agent_envelope!");
         return false;
     }
     
@@ -381,7 +381,7 @@ bool send_hello_message(
     int envelope_len = build_agent_msg_envelope(ratchet, hello_plain, hello_plain_len,
                                                   agent_envelope + 1, HELLO_BUFFER_SIZE - 1);
     if (envelope_len < 0) {
-        ESP_LOGE(TAG, "   ❌ Failed to build AgentMsgEnvelope!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to build AgentMsgEnvelope!");
         free(agent_envelope);
         return false;
     }
@@ -396,7 +396,7 @@ bool send_hello_message(
     
     uint8_t *padded = malloc(E2E_ENC_HELLO_LENGTH);
     if (!padded) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate cbEncrypt padding buffer!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate cbEncrypt padding buffer!");
         free(agent_envelope);
         return false;
     }
@@ -421,7 +421,7 @@ bool send_hello_message(
     // Client message = PubHeader + nonce + encrypted envelope
     uint8_t *client_msg = malloc(HELLO_BUFFER_SIZE);
     if (!client_msg) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate client_msg!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate client_msg!");
         free(padded);
         return false;
     }
@@ -435,14 +435,14 @@ bool send_hello_message(
     // SMP uses '0'/'1' for Maybe encoding, not ','
     client_msg[cmp++] = '0';
 
-    // Nonce (24 bytes) — directly after version + Nothing tag
+    // Nonce (24 bytes) - directly after version + Nothing tag
     memcpy(&client_msg[cmp], nonce, 24);
     cmp += 24;
 
     // Encrypted padded envelope + MAC
     uint8_t *enc_envelope = malloc(E2E_ENC_HELLO_LENGTH + crypto_box_MACBYTES);
     if (!enc_envelope) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate enc_envelope!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate enc_envelope!");
         free(client_msg);
         free(padded);
         return false;
@@ -450,7 +450,7 @@ bool send_hello_message(
     
     if (crypto_box_easy(enc_envelope, padded, E2E_ENC_HELLO_LENGTH,
                         nonce, peer_dh_public, our_dh_private) != 0) {
-        ESP_LOGE(TAG, "   ❌ crypto_box failed!");
+        ESP_LOGE(TAG, "   [FAIL] crypto_box failed!");
         free(enc_envelope);
         free(client_msg);
         free(padded);
@@ -471,7 +471,7 @@ bool send_hello_message(
     // 4. Build SEND command body
     uint8_t *send_body = malloc(HELLO_BUFFER_SIZE);
     if (!send_body) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate send_body!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate send_body!");
         free(client_msg);
         return false;
     }
@@ -506,7 +506,7 @@ bool send_hello_message(
     // authorized = sessionIdentifier corrId entityId smpCommand
     uint8_t *authorized = malloc(HELLO_BUFFER_SIZE);
     if (!authorized) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate authorized!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate authorized!");
         free(send_body);
         return false;
     }
@@ -532,7 +532,7 @@ bool send_hello_message(
     // 7. Build transmission = authorization + authorized
     uint8_t *transmission = malloc(HELLO_BUFFER_SIZE);
     if (!transmission) {
-        ESP_LOGE(TAG, "   ❌ Failed to allocate transmission!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to allocate transmission!");
         free(authorized);
         return false;
     }
@@ -556,16 +556,16 @@ bool send_hello_message(
     free(transmission);  // No longer needed
     
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ Send failed: %d", ret);
+        ESP_LOGE(TAG, "   [FAIL] Send failed: %d", ret);
         return false;
     }
     
-    ESP_LOGI(TAG, "   📤 HELLO sent! Waiting for response...");
+    ESP_LOGI(TAG, "   [SEND] HELLO sent! Waiting for response...");
     
     // 9. Wait for OK response
     int content_len = smp_read_block(ssl, block, 10000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "   ❌ No response!");
+        ESP_LOGE(TAG, "   [FAIL] No response!");
         return false;
     }
     
@@ -574,7 +574,7 @@ bool send_hello_message(
     // Look for OK or OK#
     for (int i = 0; i < content_len - 1; i++) {
         if (resp[i] == 'O' && resp[i+1] == 'K') {
-            ESP_LOGI(TAG, "   ✅ HELLO accepted by server!");
+            ESP_LOGI(TAG, "   [OK] HELLO accepted by server!");
             handshake_state.hello_sent = true;
             
             // Update prev_msg_hash for next message
@@ -599,7 +599,7 @@ bool send_hello_message(
             for (int k = i + 4; k < content_len && j < 31 && resp[k] >= 0x20 && resp[k] < 0x7F; k++) {
                 err_type[j++] = resp[k];
             }
-            ESP_LOGE(TAG, "   🛑 Server Error: ERR %s", err_type);
+            ESP_LOGE(TAG, "   [STOP] Server Error: ERR %s", err_type);
             break;
         }
     }
@@ -611,11 +611,11 @@ bool send_hello_message(
 
 /**
  * Shared encrypt+send pipeline for all outgoing agent messages.
- * Extracted from send_chat_message — zero code duplication.
+ * Extracted from send_chat_message - zero code duplication.
  *
- * Pipeline: AgentMessage → Ratchet Encrypt → AgentMsgEnvelope →
- *   PrivHeader('_') → ClientMessage → E2E Pad → crypto_box →
- *   PubHeader → SEND (signed) → OK check → update prev_msg_hash
+ * Pipeline: AgentMessage -> Ratchet Encrypt -> AgentMsgEnvelope ->
+ *   PrivHeader('_') -> ClientMessage -> E2E Pad -> crypto_box ->
+ *   PubHeader -> SEND (signed) -> OK check -> update prev_msg_hash
  *
  * @param corr_id   CorrId character: 'A' for A_MSG, 'R' for Receipt, 'H' for Hello
  * @param notify    true = 'T' (push notification), false = 'F' (silent)
@@ -644,7 +644,7 @@ static bool encrypt_and_send_agent_msg(
     // 1. Build AgentMsgEnvelope (Ratchet encrypt)
     uint8_t *agent_envelope = malloc(SEND_BUFFER_SIZE);
     if (!agent_envelope) {
-        ESP_LOGE(TAG, "   ❌ [%s] malloc agent_envelope failed!", label);
+        ESP_LOGE(TAG, "   [FAIL] [%s] malloc agent_envelope failed!", label);
         return false;
     }
     
@@ -653,7 +653,7 @@ static bool encrypt_and_send_agent_msg(
     int envelope_len = build_agent_msg_envelope(ratchet, msg_plain, msg_plain_len,
                                                   agent_envelope + 1, SEND_BUFFER_SIZE - 1);
     if (envelope_len < 0) {
-        ESP_LOGE(TAG, "   ❌ [%s] Ratchet encrypt failed!", label);
+        ESP_LOGE(TAG, "   [FAIL] [%s] Ratchet encrypt failed!", label);
         free(agent_envelope);
         return false;
     }
@@ -661,10 +661,10 @@ static bool encrypt_and_send_agent_msg(
     
     ESP_LOGD(TAG, "   [%s] ClientMessage: %d bytes", label, total_plain_len);
     
-    // 2. E2E Pad: [Word16 BE len][ClientMessage][0x23 padding → 16000]
+    // 2. E2E Pad: [Word16 BE len][ClientMessage][0x23 padding -> 16000]
     uint8_t *padded = malloc(E2E_PADDED_LENGTH);
     if (!padded) {
-        ESP_LOGE(TAG, "   ❌ [%s] malloc padded failed!", label);
+        ESP_LOGE(TAG, "   [FAIL] [%s] malloc padded failed!", label);
         free(agent_envelope);
         return false;
     }
@@ -681,7 +681,7 @@ static bool encrypt_and_send_agent_msg(
     
     uint8_t *client_msg = malloc(SEND_BUFFER_SIZE);
     if (!client_msg) {
-        ESP_LOGE(TAG, "   ❌ [%s] malloc client_msg failed!", label);
+        ESP_LOGE(TAG, "   [FAIL] [%s] malloc client_msg failed!", label);
         free(padded);
         return false;
     }
@@ -701,7 +701,7 @@ static bool encrypt_and_send_agent_msg(
     // Encrypt
     uint8_t *enc_buf = malloc(E2E_PADDED_LENGTH + crypto_box_MACBYTES);
     if (!enc_buf) {
-        ESP_LOGE(TAG, "   ❌ [%s] malloc enc_buf failed!", label);
+        ESP_LOGE(TAG, "   [FAIL] [%s] malloc enc_buf failed!", label);
         free(client_msg);
         free(padded);
         return false;
@@ -709,7 +709,7 @@ static bool encrypt_and_send_agent_msg(
     
     if (crypto_box_easy(enc_buf, padded, E2E_PADDED_LENGTH,
                         nonce, peer_dh_public, our_dh_private) != 0) {
-        ESP_LOGE(TAG, "   ❌ [%s] crypto_box failed!", label);
+        ESP_LOGE(TAG, "   [FAIL] [%s] crypto_box failed!", label);
         free(enc_buf);
         free(client_msg);
         free(padded);
@@ -842,7 +842,7 @@ static bool encrypt_and_send_agent_msg(
     // 8. Wait for response
     int content_len = smp_read_block(ssl, block, 10000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "   ❌ [%s] No response!", label);
+        ESP_LOGE(TAG, "   [FAIL] [%s] No response!", label);
         return false;
     }
     
@@ -872,7 +872,7 @@ static bool encrypt_and_send_agent_msg(
             for (int k = i + 4; k < content_len && j < 31 && resp[k] >= 0x20 && resp[k] < 0x7F; k++) {
                 err_type[j++] = resp[k];
             }
-            ESP_LOGE(TAG, "   🛑 [%s] Server Error: ERR %s", label, err_type);
+            ESP_LOGE(TAG, "   [STOP] [%s] Server Error: ERR %s", label, err_type);
             break;
         }
     }
@@ -899,9 +899,9 @@ bool send_chat_message(
     const char *message
 ) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  📤 SENDING CHAT MESSAGE (A_MSG)                              ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [SEND] SENDING CHAT MESSAGE (A_MSG)                              |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     
     handshake_state.ratchet = ratchet;
     
@@ -909,7 +909,7 @@ bool send_chat_message(
     uint8_t msg_plain[512];
     int msg_plain_len = build_chat_message(message, msg_plain, sizeof(msg_plain));
     if (msg_plain_len < 0) {
-        ESP_LOGE(TAG, "   ❌ Failed to build A_MSG!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to build A_MSG!");
         return false;
     }
     
@@ -923,10 +923,10 @@ bool send_chat_message(
     
     if (ok) {
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-        ESP_LOGI(TAG, "║  🎉🎉🎉 A_MSG ACCEPTED BY SERVER! 🎉🎉🎉                     ║");
-        ESP_LOGI(TAG, "║  Message \"%s\" sent to peer!                                  ║", message);
-        ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+        ESP_LOGI(TAG, "+----------------------------------------+");
+        ESP_LOGI(TAG, "|  [SUCCESS] A_MSG ACCEPTED BY SERVER! [SUCCESS]                     |");
+        ESP_LOGI(TAG, "|  Message \"%s\" sent to peer!                                  |", message);
+        ESP_LOGI(TAG, "+----------------------------------------+");
     }
     
     return ok;
@@ -978,7 +978,7 @@ static int build_receipt_message(uint64_t peer_snd_msg_id, const uint8_t *msg_ha
     // aMessage = A_RCVD = 'V' (delivery receipt tag)
     output[p++] = 'V';
     
-    // Word8 count = 1 (one receipt) — verified from App's own receipt
+    // Word8 count = 1 (one receipt) - verified from App's own receipt
     output[p++] = 0x01;
     
     // receipt = agentMsgId(8B) + msgHash(shortString) + rcptInfo(Large)
@@ -998,12 +998,12 @@ static int build_receipt_message(uint64_t peer_snd_msg_id, const uint8_t *msg_ha
     memcpy(&output[p], msg_hash, 32);
     p += 32;
     
-    // rcptInfo = Large (Word16 BE len + data) — empty (len=0)
+    // rcptInfo = Large (Word16 BE len + data) - empty (len=0)
     // Verified: App sends Word16, not Word32
     output[p++] = 0x00;
     output[p++] = 0x00;
     
-    ESP_LOGI(TAG, "   📬 Receipt: msg_id=%llu, peer_sndMsgId=%llu, %d bytes",
+    ESP_LOGI(TAG, "   [MSG] Receipt: msg_id=%llu, peer_sndMsgId=%llu, %d bytes",
              (unsigned long long)msg_id, (unsigned long long)peer_snd_msg_id, p);
     
     return p;
@@ -1011,7 +1011,7 @@ static int build_receipt_message(uint64_t peer_snd_msg_id, const uint8_t *msg_ha
 
 /**
  * Send a delivery receipt (A_RCVD) to peer.
- * Uses shared encrypt_and_send_agent_msg() — silent (no push notification).
+ * Uses shared encrypt_and_send_agent_msg() - silent (no push notification).
  *
  * @param peer_snd_msg_id  The sndMsgId from the received message
  * @param msg_hash         SHA256 hash of the decrypted body (32 bytes)
@@ -1031,9 +1031,9 @@ bool send_receipt_message(
     const uint8_t *msg_hash
 ) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  📬 SENDING DELIVERY RECEIPT (A_RCVD)                        ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [MSG] SENDING DELIVERY RECEIPT (A_RCVD)                        |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     
     handshake_state.ratchet = ratchet;
     
@@ -1042,7 +1042,7 @@ bool send_receipt_message(
     int rcpt_plain_len = build_receipt_message(peer_snd_msg_id, msg_hash,
                                                 rcpt_plain, sizeof(rcpt_plain));
     if (rcpt_plain_len < 0) {
-        ESP_LOGE(TAG, "   ❌ Failed to build receipt!");
+        ESP_LOGE(TAG, "   [FAIL] Failed to build receipt!");
         return false;
     }
     
@@ -1055,7 +1055,7 @@ bool send_receipt_message(
     );
     
     if (ok) {
-        ESP_LOGI(TAG, "   ✅ Receipt delivered! (✓✓ in app)");
+        ESP_LOGI(TAG, "   [OK] Receipt delivered! (✓✓ in app)");
     }
     
     return ok;
@@ -1100,7 +1100,7 @@ bool parse_hello_message(const uint8_t *data, int len, uint64_t *msg_id_out) {
     
     // aMessage - check for HELLO = 'H'
     if (data[p] == 'H') {
-        ESP_LOGI(TAG, "   ✅ HELLO parsed! MsgId: %llu", (unsigned long long)msg_id);
+        ESP_LOGI(TAG, "   [OK] HELLO parsed! MsgId: %llu", (unsigned long long)msg_id);
         handshake_state.hello_received = true;
         if (msg_id_out) *msg_id_out = msg_id;
         return true;
@@ -1138,16 +1138,16 @@ bool complete_handshake(
     const uint8_t *snd_auth_private  // NEW!
 ) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  🔗 COMPLETING DUPLEX CONNECTION (Confirmation only)          ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [CONN] COMPLETING DUPLEX CONNECTION (Confirmation only)          |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     ESP_LOGI(TAG, "");
     
     // Reset handshake state
     memset(&handshake_state, 0, sizeof(handshake_state));
     
     // HELLO is sent from main.c after KEY command
-    ESP_LOGI(TAG, "   [1/2] AgentConfirmation ✅ (already sent)");
+    ESP_LOGI(TAG, "   [1/2] AgentConfirmation [OK] (already sent)");
     ESP_LOGI(TAG, "   [2/2] HELLO will be sent from main.c after KEY ⏳");
     
     handshake_state.confirmation_received = true;
@@ -1295,7 +1295,7 @@ void handshake_clear_retry(void) {
 
 // ============== Persistence ==============
 
-// Compact struct for NVS — only the fields needed after reboot
+// Compact struct for NVS - only the fields needed after reboot
 typedef struct {
     uint64_t msg_id;
     uint8_t prev_msg_hash[32];

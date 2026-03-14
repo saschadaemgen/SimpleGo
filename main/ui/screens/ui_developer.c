@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ui_developer.c
  * @brief Developer Screen - SimpleX Console
  *

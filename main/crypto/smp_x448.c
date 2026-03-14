@@ -58,7 +58,7 @@ bool x448_init(void) {
     }
     
     rng_initialized = true;
-    ESP_LOGI(TAG, "✅ X448 crypto initialized (wolfSSL)");
+    ESP_LOGI(TAG, "[OK] X448 crypto initialized (wolfSSL)");
     return true;
 }
 
@@ -107,7 +107,7 @@ bool x448_generate_keypair(x448_keypair_t *keypair) {
     
     wc_curve448_free(&key);
     
-    ESP_LOGI(TAG, "🔑 X448 keypair generated!");
+    ESP_LOGI(TAG, "[KEY] X448 keypair generated!");
     ESP_LOGI(TAG, "   Public: %02x%02x%02x%02x...", 
              keypair->public_key[0], keypair->public_key[1],
              keypair->public_key[2], keypair->public_key[3]);
@@ -181,13 +181,13 @@ bool x448_dh(const uint8_t *their_public,
 #else /* !HAVE_CURVE448 */
 
 bool x448_init(void) {
-    ESP_LOGE(TAG, "❌ X448 not available - wolfSSL not configured with HAVE_CURVE448!");
+    ESP_LOGE(TAG, "[FAIL] X448 not available - wolfSSL not configured with HAVE_CURVE448!");
     return false;
 }
 
 bool x448_generate_keypair(x448_keypair_t *keypair) {
     (void)keypair;
-    ESP_LOGE(TAG, "❌ X448 not available!");
+    ESP_LOGE(TAG, "[FAIL] X448 not available!");
     return false;
 }
 
@@ -195,7 +195,7 @@ bool x448_dh(const uint8_t *their_public, const uint8_t *my_private, uint8_t *sh
     (void)their_public;
     (void)my_private;
     (void)shared_secret;
-    ESP_LOGE(TAG, "❌ X448 not available!");
+    ESP_LOGE(TAG, "[FAIL] X448 not available!");
     return false;
 }
 
@@ -235,9 +235,9 @@ bool e2e_generate_params(e2e_params_t *params) {
         return false;
     }
     params->has_kem = false;
-    ESP_LOGI(TAG, "🔐 Kyber1024 keypair generated!");
+    ESP_LOGI(TAG, "[LOCK] Kyber1024 keypair generated!");
 
-    ESP_LOGI(TAG, "✅ E2E params generated (v%d-%d, PQ=%d)",
+    ESP_LOGI(TAG, "[OK] E2E params generated (v%d-%d, PQ=%d)",
              params->version_min, params->version_max, params->has_kem);
     return true;
 }
@@ -263,6 +263,6 @@ int e2e_encode_params(const e2e_params_t *params, uint8_t *output) {
     // '0' (0x30) = Nothing in SimpleX Maybe-encoding
     output[offset++] = 0x30;  // '0' = No KEM/PQ
     
-    ESP_LOGI(TAG, "📦 E2E params encoded: %d bytes (v3, no KEM)", offset);
+    ESP_LOGI(TAG, "[PKG] E2E params encoded: %d bytes (v3, no KEM)", offset);
     return offset;  // 2 + 69 + 69 + 1 = 141 bytes
 }

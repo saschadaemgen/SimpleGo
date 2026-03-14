@@ -292,7 +292,7 @@ void print_invitation_links(const uint8_t *ca_hash, const char *host, int port) 
     base64url_encode(ca_hash, 32, hash_b64, sizeof(hash_b64));
     
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "ðŸ”— SIMPLEX CONTACT LINKS");
+    ESP_LOGI(TAG, "ðŸ”- SIMPLEX CONTACT LINKS");
     ESP_LOGI(TAG, "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•");
     ESP_LOGI(TAG, "Server keyHash: %s", hash_b64);
     ESP_LOGI(TAG, "");
@@ -541,7 +541,7 @@ bool remove_contact(mbedtls_ssl_context *ssl, uint8_t *block,
     }
     
     contact_t *c = &contacts_db.contacts[index];
-    ESP_LOGI(TAG, "ðŸ—‘ï¸  Removing contact '%s' [%d]...", c->name, index);
+    ESP_LOGI(TAG, "ðŸ-‘ï¸  Removing contact '%s' [%d]...", c->name, index);
     
     uint8_t del_body[64];
     int dp = 0;
@@ -744,7 +744,7 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
                          attempt, is_our_response, rp, cmd_bytes);
                 if (is_our_response && rp + 1 < content_len && 
                     resp[rp] == 'O' && resp[rp+1] == 'K') {
-                    ESP_LOGI(TAG, "       ✅ Subscribed! (attempt %d)", attempt);
+                    ESP_LOGI(TAG, "       [OK] Subscribed! (attempt %d)", attempt);
                     success_count++;
                     sub_ok = true;
 
@@ -826,13 +826,13 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
             }
         }
         if (!sub_ok) {
-            ESP_LOGE(TAG, "       ❌ Subscribe failed after retries");
+            ESP_LOGE(TAG, "       [FAIL] Subscribe failed after retries");
         }
     }
     
     
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "📡 Contact subscriptions: %d/%d", success_count, contacts_db.num_contacts);
+    ESP_LOGI(TAG, "[NET] Contact subscriptions: %d/%d", success_count, contacts_db.num_contacts);
     
     // ========== Reply Queue SUBs (Session 34 Phase 6: per-contact) ==========
     // Subscribe ALL active per-contact reply queues on main socket

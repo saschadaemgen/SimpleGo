@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SimpleGo - smp_queue.c
  * SMP Queue Management (NEW, SUB, KEY, ACK commands)
  * v0.1.15-alpha - FIXED: NEW command now properly signed!
@@ -53,11 +53,11 @@ static bool queue_connect(const char *host, int port) {
     int ret;
     
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  📦 CREATING OUR RECEIVE QUEUE                               ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [PKG] CREATING OUR RECEIVE QUEUE                               |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "🔗 CONNECTING TO OUR SMP SERVER...");
+    ESP_LOGI(TAG, "[CONN] CONNECTING TO OUR SMP SERVER...");
     ESP_LOGI(TAG, "   Host: %s:%d", host, port);
     
     // Store server info
@@ -74,7 +74,7 @@ static bool queue_connect(const char *host, int port) {
     ret = mbedtls_ctr_drbg_seed(&queue_conn.ctr_drbg, mbedtls_entropy_func, 
                                  &queue_conn.entropy, NULL, 0);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ DRBG seed failed");
+        ESP_LOGE(TAG, "   [FAIL] DRBG seed failed");
         return false;
     }
     
@@ -83,7 +83,7 @@ static bool queue_connect(const char *host, int port) {
     queue_conn.sock = smp_tcp_connect(host, port);
     ESP_LOGI(TAG, "   TCP result: %d", queue_conn.sock);
     if (queue_conn.sock < 0) {
-        ESP_LOGE(TAG, "   ❌ TCP connect failed");
+        ESP_LOGE(TAG, "   [FAIL] TCP connect failed");
         return false;
     }
     
@@ -93,7 +93,7 @@ static bool queue_connect(const char *host, int port) {
                                       MBEDTLS_SSL_TRANSPORT_STREAM,
                                       MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ mbedTLS failed: -0x%04X", -ret);
+        ESP_LOGE(TAG, "   [FAIL] mbedTLS failed: -0x%04X", -ret);
         close(queue_conn.sock);
         return false;
     }
@@ -110,7 +110,7 @@ static bool queue_connect(const char *host, int port) {
     ESP_LOGI(TAG, "   SSL setup...");
     ret = mbedtls_ssl_setup(&queue_conn.ssl, &queue_conn.conf);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ mbedTLS failed: -0x%04X", -ret);
+        ESP_LOGE(TAG, "   [FAIL] mbedTLS failed: -0x%04X", -ret);
         close(queue_conn.sock);
         return false;
     }
@@ -122,24 +122,24 @@ static bool queue_connect(const char *host, int port) {
     ESP_LOGI(TAG, "   Starting TLS handshake...");
     while ((ret = mbedtls_ssl_handshake(&queue_conn.ssl)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-            ESP_LOGE(TAG, "   ❌ TLS handshake failed: -0x%04X", -ret);
+            ESP_LOGE(TAG, "   [FAIL] TLS handshake failed: -0x%04X", -ret);
             close(queue_conn.sock);
             return false;
         }
     }
-    ESP_LOGI(TAG, "   ✅ TLS OK!");
+    ESP_LOGI(TAG, "   [OK] TLS OK!");
     
     // Allocate block buffer
     uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
     if (!block) {
-        ESP_LOGE(TAG, "   ❌ Block alloc failed");
+        ESP_LOGE(TAG, "   [FAIL] Block alloc failed");
         return false;
     }
     
     // Wait for ServerHello
     int content_len = smp_read_block(&queue_conn.ssl, block, 30000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "   ❌ No ServerHello");
+        ESP_LOGE(TAG, "   [FAIL] No ServerHello");
         free(block);
         return false;
     }
@@ -147,7 +147,7 @@ static bool queue_connect(const char *host, int port) {
     uint8_t *hello = block + 2;
     uint8_t sess_id_len = hello[4];
     if (sess_id_len != 32) {
-        ESP_LOGE(TAG, "   ❌ Bad sessionId length");
+        ESP_LOGE(TAG, "   [FAIL] Bad sessionId length");
         free(block);
         return false;
     }
@@ -183,11 +183,11 @@ static bool queue_connect(const char *host, int port) {
     free(block);
     
     if (ret2 != 0) {
-        ESP_LOGE(TAG, "   ❌ ClientHello failed");
+        ESP_LOGE(TAG, "   [FAIL] ClientHello failed");
         return false;
     }
     
-    ESP_LOGI(TAG, "   ✅ SMP Handshake complete!");
+    ESP_LOGI(TAG, "   [OK] SMP Handshake complete!");
     queue_conn.connected = true;
     
     return true;
@@ -202,7 +202,7 @@ bool queue_create(const char *host, int port) {
     }
     
     // Generate our keypairs FIRST (needed for signing!)
-    ESP_LOGI(TAG, "   🔑 Generating keypairs...");
+    ESP_LOGI(TAG, "   [KEY] Generating keypairs...");
     
     // Ed25519 for command signing (rcvAuthKey)
     crypto_sign_keypair(our_queue.rcv_auth_public, our_queue.rcv_auth_private);
@@ -266,7 +266,7 @@ bool queue_create(const char *host, int port) {
     trans_body[pos++] = 'S';
     
     int trans_body_len = pos;
-    ESP_LOGI(TAG, "   📤 NEW command body: %d bytes", trans_body_len);
+    ESP_LOGI(TAG, "   [SEND] NEW command body: %d bytes", trans_body_len);
     
     /*
      * Sign: smpEncode(sessionId) + transmission_body
@@ -286,7 +286,7 @@ bool queue_create(const char *host, int port) {
     uint8_t signature[crypto_sign_BYTES];  // 64 bytes
     crypto_sign_detached(signature, NULL, to_sign, sign_pos, our_queue.rcv_auth_private);
     
-    ESP_LOGI(TAG, "   🔏 Signature: %02x%02x%02x%02x...%02x%02x%02x%02x",
+    ESP_LOGI(TAG, "   [SIG] Signature: %02x%02x%02x%02x...%02x%02x%02x%02x",
              signature[0], signature[1], signature[2], signature[3],
              signature[60], signature[61], signature[62], signature[63]);
     
@@ -294,9 +294,9 @@ bool queue_create(const char *host, int port) {
     int verify_result = crypto_sign_verify_detached(signature, to_sign, sign_pos, 
                                                      our_queue.rcv_auth_public);
     if (verify_result == 0) {
-        ESP_LOGI(TAG, "   ✅ Signature verified locally!");
+        ESP_LOGI(TAG, "   [OK] Signature verified locally!");
     } else {
-        ESP_LOGE(TAG, "   ❌ Local signature verification FAILED!");
+        ESP_LOGE(TAG, "   [FAIL] Local signature verification FAILED!");
         return false;
     }
     
@@ -323,7 +323,7 @@ bool queue_create(const char *host, int port) {
     memcpy(&transmission[tp], trans_body, trans_body_len);
     tp += trans_body_len;
     
-    ESP_LOGI(TAG, "   📡 Full transmission: %d bytes", tp);
+    ESP_LOGI(TAG, "   [NET] Full transmission: %d bytes", tp);
     
     // Debug: print first 20 bytes
     printf("      First 20 bytes: ");
@@ -338,17 +338,17 @@ bool queue_create(const char *host, int port) {
     
     int ret = smp_write_command_block(&queue_conn.ssl, block, transmission, tp);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ Send NEW failed!");
+        ESP_LOGE(TAG, "   [FAIL] Send NEW failed!");
         free(block);
         return false;
     }
     
-    ESP_LOGI(TAG, "   📤 NEW sent! Waiting for IDS...");
+    ESP_LOGI(TAG, "   [SEND] NEW sent! Waiting for IDS...");
     
     // Wait for IDS response
     int content_len = smp_read_block(&queue_conn.ssl, block, 10000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "   ❌ No response");
+        ESP_LOGE(TAG, "   [FAIL] No response");
         free(block);
         return false;
     }
@@ -356,7 +356,7 @@ bool queue_create(const char *host, int port) {
     uint8_t *resp = block + 2;
     
     // Debug
-    ESP_LOGI(TAG, "   📥 Response (%d bytes):", content_len);
+    ESP_LOGI(TAG, "   [RECV] Response (%d bytes):", content_len);
     printf("      ");
     for (int i = 0; i < content_len && i < 80; i++) {
         printf("%02x ", resp[i]);
@@ -403,7 +403,7 @@ bool queue_create(const char *host, int port) {
         // rcvId (length-prefixed)
         our_queue.rcv_id_len = resp[p++];
         if (our_queue.rcv_id_len > QUEUE_ID_SIZE) {
-            ESP_LOGE(TAG, "   ❌ rcvId too long: %d", our_queue.rcv_id_len);
+            ESP_LOGE(TAG, "   [FAIL] rcvId too long: %d", our_queue.rcv_id_len);
             free(block);
             return false;
         }
@@ -413,7 +413,7 @@ bool queue_create(const char *host, int port) {
         // sndId (length-prefixed)
         our_queue.snd_id_len = resp[p++];
         if (our_queue.snd_id_len > QUEUE_ID_SIZE) {
-            ESP_LOGE(TAG, "   ❌ sndId too long: %d", our_queue.snd_id_len);
+            ESP_LOGE(TAG, "   [FAIL] sndId too long: %d", our_queue.snd_id_len);
             free(block);
             return false;
         }
@@ -424,7 +424,7 @@ bool queue_create(const char *host, int port) {
         // rcvPublicDhKey = Server's X25519 SPKI
         int dhLen = resp[p++];
         if (dhLen != 44) {
-            ESP_LOGE(TAG, "   ❌ Unexpected DH key length: %d", dhLen);
+            ESP_LOGE(TAG, "   [FAIL] Unexpected DH key length: %d", dhLen);
             free(block);
             return false;
         }
@@ -446,7 +446,7 @@ bool queue_create(const char *host, int port) {
         if (crypto_box_beforenm(our_queue.shared_secret,
                                 our_queue.srv_dh_public,
                                 our_queue.rcv_dh_private) != 0) {
-            ESP_LOGE(TAG, "   ❌ DH failed");
+            ESP_LOGE(TAG, "   [FAIL] DH failed");
             free(block);
             return false;
         }
@@ -461,9 +461,9 @@ bool queue_create(const char *host, int port) {
         queue_save_credentials();
 
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-        ESP_LOGI(TAG, "║   ✅ QUEUE CREATED SUCCESSFULLY!                             ║");
-        ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+        ESP_LOGI(TAG, "+----------------------------------------+");
+        ESP_LOGI(TAG, "|   [OK] QUEUE CREATED SUCCESSFULLY!                             |");
+        ESP_LOGI(TAG, "+----------------------------------------+");
         ESP_LOGI(TAG, "   rcvId (%d): %02x%02x%02x%02x...", 
                  our_queue.rcv_id_len,
                  our_queue.rcv_id[0], our_queue.rcv_id[1],
@@ -487,9 +487,9 @@ bool queue_create(const char *host, int port) {
             printf("%c", (c >= 32 && c < 127) ? c : '.');
         }
         printf("\n");
-        ESP_LOGE(TAG, "   ❌ Server error!");
+        ESP_LOGE(TAG, "   [FAIL] Server error!");
     } else {
-        ESP_LOGE(TAG, "   ❌ Unexpected response");
+        ESP_LOGE(TAG, "   [FAIL] Unexpected response");
     }
     
     free(block);
@@ -565,7 +565,7 @@ bool queue_subscribe(void) {
         return false;
     }
     
-    ESP_LOGI(TAG, "   📥 Subscribing to queue...");
+    ESP_LOGI(TAG, "   [RECV] Subscribing to queue...");
     
     /*
      * Build SUB command with proper signing (same pattern as queue_create)
@@ -625,7 +625,7 @@ bool queue_subscribe(void) {
     
     int ret = smp_write_command_block(&queue_conn.ssl, block, transmission, tp);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ Send SUB failed!");
+        ESP_LOGE(TAG, "   [FAIL] Send SUB failed!");
         free(block);
         return false;
     }
@@ -638,7 +638,7 @@ bool queue_subscribe(void) {
         // Scan for OK
         for (int i = 0; i < content_len - 1; i++) {
             if (resp[i] == 'O' && resp[i+1] == 'K') {
-                ESP_LOGI(TAG, "   ✅ Subscribed!");
+                ESP_LOGI(TAG, "   [OK] Subscribed!");
                 free(block);
                 return true;
             }
@@ -647,17 +647,17 @@ bool queue_subscribe(void) {
         // Scan for END
         for (int i = 0; i < content_len - 2; i++) {
             if (resp[i] == 'E' && resp[i+1] == 'N' && resp[i+2] == 'D') {
-                ESP_LOGI(TAG, "   ✅ Subscribed (END — queue empty)!");
+                ESP_LOGI(TAG, "   [OK] Subscribed (END - queue empty)!");
                 free(block);
                 return true;
             }
         }
 
-        // Scan for MSG (pending message — buffer it!)
+        // Scan for MSG (pending message - buffer it!)
         for (int i = 0; i < content_len - 2; i++) {
             if (resp[i] == 'M' && resp[i+1] == 'S' && resp[i+2] == 'G') {
-                ESP_LOGI(TAG, "   ✅ Subscribed (server delivered pending MSG)");
-                ESP_LOGI(TAG, "   📬 Storing MSG in pending buffer (%d bytes)", content_len + 2);
+                ESP_LOGI(TAG, "   [OK] Subscribed (server delivered pending MSG)");
+                ESP_LOGI(TAG, "   [MSG] Storing MSG in pending buffer (%d bytes)", content_len + 2);
                 pending_msg.data = malloc(content_len + 2);
                 if (pending_msg.data) {
                     memcpy(pending_msg.data, block, content_len + 2);
@@ -669,7 +669,7 @@ bool queue_subscribe(void) {
             }
         }
 
-        ESP_LOGW(TAG, "   ⚠️ SUB response (%d bytes): no OK/END/MSG found", content_len);
+        ESP_LOGW(TAG, "   [WARN] SUB response (%d bytes): no OK/END/MSG found", content_len);
     }
 
     free(block);
@@ -686,9 +686,9 @@ bool queue_send_key(const uint8_t *peer_auth_key_spki, int key_len) {
     }
 
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  🔐 SENDING KEY COMMAND (Register Peer Auth)                 ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [LOCK] SENDING KEY COMMAND (Register Peer Auth)                 |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
 
     // Body: corrId + entityId(rcvId) + "KEY " + [len]authKey
     uint8_t body[128];
@@ -735,8 +735,8 @@ bool queue_send_key(const uint8_t *peer_auth_key_spki, int key_len) {
     memcpy(&transmission[tp], body, bp);
     tp += bp;
 
-    ESP_LOGI(TAG, "   📡 KEY transmission: %d bytes", tp);
-    ESP_LOGI(TAG, "   🔑 Peer auth key: %02x%02x%02x%02x...%02x%02x%02x%02x",
+    ESP_LOGI(TAG, "   [NET] KEY transmission: %d bytes", tp);
+    ESP_LOGI(TAG, "   [KEY] Peer auth key: %02x%02x%02x%02x...%02x%02x%02x%02x",
              peer_auth_key_spki[0], peer_auth_key_spki[1],
              peer_auth_key_spki[2], peer_auth_key_spki[3],
              peer_auth_key_spki[40], peer_auth_key_spki[41],
@@ -747,16 +747,16 @@ bool queue_send_key(const uint8_t *peer_auth_key_spki, int key_len) {
 
     int ret = smp_write_command_block(&queue_conn.ssl, block, transmission, tp);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ Send KEY failed: %d", ret);
+        ESP_LOGE(TAG, "   [FAIL] Send KEY failed: %d", ret);
         free(block);
         return false;
     }
 
-    ESP_LOGI(TAG, "   📤 KEY sent! Waiting for response...");
+    ESP_LOGI(TAG, "   [SEND] KEY sent! Waiting for response...");
 
     int content_len = smp_read_block(&queue_conn.ssl, block, 10000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "   ❌ No response!");
+        ESP_LOGE(TAG, "   [FAIL] No response!");
         free(block);
         return false;
     }
@@ -765,14 +765,14 @@ bool queue_send_key(const uint8_t *peer_auth_key_spki, int key_len) {
 
     for (int i = 0; i < content_len - 1; i++) {
         if (resp[i] == 'O' && resp[i+1] == 'K') {
-            ESP_LOGI(TAG, "   ✅ KEY accepted! Peer auth registered on our queue.");
+            ESP_LOGI(TAG, "   [OK] KEY accepted! Peer auth registered on our queue.");
             free(block);
             return true;
         }
     }
 
     // Debug response
-    ESP_LOGW(TAG, "   ⚠️ KEY response (%d bytes):", content_len);
+    ESP_LOGW(TAG, "   [WARN] KEY response (%d bytes):", content_len);
     printf("      ");
     for (int i = 0; i < content_len && i < 50; i++) printf("%02x ", resp[i]);
     printf("\n");
@@ -783,7 +783,7 @@ bool queue_send_key(const uint8_t *peer_auth_key_spki, int key_len) {
             int j = 0;
             for (int k = i + 4; k < content_len && j < 31 && resp[k] >= 0x20; k++)
                 err[j++] = resp[k];
-            ESP_LOGE(TAG, "   🛑 Server Error: ERR %s", err);
+            ESP_LOGE(TAG, "   [STOP] Server Error: ERR %s", err);
             break;
         }
     }
@@ -807,7 +807,7 @@ int queue_read_raw(uint8_t *buf, int buf_size, int timeout_ms) {
         pending_msg.len = 0;
         pending_msg.valid = false;
         int content_len = total - 2;
-        ESP_LOGI(TAG, "   📬 Returning pending MSG from buffer (content_len=%d)", content_len);
+        ESP_LOGI(TAG, "   [MSG] Returning pending MSG from buffer (content_len=%d)", content_len);
         return content_len;
     }
     
@@ -848,7 +848,7 @@ bool queue_send_ack(const uint8_t *msg_id, int msg_id_len) {
         return false;
     }
     
-    ESP_LOGI(TAG, "   📨 Sending ACK for msgId %02x%02x%02x%02x...",
+    ESP_LOGI(TAG, "   [MSG] Sending ACK for msgId %02x%02x%02x%02x...",
              msg_id[0], msg_id[1], msg_id[2], msg_id[3]);
     
     // Build body: corrId + entityId(rcvId) + "ACK " + msgId
@@ -903,7 +903,7 @@ bool queue_send_ack(const uint8_t *msg_id, int msg_id_len) {
     
     int ret = smp_write_command_block(&queue_conn.ssl, block, transmission, tp);
     if (ret != 0) {
-        ESP_LOGE(TAG, "   ❌ Send ACK failed!");
+        ESP_LOGE(TAG, "   [FAIL] Send ACK failed!");
         free(block);
         return false;
     }
@@ -915,7 +915,7 @@ bool queue_send_ack(const uint8_t *msg_id, int msg_id_len) {
         // Scan for OK
         for (int i = 0; i < content_len - 1; i++) {
             if (resp[i] == 'O' && resp[i+1] == 'K') {
-                ESP_LOGI(TAG, "   ✅ ACK accepted!");
+                ESP_LOGI(TAG, "   [OK] ACK accepted!");
                 free(block);
                 return true;
             }
@@ -924,8 +924,8 @@ bool queue_send_ack(const uint8_t *msg_id, int msg_id_len) {
         // Scan for MSG (ACK accepted implicitly, server sent next message)
         for (int i = 0; i < content_len - 2; i++) {
             if (resp[i] == 'M' && resp[i+1] == 'S' && resp[i+2] == 'G') {
-                ESP_LOGI(TAG, "   ✅ ACK accepted (implicit — server sent next MSG)");
-                ESP_LOGI(TAG, "   📬 Storing MSG in pending buffer (%d bytes)", content_len + 2);
+                ESP_LOGI(TAG, "   [OK] ACK accepted (implicit - server sent next MSG)");
+                ESP_LOGI(TAG, "   [MSG] Storing MSG in pending buffer (%d bytes)", content_len + 2);
                 pending_msg.data = malloc(content_len + 2);
                 if (pending_msg.data) {
                     memcpy(pending_msg.data, block, content_len + 2);
@@ -940,7 +940,7 @@ bool queue_send_ack(const uint8_t *msg_id, int msg_id_len) {
         // Scan for END
         for (int i = 0; i < content_len - 2; i++) {
             if (resp[i] == 'E' && resp[i+1] == 'N' && resp[i+2] == 'D') {
-                ESP_LOGI(TAG, "   ✅ ACK accepted (got END — queue empty)");
+                ESP_LOGI(TAG, "   [OK] ACK accepted (got END - queue empty)");
                 free(block);
                 return true;
             }
@@ -949,16 +949,16 @@ bool queue_send_ack(const uint8_t *msg_id, int msg_id_len) {
         // Scan for ERR
         for (int i = 0; i < content_len - 2; i++) {
             if (resp[i] == 'E' && resp[i+1] == 'R' && resp[i+2] == 'R') {
-                ESP_LOGE(TAG, "   ❌ ACK error: ERR");
+                ESP_LOGE(TAG, "   [FAIL] ACK error: ERR");
                 free(block);
                 return false;
             }
         }
         
-        ESP_LOGW(TAG, "   ⚠️ ACK response (%d bytes): no OK/MSG/END/ERR found", content_len);
+        ESP_LOGW(TAG, "   [WARN] ACK response (%d bytes): no OK/MSG/END/ERR found", content_len);
     }
     
-    ESP_LOGW(TAG, "   ⚠️ ACK response timeout or parse error");
+    ESP_LOGW(TAG, "   [WARN] ACK response timeout or parse error");
     free(block);
     return false;
 }
@@ -973,9 +973,9 @@ bool queue_reconnect(void) {
         return false;
     }
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "╔══════════════════════════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  🔄 RECONNECTING TO REPLY QUEUE SERVER                      ║");
-    ESP_LOGI(TAG, "╚══════════════════════════════════════════════════════════════╝");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [SYNC] RECONNECTING TO REPLY QUEUE SERVER                      |");
+    ESP_LOGI(TAG, "+----------------------------------------+");
 
     // Cleanup old connection
     queue_disconnect();
@@ -997,21 +997,21 @@ bool queue_save_credentials(void) {
     // Save our_queue struct
     esp_err_t ret = smp_storage_save_blob_sync("queue_our", &our_queue, sizeof(our_queue_t));
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "❌ queue_save_credentials('queue_our') FAILED: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "[FAIL] queue_save_credentials('queue_our') FAILED: %s", esp_err_to_name(ret));
         return false;
     }
 
-    // Save reply queue E2E peer key (separate blob — set later during handshake)
+    // Save reply queue E2E peer key (separate blob - set later during handshake)
     uint8_t e2e_blob[33];  // 32 bytes key + 1 byte valid flag
     memcpy(e2e_blob, reply_queue_e2e_peer_public, 32);
     e2e_blob[32] = reply_queue_e2e_peer_valid ? 1 : 0;
     ret = smp_storage_save_blob_sync("queue_e2e", e2e_blob, sizeof(e2e_blob));
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "❌ queue_save_credentials('queue_e2e') FAILED: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "[FAIL] queue_save_credentials('queue_e2e') FAILED: %s", esp_err_to_name(ret));
         return false;
     }
 
-    ESP_LOGI(TAG, "💾 Queue credentials saved: our_queue (%zu bytes) + E2E peer (valid=%d)",
+    ESP_LOGI(TAG, "[SAVE] Queue credentials saved: our_queue (%zu bytes) + E2E peer (valid=%d)",
              sizeof(our_queue_t), reply_queue_e2e_peer_valid);
     ESP_LOGI(TAG, "   rcvId: %02x%02x%02x%02x... sndId: %02x%02x%02x%02x...",
              our_queue.rcv_id[0], our_queue.rcv_id[1], our_queue.rcv_id[2], our_queue.rcv_id[3],
@@ -1021,7 +1021,7 @@ bool queue_save_credentials(void) {
 
 bool queue_load_credentials(void) {
     if (!smp_storage_exists("queue_our")) {
-        ESP_LOGI(TAG, "queue_load_credentials: 'queue_our' not found — fresh start");
+        ESP_LOGI(TAG, "queue_load_credentials: 'queue_our' not found - fresh start");
         return false;
     }
 
@@ -1030,23 +1030,23 @@ bool queue_load_credentials(void) {
     size_t loaded_len = 0;
     esp_err_t ret = smp_storage_load_blob("queue_our", &loaded, sizeof(our_queue_t), &loaded_len);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "❌ queue_load_credentials: load failed: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "[FAIL] queue_load_credentials: load failed: %s", esp_err_to_name(ret));
         return false;
     }
     if (loaded_len != sizeof(our_queue_t)) {
-        ESP_LOGE(TAG, "❌ queue_load_credentials: size mismatch! got %zu, expected %zu",
+        ESP_LOGE(TAG, "[FAIL] queue_load_credentials: size mismatch! got %zu, expected %zu",
                  loaded_len, sizeof(our_queue_t));
         return false;
     }
     if (!loaded.valid) {
-        ESP_LOGW(TAG, "❌ queue_load_credentials: loaded queue has valid=false!");
+        ESP_LOGW(TAG, "[FAIL] queue_load_credentials: loaded queue has valid=false!");
         return false;
     }
 
     // Accept
     memcpy(&our_queue, &loaded, sizeof(our_queue_t));
 
-    // Load reply queue E2E peer key (optional — may not be set yet)
+    // Load reply queue E2E peer key (optional - may not be set yet)
     uint8_t e2e_blob[33];
     size_t e2e_len = 0;
     ret = smp_storage_load_blob("queue_e2e", e2e_blob, sizeof(e2e_blob), &e2e_len);
@@ -1055,11 +1055,11 @@ bool queue_load_credentials(void) {
         reply_queue_e2e_peer_valid = (e2e_blob[32] == 1);
         ESP_LOGI(TAG, "   E2E peer key restored (valid=%d)", reply_queue_e2e_peer_valid);
     } else {
-        ESP_LOGW(TAG, "   E2E peer key not found — will be set during handshake");
+        ESP_LOGW(TAG, "   E2E peer key not found - will be set during handshake");
         reply_queue_e2e_peer_valid = false;
     }
 
-    ESP_LOGI(TAG, "📂 Queue credentials restored: our_queue (%zu bytes)",
+    ESP_LOGI(TAG, "[LOAD] Queue credentials restored: our_queue (%zu bytes)",
              loaded_len);
     ESP_LOGI(TAG, "   rcvId (%d): %02x%02x%02x%02x... sndId (%d): %02x%02x%02x%02x...",
              our_queue.rcv_id_len,
@@ -1082,6 +1082,6 @@ void queue_disconnect(void) {
         if (queue_conn.sock >= 0) close(queue_conn.sock);
         queue_conn.connected = false;
         queue_conn.initialized = false;
-        ESP_LOGI(TAG, "   🔌 Queue connection closed");
+        ESP_LOGI(TAG, "   [DISC] Queue connection closed");
     }
 }

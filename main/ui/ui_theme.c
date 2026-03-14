@@ -201,7 +201,7 @@ lv_obj_t *ui_create_btn(lv_obj_t *parent, const char *text, lv_coord_t x, lv_coo
 }
 
 /* ============================================================
- * v2 Status Bar (16px) — hand-drawn indicators
+ * v2 Status Bar (16px) - hand-drawn indicators
  *
  * Matches mockup v5:
  *   [GO]          [12:42] [▂▃▅▇] [▯▯▯|]
@@ -248,7 +248,7 @@ lv_obj_t *ui_create_status_bar(lv_obj_t *parent)
     lv_obj_set_style_pad_all(bar, 0, 0);
     lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* ---- "GO" button — left side, Font 10 ---- */
+    /* ---- "GO" button - left side, Font 10 ---- */
     lv_obj_t *go_btn = lv_btn_create(bar);
     lv_obj_set_size(go_btn, 28, UI_STATUS_H);
     lv_obj_set_pos(go_btn, 2, 0);

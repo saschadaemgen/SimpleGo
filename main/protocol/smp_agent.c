@@ -102,7 +102,7 @@ static bool ratchet_header_try_decrypt(
     } else {
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "      +----------------------------------------------+");
-        ESP_LOGI(TAG, "      |  🎉 HEADER DECRYPT SUCCESS! (%s)     |",
+        ESP_LOGI(TAG, "      |  [OK] HEADER DECRYPT SUCCESS! (%s)     |",
                  *decrypt_mode == 0 ? "SameRatchet" : "AdvanceRatchet");
         ESP_LOGI(TAG, "      +----------------------------------------------+");
     }
@@ -172,7 +172,7 @@ static bool ratchet_parse_msg_header(const uint8_t *header_plain,
 }
 
 /**
- * Full ratchet decrypt pipeline: header decrypt → parse → body decrypt.
+ * Full ratchet decrypt pipeline: header decrypt -> parse -> body decrypt.
  *
  * @param erm_data      Start of EncRatchetMessage data
  * @param erm_len       Length of EncRatchetMessage
@@ -398,7 +398,7 @@ static void handle_conninfo(const uint8_t *body, size_t body_len)
 
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "      +----------------------------------------------+");
-    ESP_LOGI(TAG, "      |  🎉 ConnInfo JSON DECOMPRESSED!               |");
+    ESP_LOGI(TAG, "      |  [OK] ConnInfo JSON DECOMPRESSED!               |");
     ESP_LOGI(TAG, "      +----------------------------------------------+");
     ESP_LOGI(TAG, "      Decompressed: %zu bytes", result);
 
@@ -504,7 +504,7 @@ static bool handle_confirmation(const uint8_t *client_msg, uint16_t original_len
     if (maybe_tag == '0') {
         ESP_LOGD(TAG, "e2eEncryption_ = Nothing (X3DH already exchanged)");
     } else if (maybe_tag == '1') {
-        ESP_LOGW(TAG, "e2eEncryption_ = Just — X448 Keys follow!");
+        ESP_LOGW(TAG, "e2eEncryption_ = Just - X448 Keys follow!");
     }
 
     // Ratchet decrypt the EncRatchetMessage
@@ -514,7 +514,7 @@ static bool handle_confirmation(const uint8_t *client_msg, uint16_t original_len
     if (ratchet_decrypt_message(client_msg, original_len, cm_offset, &body, &body_len)) {
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "      +----------------------------------------------+");
-        ESP_LOGI(TAG, "      |  🎉🎉🎉 ConnInfo DECRYPTED! 🎉🎉🎉          |");
+        ESP_LOGI(TAG, "      |  [SUCCESS] ConnInfo DECRYPTED! [SUCCESS]          |");
         ESP_LOGI(TAG, "      +----------------------------------------------+");
         ESP_LOGI(TAG, "      Plaintext: %zu bytes", body_len);
 
@@ -526,12 +526,12 @@ static bool handle_confirmation(const uint8_t *client_msg, uint16_t original_len
 }
 
 // ============================================================================
-// PHEmpty Handler ('_') — A_HELLO / A_MSG
+// PHEmpty Handler ('_') - A_HELLO / A_MSG
 // ============================================================================
 
 /**
  * Extract chat text from ratchet-decrypted A_MSG body.
- * Parses: AgentMessage 'M' → JSON → "text":"..."
+ * Parses: AgentMessage 'M' -> JSON -> "text":"..."
  */
 static void extract_chat_text(const uint8_t *body, size_t body_len, int contact_idx)
 {
@@ -545,7 +545,7 @@ static void extract_chat_text(const uint8_t *body, size_t body_len, int contact_
     uint8_t inner_tag = body[inner_off];
 
     if (inner_tag == 'M') {
-        // A_MSG body → JSON with chat text
+        // A_MSG body -> JSON with chat text
         int json_off = inner_off + 1;
         int json_len = (int)body_len - json_off;
 
@@ -563,9 +563,9 @@ static void extract_chat_text(const uint8_t *body, size_t body_len, int contact_
                 *text_end = '\0';
                 ESP_LOGI(TAG, "");
                 ESP_LOGI(TAG, "      +----------------------------------------------+");
-                ESP_LOGI(TAG, "      |  🎉🎉🎉 ESP32 RECEIVED MESSAGE! 🎉🎉🎉       |");
+                ESP_LOGI(TAG, "      |  [SUCCESS] ESP32 RECEIVED MESSAGE! [SUCCESS]       |");
                 ESP_LOGI(TAG, "      |                                              |");
-                ESP_LOGI(TAG, "      |  📨 \"%s\"", text_start);
+                ESP_LOGI(TAG, "      |  [MSG] \"%s\"", text_start);
                 ESP_LOGI(TAG, "      |                                              |");
                 ESP_LOGI(TAG, "      |  🏆 BIDIRECTIONAL CHAT ON ESP32! 🏆           |");
                 ESP_LOGI(TAG, "      +----------------------------------------------+");
@@ -602,7 +602,7 @@ static void extract_chat_text(const uint8_t *body, size_t body_len, int contact_
         uint8_t receipt_count = body[voff++];
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "      +----------------------------------------------+");
-        ESP_LOGI(TAG, "      |  📬 DELIVERY RECEIPT: %d message(s)            |", receipt_count);
+        ESP_LOGI(TAG, "      |  [MSG] DELIVERY RECEIPT: %d message(s)            |", receipt_count);
         ESP_LOGI(TAG, "      +----------------------------------------------+");
 
         for (uint8_t r = 0; r < receipt_count && voff + 9 < (int)body_len; r++) {
@@ -645,7 +645,7 @@ static void extract_chat_text(const uint8_t *body, size_t body_len, int contact_
 static bool handle_empty(const uint8_t *client_msg, uint16_t original_len,
                           contact_t *contact)
 {
-    ESP_LOGD(TAG, "PHEmpty — AgentMsgEnvelope");
+    ESP_LOGD(TAG, "PHEmpty - AgentMsgEnvelope");
 
     const uint8_t *agent = client_msg + 1;
     int agent_len = original_len - 1;
@@ -659,16 +659,16 @@ static bool handle_empty(const uint8_t *client_msg, uint16_t original_len,
     char agent_tag = agent[2];
 
     if (agent_tag == 'H') {
-        // A_HELLO — Connection established!
+        // A_HELLO - Connection established!
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "      +----------------------------------------------+");
-        ESP_LOGI(TAG, "      |  🎉🎉🎉 A_HELLO received! CONNECTED! 🎉🎉🎉 |");
+        ESP_LOGI(TAG, "      |  [SUCCESS] A_HELLO received! CONNECTED! [SUCCESS] |");
         ESP_LOGI(TAG, "      +----------------------------------------------+");
         return true;
 
     } else if (agent_tag == 'M') {
-        // A_MSG — Ratchet decrypt → Chat text
-        ESP_LOGI(TAG, "A_MSG — ratchet decrypt starting...");
+        // A_MSG - Ratchet decrypt -> Chat text
+        ESP_LOGI(TAG, "A_MSG - ratchet decrypt starting...");
 
         const uint8_t *erm = agent + 3;
         int erm_len = agent_len - 3;
@@ -706,7 +706,7 @@ static bool handle_empty(const uint8_t *client_msg, uint16_t original_len,
                     uint8_t msg_hash[32];
                     mbedtls_sha256(body, body_len, msg_hash, 0);
                     
-                    ESP_LOGI(TAG, "📬 Receipt data: peer_sndMsgId=%llu, hash=%02x%02x%02x%02x...",
+                    ESP_LOGI(TAG, "[MSG] Receipt data: peer_sndMsgId=%llu, hash=%02x%02x%02x%02x...",
                              (unsigned long long)peer_snd_msg_id,
                              msg_hash[0], msg_hash[1], msg_hash[2], msg_hash[3]);
                     
@@ -714,7 +714,7 @@ static bool handle_empty(const uint8_t *client_msg, uint16_t original_len,
                     if (contact) {
                         peer_send_receipt(contact, peer_snd_msg_id, msg_hash);
                     } else {
-                        ESP_LOGW(TAG, "⚠️  Cannot send receipt: contact is NULL");
+                        ESP_LOGW(TAG, "[WARN]  Cannot send receipt: contact is NULL");
                     }
                 }
             }

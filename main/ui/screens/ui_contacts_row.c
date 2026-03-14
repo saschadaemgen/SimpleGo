@@ -79,7 +79,7 @@ lv_obj_t *ui_contacts_row_create(lv_obj_t *parent, int idx, contact_t *c,
         accent_opa = (lv_opa_t)80;
     }
 
-    /* === Row container — zero padding, all positions absolute === */
+    /* === Row container - zero padding, all positions absolute === */
     lv_obj_t *row = lv_obj_create(parent);
     lv_obj_set_size(row, LV_PCT(100), ROW_H);
     lv_obj_set_style_bg_color(row, ROW_BG, 0);
@@ -94,7 +94,7 @@ lv_obj_t *ui_contacts_row_create(lv_obj_t *parent, int idx, contact_t *c,
     lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_user_data(row, (void *)(intptr_t)idx);
 
-    /* === Object 1: Accent bar — 3px wide, proper spacing === */
+    /* === Object 1: Accent bar - 3px wide, proper spacing === */
     lv_obj_t *accent = lv_obj_create(row);
     lv_obj_set_size(accent, ACCENT_W, ACCENT_H);
     lv_obj_set_pos(accent, 6, (ROW_H - ACCENT_H) / 2);
@@ -143,7 +143,7 @@ lv_obj_t *ui_contacts_row_create(lv_obj_t *parent, int idx, contact_t *c,
         lv_obj_set_style_text_color(check_lbl, UI_COLOR_TEXT_DIM, 0);
     }
 
-    /* === Object 4: Message count — always visible === */
+    /* === Object 4: Message count - always visible === */
     lv_obj_t *count_lbl = lv_label_create(row);
     lv_obj_set_style_text_font(count_lbl, &lv_font_montserrat_10, 0);
     if (total > 0 || unread > 0) {
@@ -158,7 +158,7 @@ lv_obj_t *ui_contacts_row_create(lv_obj_t *parent, int idx, contact_t *c,
     }
     lv_obj_align(count_lbl, LV_ALIGN_RIGHT_MID, -36, 0);
 
-    /* === Object 5: E2EE badge — far right === */
+    /* === Object 5: E2EE badge - far right === */
     lv_obj_t *e2ee_lbl = lv_label_create(row);
     lv_label_set_text(e2ee_lbl, "E2EE");
     lv_obj_set_style_text_font(e2ee_lbl, &lv_font_montserrat_10, 0);
