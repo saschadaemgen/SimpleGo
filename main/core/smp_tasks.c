@@ -975,7 +975,9 @@ static void app_handle_reply_queue_msg(
     uint8_t *msg_id, uint8_t msgIdLen)
 {
     ESP_LOGI(TAG_APP, "   Decrypting REPLY QUEUE message for contact [%d] (legacy=%d)...", rq_contact, is_legacy_rq);
-    smp_notify_ui_status("Decrypting...");
+    // Session 47: Only show status during active handshake, not normal messages
+    if (!is_42d_done(rq_contact))
+        smp_notify_ui_status("Decrypting...");
 
     uint8_t *e2e_plain = NULL;
     size_t e2e_plain_len = 0;

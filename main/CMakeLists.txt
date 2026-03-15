@@ -56,4 +56,5 @@ idf_component_register(
         fatfs
         vfs
         sntrup761
+        efuse
 )

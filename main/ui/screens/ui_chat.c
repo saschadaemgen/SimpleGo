@@ -263,7 +263,7 @@ static lv_obj_t *create_chat_header(lv_obj_t *parent)
 
     /* Contact name */
     lv_obj_t *name = lv_label_create(hdr);
-    lv_label_set_text(name, "Alice");
+    lv_label_set_text(name, "");
     lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
     lv_obj_set_width(name, 148);  /* narrower for settings button */
     lv_obj_set_style_text_color(name, UI_COLOR_TEXT_WHITE, 0);
