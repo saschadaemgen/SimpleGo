@@ -20,6 +20,8 @@
 #include "smp_queue.h"
 #include "reply_queue.h"   // Session 34 Phase 6: per-contact reply queues
 #include "smp_storage.h"  // 36a: smp_storage_delete for NVS key cleanup
+#include "smp_ratchet.h"  // Bug #26: ratchet_wipe_slot for contact deletion
+#include "smp_history.h"  // Bug #26: smp_history_delete for SD card cleanup
 extern void smp_clear_42d(int idx);  // 36b: reset 42d bitmap on delete
 #include "freertos/ringbuf.h"
 
@@ -265,8 +267,8 @@ int find_contact_by_recipient_id(const uint8_t *recipient_id, uint8_t len) {
 
 void list_contacts(void) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "ðŸ“‹ Contact List (%d active):", contacts_db.num_contacts);
-    ESP_LOGI(TAG, "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
+    ESP_LOGI(TAG, "[LIST] Contact List (%d active):", contacts_db.num_contacts);
+    ESP_LOGI(TAG, "------------------------------------");
     for (int i = 0; i < MAX_CONTACTS; i++) {
         if (contacts_db.contacts[i].active) {
             contact_t *c = &contacts_db.contacts[i];
@@ -275,10 +277,10 @@ void list_contacts(void) {
                      c->recipient_id[0], c->recipient_id[1], 
                      c->recipient_id[2], c->recipient_id[3],
                      c->recipient_id[4], c->recipient_id[5]);
-            ESP_LOGI(TAG, "      srvDH: %s", c->have_srv_dh ? "âœ…" : "âŒ");
+            ESP_LOGI(TAG, "      srvDH: %s", c->have_srv_dh ? "[OK]" : "[FAIL]");
         }
     }
-    ESP_LOGI(TAG, "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
+    ESP_LOGI(TAG, "------------------------------------");
     ESP_LOGI(TAG, "");
 }
 
@@ -292,8 +294,8 @@ void print_invitation_links(const uint8_t *ca_hash, const char *host, int port) 
     base64url_encode(ca_hash, 32, hash_b64, sizeof(hash_b64));
     
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "ðŸ”- SIMPLEX CONTACT LINKS");
-    ESP_LOGI(TAG, "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•");
+    ESP_LOGI(TAG, "[LINK] SIMPLEX CONTACT LINKS");
+    ESP_LOGI(TAG, "------------------------------------");
     ESP_LOGI(TAG, "Server keyHash: %s", hash_b64);
     ESP_LOGI(TAG, "");
     
@@ -355,21 +357,21 @@ void print_invitation_links(const uint8_t *ca_hash, const char *host, int port) 
         
         url_encode(smp_uri, smp_uri_encoded, sizeof(smp_uri_encoded));
         
-        ESP_LOGI(TAG, "ðŸ“± [%d] %s", i, c->name);
-        ESP_LOGI(TAG, "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
+        ESP_LOGI(TAG, "[DEV] [%d] %s", i, c->name);
+        ESP_LOGI(TAG, "------------------------------------");
         
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "   ðŸŒ SimpleX Contact Link (COPY THIS!):");
+        ESP_LOGI(TAG, "   [WEB] SimpleX Contact Link (COPY THIS!):");
         printf("   https://simplex.chat/contact#/?v=2-7&smp=%s\n", smp_uri_encoded);
         
         ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "   ðŸ“² Direct App Link:");
+        ESP_LOGI(TAG, "   [APP] Direct App Link:");
         printf("   simplex:/contact#/?v=2-7&smp=%s\n", smp_uri_encoded);
         
         ESP_LOGI(TAG, "");
     }
     
-    ESP_LOGI(TAG, "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•");
+    ESP_LOGI(TAG, "------------------------------------");
     ESP_LOGI(TAG, "");
 }
 
@@ -386,7 +388,7 @@ int add_contact(mbedtls_ssl_context *ssl, uint8_t *block,
     }
     
     if (slot < 0) {
-        ESP_LOGE(TAG, "âŒ No free contact slot! Max %d contacts.", MAX_CONTACTS);
+        ESP_LOGE(TAG, "[FAIL] No free contact slot! Max %d contacts.", MAX_CONTACTS);
         return -1;
     }
     
@@ -394,7 +396,7 @@ int add_contact(mbedtls_ssl_context *ssl, uint8_t *block,
     memset(c, 0, sizeof(contact_t));
     strncpy(c->name, name, sizeof(c->name) - 1);
     
-    ESP_LOGI(TAG, "âž• Creating contact '%s' in slot %d...", name, slot);
+    ESP_LOGI(TAG, "[NEW] Creating contact '%s' in slot %d...", name, slot);
     
     // Generate Ed25519 keypair
     uint8_t seed[32];
@@ -468,14 +470,14 @@ int add_contact(mbedtls_ssl_context *ssl, uint8_t *block,
     ESP_LOGI(TAG, "      Sending NEW command...");
     int ret = smp_write_command_block(ssl, block, transmission, tpos);
     if (ret != 0) {
-        ESP_LOGE(TAG, "      âŒ Failed to send NEW");
+        ESP_LOGE(TAG, "      [FAIL] Failed to send NEW");
         return -1;
     }
     
     // Wait for IDS response
     int content_len = smp_read_block(ssl, block, 15000);
     if (content_len < 0) {
-        ESP_LOGE(TAG, "      âŒ No response to NEW");
+        ESP_LOGE(TAG, "      [FAIL] No response to NEW");
         return -1;
     }
     
@@ -519,29 +521,29 @@ int add_contact(mbedtls_ssl_context *ssl, uint8_t *block,
                 ESP_LOGI(TAG, "NVS save deferred (PSRAM task)");
             }
             
-            ESP_LOGI(TAG, "      âœ… Contact '%s' created!", name);
+            ESP_LOGI(TAG, "      [OK] Contact '%s' created!", name);
             return slot;
         }
         
         if (resp[i] == 'E' && resp[i+1] == 'R' && resp[i+2] == 'R') {
-            ESP_LOGE(TAG, "      âŒ Server error creating contact");
+            ESP_LOGE(TAG, "      [FAIL] Server error creating contact");
             return -1;
         }
     }
     
-    ESP_LOGE(TAG, "      âŒ Unexpected response");
+    ESP_LOGE(TAG, "      [FAIL] Unexpected response");
     return -1;
 }
 
 bool remove_contact(mbedtls_ssl_context *ssl, uint8_t *block,
                     const uint8_t *session_id, int index) {
     if (index < 0 || index >= MAX_CONTACTS || !contacts_db.contacts[index].active) {
-        ESP_LOGE(TAG, "âŒ Invalid contact index: %d", index);
+        ESP_LOGE(TAG, "[FAIL] Invalid contact index: %d", index);
         return false;
     }
     
     contact_t *c = &contacts_db.contacts[index];
-    ESP_LOGI(TAG, "ðŸ-‘ï¸  Removing contact '%s' [%d]...", c->name, index);
+    ESP_LOGI(TAG, "[DEL] Removing contact '%s' [%d]...", c->name, index);
     
     uint8_t del_body[64];
     int dp = 0;
@@ -579,7 +581,7 @@ bool remove_contact(mbedtls_ssl_context *ssl, uint8_t *block,
     
     int ret = smp_write_command_block(ssl, block, del_trans, dtp);
     if (ret != 0) {
-        ESP_LOGE(TAG, "      âŒ Failed to send DEL");
+        ESP_LOGE(TAG, "      [FAIL] Failed to send DEL");
         return false;
     }
     
@@ -598,26 +600,42 @@ bool remove_contact(mbedtls_ssl_context *ssl, uint8_t *block,
             if (rp + 1 < content_len && resp[rp] == 'O' && resp[rp+1] == 'K') {
                 c->active = 0;
                 memset(c, 0, sizeof(contact_t));
-                // 36a+36b: Clean up ALL orphaned NVS keys for this contact
+                // 36a+36b+Bug #26: Clean up ALL NVS keys for this contact
                 {
+                    // Classical keys (36a)
                     const char *prefixes[] = {"rat_", "peer_", "hand_", "rq_"};
                     char nkey[16];
                     for (int k = 0; k < 4; k++) {
                         snprintf(nkey, sizeof(nkey), "%s%02x", prefixes[k], index);
                         smp_storage_delete(nkey);
                     }
-                    ESP_LOGI(TAG, "      NVS keys cleaned: rat/peer/hand/rq_%02x", index);
+                    // Bug #26: PQ NVS keys (Session 46, up to 5.2 KB per contact)
+                    const char *pq_suffixes[] = {"_act", "_st", "_opk", "_osk", "_ppk", "_ct", "_ss"};
+                    for (int k = 0; k < 7; k++) {
+                        snprintf(nkey, sizeof(nkey), "pq_%02x%s", index, pq_suffixes[k]);
+                        smp_storage_delete(nkey);
+                    }
+                    ESP_LOGI(TAG, "      NVS keys cleaned: rat/peer/hand/rq/pq_%02x", index);
                 }
+                // Bug #26: Wipe ratchet PSRAM slot (+ working copy if active)
+                ratchet_wipe_slot((uint8_t)index);
+                // Bug #26: Wipe reply queue PSRAM slot
+                if (reply_queue_db) {
+                    sodium_memzero(&reply_queue_db->queues[index], sizeof(reply_queue_t));
+                    ESP_LOGI(TAG, "      Reply queue PSRAM slot [%d] wiped", index);
+                }
+                // Bug #26: Delete SD card history file
+                smp_history_delete((uint8_t)index);
                 smp_clear_42d(index);  // 36b: allow 42d re-handshake in this slot
                 contacts_db.num_contacts--;
                 save_contacts_to_nvs();
-                ESP_LOGI(TAG, "      âœ… Contact removed!");
+                ESP_LOGI(TAG, "      [OK] Contact removed!");
                 return true;
             }
         }
     }
     
-    ESP_LOGE(TAG, "      âŒ Failed to remove contact");
+    ESP_LOGE(TAG, "      [FAIL] Failed to remove contact");
     return false;
 }
 
@@ -626,7 +644,7 @@ bool remove_contact(mbedtls_ssl_context *ssl, uint8_t *block,
 void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
                             const uint8_t *session_id) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "ðŸ“¡ Subscribing to all contacts...");
+    ESP_LOGI(TAG, "[CONN] Subscribing to all contacts...");
     
     int success_count = 0;
     
@@ -692,7 +710,7 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
         
         int ret = smp_write_command_block(ssl, block, sub_trans, sub_tpos);
         if (ret != 0) {
-            ESP_LOGE(TAG, "       âŒ Send failed");
+                ESP_LOGE(TAG, "       [FAIL] Send failed");
             continue;
         }
         

@@ -96,6 +96,23 @@ uint8_t ratchet_get_active(void) {
     return active_ratchet_idx;
 }
 
+// Bug #26: Securely wipe a ratchet slot on contact deletion
+void ratchet_wipe_slot(uint8_t idx) {
+    if (idx >= MAX_RATCHETS || !ratchet_states) return;
+
+    // If wiping the active slot, zero the working copy first
+    if (idx == active_ratchet_idx) {
+        sodium_memzero(&ratchet_state, sizeof(ratchet_state_t));
+        active_ratchet_idx = 0xFF;  // No valid active slot
+        ESP_LOGW(TAG, "Wiped active ratchet slot [%d] (working copy + PSRAM)", idx);
+    } else {
+        ESP_LOGI(TAG, "Wiped ratchet slot [%d] (PSRAM)", idx);
+    }
+
+    // Wipe the PSRAM array slot
+    sodium_memzero(&ratchet_states[idx], sizeof(ratchet_state_t));
+}
+
 // ============== Helper Functions ==============
 
 static int hkdf_sha512(const uint8_t *salt, size_t salt_len,

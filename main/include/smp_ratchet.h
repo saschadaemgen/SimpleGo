@@ -191,6 +191,14 @@ bool ratchet_set_active(uint8_t idx);
  */
 uint8_t ratchet_get_active(void);
 
+/**
+ * Securely wipe a ratchet slot (Bug #26: contact deletion cleanup).
+ * If idx is the active slot, also zeros the working copy and
+ * sets active index to 0xFF (invalid).
+ * @param idx  Contact index (0 to MAX_RATCHETS-1)
+ */
+void ratchet_wipe_slot(uint8_t idx);
+
 // ============== X3DH Key Agreement ==============
 
 /**

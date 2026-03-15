@@ -16,6 +16,10 @@
 #include "smp_types.h"
 #include "smp_contacts.h"
 #include "smp_storage.h"
+#include "smp_ratchet.h"   // Bug #26: ratchet_wipe_slot
+#include "smp_history.h"   // Bug #26: smp_history_delete
+#include "reply_queue.h"   // Bug #26: reply queue PSRAM wipe
+#include "sodium.h"        // Bug #26: sodium_memzero
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -274,16 +278,33 @@ static void on_popup_delete(lv_event_t *e)
 
     memset(c, 0, sizeof(contact_t));
 
-    // Clean up ALL orphaned NVS keys for this contact
+    // 36a+Bug #26: Clean up ALL NVS keys for this contact
     {
+        // Classical keys (36a)
         const char *prefixes[] = {"rat_", "peer_", "hand_", "rq_"};
         char nkey[16];
         for (int k = 0; k < 4; k++) {
             snprintf(nkey, sizeof(nkey), "%s%02x", prefixes[k], idx);
             smp_storage_delete(nkey);
         }
-        ESP_LOGI(TAG, "NVS keys cleaned: rat/peer/hand/rq_%02x", idx);
+        // Bug #26: PQ NVS keys (Session 46, up to 5.2 KB per contact)
+        const char *pq_suffixes[] = {"_act", "_st", "_opk", "_osk", "_ppk", "_ct", "_ss"};
+        for (int k = 0; k < 7; k++) {
+            snprintf(nkey, sizeof(nkey), "pq_%02x%s", idx, pq_suffixes[k]);
+            smp_storage_delete(nkey);
+        }
+        ESP_LOGI(TAG, "NVS keys cleaned: rat/peer/hand/rq/pq_%02x", idx);
     }
+
+    // Bug #26: Wipe ratchet PSRAM slot (+ working copy if active)
+    ratchet_wipe_slot((uint8_t)idx);
+    // Bug #26: Wipe reply queue PSRAM slot
+    if (reply_queue_db) {
+        sodium_memzero(&reply_queue_db->queues[idx], sizeof(reply_queue_t));
+        ESP_LOGI(TAG, "Reply queue PSRAM slot [%d] wiped", idx);
+    }
+    // Bug #26: Delete SD card history file
+    smp_history_delete((uint8_t)idx);
 
     smp_clear_42d(idx);
     ui_chat_clear_contact(idx);
