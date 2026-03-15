@@ -68,6 +68,8 @@
 #include "ui_manager.h"
 #include "ui/screens/ui_connect.h"
 #include "ui_chat.h"
+#include "ui_contacts.h"       // Auftrag 2a: live refresh on incoming message
+#include "ui_main.h"           // Auftrag 2a: live refresh on incoming message
 #include "ui_settings.h"
 #include "ui_theme.h"
 #include "simplego_fonts.h"
@@ -179,11 +181,16 @@ static void ui_poll_timer_cb(lv_timer_t *t)
     while (xQueueReceive(app_to_ui_queue, &evt, 0) == pdTRUE) {
         switch (evt.type) {
             case UI_EVT_MESSAGE:
-                // Auto-navigate to chat on first message
-                if (ui_manager_get_current() != UI_SCREEN_CHAT) {
-                    ui_manager_show_screen(UI_SCREEN_CHAT, LV_SCR_LOAD_ANIM_NONE);
-                }
+                // Auftrag 2a: No auto-navigate. SD history is written in
+                // smp_agent.c before this event. PSRAM cache updates if
+                // chat screen is open (guard in ui_chat_add_message).
                 ui_chat_add_message(evt.text, evt.is_outgoing, evt.contact_idx);
+                // Live-refresh unread counters on whichever screen is visible
+                if (ui_manager_get_current() == UI_SCREEN_CONTACTS) {
+                    ui_contacts_refresh();
+                } else if (ui_manager_get_current() == UI_SCREEN_MAIN) {
+                    ui_main_refresh();
+                }
                 break;
             case UI_EVT_NAVIGATE:
                 ui_manager_show_screen((ui_screen_t)evt.screen, LV_SCR_LOAD_ANIM_NONE);
