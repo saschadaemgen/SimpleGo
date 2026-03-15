@@ -83,6 +83,9 @@ typedef enum {
     UI_EVT_UPDATE_STATUS,   // Update status text on connect screen
     UI_EVT_SWITCH_CONTACT,  // 35e: Switch chat view to different contact
     UI_EVT_HISTORY_BATCH,   // Session 37: History messages loaded, batch ready in shared buffer
+    UI_EVT_CONNECT_SCANNED, // Session 47 2d: First reply queue MSG received (someone scanned QR)
+    UI_EVT_CONNECT_NAME,    // Session 47 2d: Peer display name received during handshake
+    UI_EVT_CONNECT_DONE,    // Session 47 2d: Contact fully connected (42d complete)
 } ui_event_type_t;
 
 /** Delivery status for outgoing messages */
@@ -121,6 +124,15 @@ void smp_notify_ui_status(const char *status_text);
 
 /** 35e: Switch chat view to different contact (thread-safe, uses UI queue) */
 void smp_notify_ui_switch_contact(int contact_idx, const char *name);
+
+/** Session 47 2d: Notify UI that someone scanned our QR code (first reply queue MSG) */
+void smp_notify_ui_connect_scanned(int contact_idx);
+
+/** Session 47 2d: Notify UI that peer display name was received */
+void smp_notify_ui_connect_name(int contact_idx, const char *name);
+
+/** Session 47 2d: Notify UI that contact handshake is fully complete */
+void smp_notify_ui_connect_done(int contact_idx);
 
 /**
  * @brief Register mapping between UI sequence and protocol msg_id

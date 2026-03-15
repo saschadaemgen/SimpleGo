@@ -703,6 +703,40 @@ void smp_notify_ui_switch_contact(int contact_idx, const char *name)
     xQueueSend(app_to_ui_queue, &evt, 0);
 }
 
+// Session 47 2d: Someone scanned our QR code (first reply queue MSG)
+void smp_notify_ui_connect_scanned(int contact_idx)
+{
+    if (!app_to_ui_queue) return;
+    ui_event_t evt = {0};
+    evt.type = UI_EVT_CONNECT_SCANNED;
+    evt.contact_idx = contact_idx;
+    xQueueSend(app_to_ui_queue, &evt, 0);
+    ESP_LOGI("CONNECT", "UI_EVT_CONNECT_SCANNED fired for contact [%d]", contact_idx);
+}
+
+// Session 47 2d: Peer display name received during handshake
+void smp_notify_ui_connect_name(int contact_idx, const char *name)
+{
+    if (!app_to_ui_queue || !name) return;
+    ui_event_t evt = {0};
+    evt.type = UI_EVT_CONNECT_NAME;
+    evt.contact_idx = contact_idx;
+    strncpy(evt.text, name, sizeof(evt.text) - 1);
+    xQueueSend(app_to_ui_queue, &evt, 0);
+    ESP_LOGI("CONNECT", "UI_EVT_CONNECT_NAME fired for contact [%d]: '%s'", contact_idx, name);
+}
+
+// Session 47 2d: Contact handshake fully complete
+void smp_notify_ui_connect_done(int contact_idx)
+{
+    if (!app_to_ui_queue) return;
+    ui_event_t evt = {0};
+    evt.type = UI_EVT_CONNECT_DONE;
+    evt.contact_idx = contact_idx;
+    xQueueSend(app_to_ui_queue, &evt, 0);
+    ESP_LOGI("CONNECT", "UI_EVT_CONNECT_DONE fired for contact [%d]", contact_idx);
+}
+
 // ============== Message ID Mapping for Receipts ==============
 
 void smp_register_msg_mapping(uint32_t ui_seq, uint64_t protocol_msg_id)
@@ -1034,6 +1068,9 @@ static void app_handle_reply_queue_msg(
         smp_notify_ui_status("Connected!");
         ESP_LOGI(TAG_APP, "APP: 42d -- Contact [%d] connected!", hs_contact);
 
+        // Session 47 2d: Notify UI that handshake is fully complete
+        smp_notify_ui_connect_done(hs_contact);
+
         s_has_peer_sender_auth = false;
 
         skip_42d_app: ;
@@ -1164,6 +1201,11 @@ void smp_app_run(QueueHandle_t kbd_queue)
 
         if (is_reply_queue)
             ESP_LOGI(TAG_APP, "MSG on REPLY_Q for contact [%d]", rq_contact);
+
+        // Session 47 2d: Notify UI that someone scanned our QR code
+        // Only for new contacts (42d not yet done = handshake in progress)
+        if (is_reply_queue && !is_42d_done(rq_contact))
+            smp_notify_ui_connect_scanned(rq_contact);
 
         // Command dispatch
         if (p + 1 < content_len && resp[p] == 'O' && resp[p+1] == 'K') {

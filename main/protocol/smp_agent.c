@@ -360,6 +360,9 @@ static void handle_conninfo(const uint8_t *body, size_t body_len)
 
                     save_contact_single(s_agent_contact_idx);
                     smp_notify_ui_contact(peer_name);
+
+                    // Session 47 2d: Notify UI of peer name for connection progress
+                    smp_notify_ui_connect_name(s_agent_contact_idx, peer_name);
                 }
             }
         }
@@ -437,6 +440,9 @@ static void handle_conninfo(const uint8_t *body, size_t body_len)
 
                 // Update UI chat header
                 smp_notify_ui_contact(peer_name);
+
+                // Session 47 2d: Notify UI of peer name for connection progress
+                smp_notify_ui_connect_name(s_agent_contact_idx, peer_name);
             }
         }
     }

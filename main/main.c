@@ -243,6 +243,17 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                     ui_chat_hide_loading();
                 }
                 break;
+
+            // Session 47 2d: Connection progress events (log-only, UI handling in next step)
+            case UI_EVT_CONNECT_SCANNED:
+                ESP_LOGI("UI", "CONNECT_SCANNED: contact [%d] - someone scanned QR", evt.contact_idx);
+                break;
+            case UI_EVT_CONNECT_NAME:
+                ESP_LOGI("UI", "CONNECT_NAME: contact [%d] name='%s'", evt.contact_idx, evt.text);
+                break;
+            case UI_EVT_CONNECT_DONE:
+                ESP_LOGI("UI", "CONNECT_DONE: contact [%d] - handshake complete", evt.contact_idx);
+                break;
         }
     }
 }
