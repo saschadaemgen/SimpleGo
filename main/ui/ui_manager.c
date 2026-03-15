@@ -18,6 +18,8 @@
 #include "ui_lock.h"
 #include "wifi_manager.h"
 #include "smp_storage.h"
+#include "smp_tasks.h"         // Bug #24: smp_get/set_active_contact, smp_request_load_history
+#include "smp_contacts.h"      // Bug #24: contacts_db for contact name
 #include "esp_log.h"
 
 /* Cleanup functions called before screen deletion.
@@ -36,6 +38,10 @@ static bool s_name_check_done = false;  /* Session 43: one-shot first-boot name 
 #define LOCK_TIMEOUT_MS      60000   /* 60 seconds inactivity to lock */
 #define LOCK_CHECK_INTERVAL  2000    /* Check every 2 seconds */
 static lv_timer_t *s_lock_timer = NULL;
+
+/* Bug #24: Remember screen and contact before lock for restore on unlock */
+static ui_screen_t s_locked_screen = UI_SCREEN_MAIN;
+static int s_locked_contact_idx = -1;
 
 // Navigation stack (replaces single prev_screen)
 #define NAV_STACK_DEPTH 8
@@ -269,7 +275,11 @@ void ui_manager_lock(void)
     if (current_screen == UI_SCREEN_LOCK) return;
     if (current_screen == UI_SCREEN_SPLASH) return;
 
-    ESP_LOGI(TAG, "SEC-04: Locking device (from screen %d)", current_screen);
+    /* Bug #24: Save current screen and active contact for restore on unlock */
+    s_locked_screen = current_screen;
+    s_locked_contact_idx = smp_get_active_contact();
+    ESP_LOGI(TAG, "SEC-04: Locking device (from screen %d, contact [%d])",
+             current_screen, s_locked_contact_idx);
 
     /* Force-wipe decrypted message data regardless of current screen.
      * If chat is active, this wipes labels + cache before navigation
@@ -287,11 +297,29 @@ void ui_manager_unlock(void)
 {
     if (current_screen != UI_SCREEN_LOCK) return;
 
-    ESP_LOGI(TAG, "SEC-04: Unlocking device");
+    /* Bug #24: If user was in a chat before lock, restore it fully.
+     * The chat screen was destroyed on lock (ephemeral), so we recreate
+     * it with the same contact. History reloads from SD automatically. */
+    if (s_locked_screen == UI_SCREEN_CHAT
+        && s_locked_contact_idx >= 0
+        && s_locked_contact_idx < MAX_CONTACTS
+        && contacts_db.contacts
+        && contacts_db.contacts[s_locked_contact_idx].active) {
 
-    /* Go back to previous screen. If the previous screen was CHAT,
-     * it was destroyed on lock. go_back will pop the stack and land
-     * on MAIN or CONTACTS. User re-enters chat normally, which triggers
-     * fresh SD history load. */
-    ui_manager_go_back();
+        ESP_LOGI(TAG, "SEC-04: Unlocking -> restoring chat [%d] '%s'",
+                 s_locked_contact_idx,
+                 contacts_db.contacts[s_locked_contact_idx].name);
+
+        smp_set_active_contact(s_locked_contact_idx);
+        ui_chat_set_contact(contacts_db.contacts[s_locked_contact_idx].name);
+        smp_request_load_history(s_locked_contact_idx);
+        ui_manager_show_screen(UI_SCREEN_CHAT, LV_SCR_LOAD_ANIM_NONE);
+        ui_chat_show_loading();
+    } else {
+        ESP_LOGI(TAG, "SEC-04: Unlocking -> back to screen %d", s_locked_screen);
+        ui_manager_go_back();
+    }
+
+    s_locked_screen = UI_SCREEN_MAIN;
+    s_locked_contact_idx = -1;
 }
