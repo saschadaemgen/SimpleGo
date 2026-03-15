@@ -359,6 +359,10 @@ static void handle_conninfo(const uint8_t *body, size_t body_len)
                              s_agent_contact_idx, peer_name);
 
                     save_contact_single(s_agent_contact_idx);
+
+                    // Session 47 2d: Show name received in status
+                    smp_notify_ui_status("Name received!");
+
                     smp_notify_ui_contact(peer_name);
 
                     // Session 47 2d: Notify UI of peer name for connection progress
@@ -405,6 +409,7 @@ static void handle_conninfo(const uint8_t *body, size_t body_len)
     ESP_LOGI(TAG, "      |  [OK] ConnInfo JSON DECOMPRESSED!               |");
     ESP_LOGI(TAG, "      +----------------------------------------------+");
     ESP_LOGI(TAG, "      Decompressed: %zu bytes", result);
+    smp_notify_ui_status("Peer info received!");
 
     // Print in chunks to avoid log truncation
     size_t printed = 0;
@@ -437,6 +442,9 @@ static void handle_conninfo(const uint8_t *body, size_t body_len)
 
                 // Persist to NVS
                 save_contact_single(s_agent_contact_idx);
+
+                // Session 47 2d: Show name received in status
+                smp_notify_ui_status("Name received!");
 
                 // Update UI chat header
                 smp_notify_ui_contact(peer_name);
@@ -518,6 +526,7 @@ static bool handle_confirmation(const uint8_t *client_msg, uint16_t original_len
     uint8_t *body = NULL;
     size_t body_len = 0;
 
+    smp_notify_ui_status("Decrypting peer info...");
     if (ratchet_decrypt_message(client_msg, original_len, cm_offset, &body, &body_len)) {
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "      +----------------------------------------------+");

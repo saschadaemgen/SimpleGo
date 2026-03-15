@@ -31,6 +31,8 @@
 #include <sys/socket.h>
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"      // Session 47: Timing analysis (us precision)
+#include <inttypes.h>       // PRId64
 
 
 static const char *TAG = "SMP_TASKS";
@@ -54,6 +56,8 @@ static uint8_t s_peer_sender_auth_key[44];
 static bool s_has_peer_sender_auth = false;
 // Per-contact 42d completion: bit N = contact[N] completed handshake
 static uint8_t s_42d_bitmap[16] = {0};  // 128 bits = MAX_CONTACTS
+// Session 47 2d: Per-contact "scanned notification sent" bitmap
+static uint8_t s_scanned_notified[16] = {0};
 
 static inline bool is_42d_done(int idx) {
     if (idx < 0 || idx >= 128) return true;  // Out of range = skip
@@ -68,7 +72,8 @@ static inline void mark_42d_done(int idx) {
 void smp_clear_42d(int idx) {
     if (idx >= 0 && idx < 128) {
         s_42d_bitmap[idx / 8] &= ~(1 << (idx % 8));
-        ESP_LOGI("SMP_TASKS", "42d bitmap cleared for slot [%d]", idx);
+        s_scanned_notified[idx / 8] &= ~(1 << (idx % 8));
+        ESP_LOGI("SMP_TASKS", "42d + scanned bitmap cleared for slot [%d]", idx);
     }
 }
 
@@ -102,7 +107,7 @@ int                smp_history_batch_count = 0;
 int                smp_history_batch_slot  = -1;
 
 // Track which contact slot is currently in handshake (set by add-contact flow)
-static volatile int s_handshake_contact_idx = 0;
+static volatile int s_handshake_contact_idx = -1;
 
 // Net Task signals KEY completion to App Task
 static TaskHandle_t s_app_task_handle = NULL;
@@ -337,6 +342,8 @@ static void network_task(void *arg)
                         if (slot >= 0) {
                             s_contacts_dirty = true;  // App task will save
                             s_handshake_contact_idx = slot;  // Track for 42d
+                            // Session 47 2d: Reset scanned notification for this slot
+                            s_scanned_notified[slot / 8] &= ~(1 << (slot % 8));
                             ESP_LOGI(TAG, "NET: Contact '%s' created in slot [%d]",
                                      cmd->contact_name, slot);
                             subscribe_all_contacts(s_ssl, block, s_session_id);
@@ -711,7 +718,10 @@ void smp_notify_ui_connect_scanned(int contact_idx)
     evt.type = UI_EVT_CONNECT_SCANNED;
     evt.contact_idx = contact_idx;
     xQueueSend(app_to_ui_queue, &evt, 0);
-    ESP_LOGI("CONNECT", "UI_EVT_CONNECT_SCANNED fired for contact [%d]", contact_idx);
+
+    // TIMING: Messpunkt 1 - Event gefeuert
+    int64_t t1 = esp_timer_get_time();
+    ESP_LOGI("TIMING", "[1] CONNECT_SCANNED fired at %" PRId64 " us (contact [%d])", t1, contact_idx);
 }
 
 // Session 47 2d: Peer display name received during handshake
@@ -965,6 +975,7 @@ static void app_handle_reply_queue_msg(
     uint8_t *msg_id, uint8_t msgIdLen)
 {
     ESP_LOGI(TAG_APP, "   Decrypting REPLY QUEUE message for contact [%d] (legacy=%d)...", rq_contact, is_legacy_rq);
+    smp_notify_ui_status("Decrypting...");
 
     uint8_t *e2e_plain = NULL;
     size_t e2e_plain_len = 0;
@@ -1192,7 +1203,8 @@ void smp_app_run(QueueHandle_t kbd_queue)
 
         if (!is_reply_queue && our_queue.rcv_id_len > 0 &&
             entLen == our_queue.rcv_id_len &&
-            memcmp(entity_id, our_queue.rcv_id, entLen) == 0) {
+            memcmp(entity_id, our_queue.rcv_id, entLen) == 0 &&
+            s_handshake_contact_idx >= 0) {
             is_reply_queue = true;
             is_legacy_rq = true;
             rq_contact = s_handshake_contact_idx;
@@ -1202,10 +1214,33 @@ void smp_app_run(QueueHandle_t kbd_queue)
         if (is_reply_queue)
             ESP_LOGI(TAG_APP, "MSG on REPLY_Q for contact [%d]", rq_contact);
 
-        // Session 47 2d: Notify UI that someone scanned our QR code
-        // Only for new contacts (42d not yet done = handshake in progress)
-        if (is_reply_queue && !is_42d_done(rq_contact))
-            smp_notify_ui_connect_scanned(rq_contact);
+        // Session 47 2d: Notify UI at first sign of activity after QR scan.
+        // Contact Queue MSG arrives ~1s after scan (invitation response).
+        // Reply Queue MSG arrives ~9s later (confirmation).
+        // Fire on whichever comes first, but only once per contact.
+        {
+            int scanned_idx = -1;
+            // Path A: Contact Queue MSG for the contact being created
+            if (!is_reply_queue && contact &&
+                contact_idx >= 0 && s_handshake_contact_idx >= 0 &&
+                contact_idx == s_handshake_contact_idx &&
+                !is_42d_done(contact_idx)) {
+                scanned_idx = contact_idx;
+            }
+            // Path B: Reply Queue MSG for any new contact (fallback)
+            if (scanned_idx < 0 && is_reply_queue &&
+                rq_contact >= 0 && !is_42d_done(rq_contact)) {
+                scanned_idx = rq_contact;
+            }
+            if (scanned_idx >= 0) {
+                int byte = scanned_idx / 8;
+                int bit = scanned_idx % 8;
+                if (!(s_scanned_notified[byte] & (1 << bit))) {
+                    s_scanned_notified[byte] |= (1 << bit);
+                    smp_notify_ui_connect_scanned(scanned_idx);
+                }
+            }
+        }
 
         // Command dispatch
         if (p + 1 < content_len && resp[p] == 'O' && resp[p+1] == 'K') {
