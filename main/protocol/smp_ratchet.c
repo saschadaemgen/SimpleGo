@@ -1519,16 +1519,27 @@ bool ratchet_load_state(uint8_t contact_idx) {
         return false;
     }
 
+    /* Bug #23: ratchet_state_t is ~5.7 KB after PQ integration (Session 46).
+     * Stack allocation crashed LVGL task (8 KB stack) when called from
+     * on_contact_click -> smp_set_active_contact -> ratchet_set_active.
+     * Fix: allocate in PSRAM, zero-wipe before free. */
+    ratchet_state_t *loaded = heap_caps_malloc(sizeof(ratchet_state_t), MALLOC_CAP_SPIRAM);
+    if (!loaded) {
+        ESP_LOGE(TAG, "ratchet_load_state: PSRAM alloc failed (%zu bytes)", sizeof(ratchet_state_t));
+        return false;
+    }
+
     /* Zero entire struct (PQ fields default to 0 = inactive) */
     size_t loaded_len = 0;
-    ratchet_state_t loaded;
-    memset(&loaded, 0, sizeof(ratchet_state_t));
+    memset(loaded, 0, sizeof(ratchet_state_t));
 
     /* Load classical part only. NVS blob is RATCHET_CLASSICAL_SIZE (~520 bytes).
      * Old pre-PQ blobs (also 520 bytes) load identically. */
-    esp_err_t ret = smp_storage_load_blob(key, &loaded, RATCHET_CLASSICAL_SIZE, &loaded_len);
+    esp_err_t ret = smp_storage_load_blob(key, loaded, RATCHET_CLASSICAL_SIZE, &loaded_len);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "ratchet_load_state('%s') FAILED: %s", key, esp_err_to_name(ret));
+        sodium_memzero(loaded, sizeof(ratchet_state_t));
+        heap_caps_free(loaded);
         return false;
     }
 
@@ -1537,19 +1548,27 @@ bool ratchet_load_state(uint8_t contact_idx) {
     if (loaded_len != RATCHET_CLASSICAL_SIZE && loaded_len != RATCHET_STATE_SIZE_PRE_PQ) {
         ESP_LOGE(TAG, "ratchet_load_state: size mismatch! got %zu, expected %zu or %zu",
                  loaded_len, RATCHET_CLASSICAL_SIZE, (size_t)RATCHET_STATE_SIZE_PRE_PQ);
+        sodium_memzero(loaded, sizeof(ratchet_state_t));
+        heap_caps_free(loaded);
         return false;
     }
-    if (!loaded.initialized) {
+    if (!loaded->initialized) {
         ESP_LOGW(TAG, "ratchet_load_state: loaded state has initialized=false!");
+        sodium_memzero(loaded, sizeof(ratchet_state_t));
+        heap_caps_free(loaded);
         return false;
     }
 
     /* Accept loaded state (PQ fields stay zeroed, loaded via pq_nvs_load) */
-    memcpy(&ratchet_state, &loaded, sizeof(ratchet_state_t));
+    memcpy(&ratchet_state, loaded, sizeof(ratchet_state_t));
 
     ESP_LOGI(TAG, "Ratchet restored: '%s' (%zu bytes) send=%" PRIu32 " recv=%" PRIu32 "",
              key, loaded_len,
              ratchet_state.msg_num_send, ratchet_state.msg_num_recv);
+
+    /* Wipe and free temp buffer - keys were in here */
+    sodium_memzero(loaded, sizeof(ratchet_state_t));
+    heap_caps_free(loaded);
     return true;
 }
 
