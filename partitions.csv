@@ -1,9 +1,10 @@
 # SimpleGo Partition Table
-# Updated: Session 26 — Auftrag 50a (Message Persistence)
-# Change: NVS expanded from 0x6000 (24KB) to 0x20000 (128KB)
-# Reason: Ratchet State, Queue Credentials, Skipped Keys need persistent storage
+# Updated: Session 47 - NVS enlarged from 128KB to 1MB
+# Reason: PQ integration (Session 46) increased per-contact NVS from 520B to 5.7KB
+#         128 contacts x 5.7KB = 730KB + 294KB overhead = 1MB
+#         eFuse HMAC (SEC-02, BLOCK_KEY1) unaffected by size change
 #
 # Name,   Type, SubType, Offset,   Size,    Flags
-nvs,      data, nvs,     0x9000,   0x20000,
-phy_init, data, phy,     0x29000,  0x1000,
-factory,  app,  factory, 0x30000,  0x1D0000,
+nvs,      data, nvs,     0x9000,   0x100000,
+phy_init, data, phy,     0x109000, 0x1000,
+factory,  app,  factory, 0x110000, 0x1D0000,
