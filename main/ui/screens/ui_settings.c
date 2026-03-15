@@ -327,3 +327,37 @@ void ui_settings_show_wifi_tab(void)
 {
     settings_switch_tab(TAB_WIFI);
 }
+
+int ui_settings_get_active_tab(void)
+{
+    return (int)active_tab;
+}
+
+void ui_settings_show_tab(int tab)
+{
+    if (tab >= TAB_BRIGHT && tab <= TAB_INFO) {
+        settings_switch_tab((settings_tab_t)tab);
+    }
+}
+
+void ui_settings_cleanup(void)
+{
+    /* Stop ALL tab timers so callbacks don't fire on deleted objects */
+    settings_cleanup_bright_timers();
+    settings_cleanup_wifi_timers();
+    settings_cleanup_info_timers();
+
+    /* Nullify all widget pointers */
+    settings_nullify_bright_pointers();
+    settings_nullify_wifi_pointers();
+    settings_nullify_info_pointers();
+
+    /* Nullify shared state */
+    content_area = NULL;
+    s_settings_scr = NULL;
+    hdr_title_lbl = NULL;
+    hdr_action_btn = NULL;
+    hdr_action_lbl = NULL;
+
+    ESP_LOGI(TAG, "Settings cleanup (all timers stopped, pointers nulled)");
+}

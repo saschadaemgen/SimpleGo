@@ -42,6 +42,7 @@ static lv_timer_t *s_lock_timer = NULL;
 /* Bug #24: Remember screen and contact before lock for restore on unlock */
 static ui_screen_t s_locked_screen = UI_SCREEN_MAIN;
 static int s_locked_contact_idx = -1;
+static int s_locked_settings_tab = 0;  /* Auftrag 2c: remember settings tab */
 
 // Navigation stack (replaces single prev_screen)
 #define NAV_STACK_DEPTH 8
@@ -150,6 +151,7 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
             if (prev == UI_SCREEN_CHAT) ui_chat_cleanup();
             if (prev == UI_SCREEN_CONNECT) ui_connect_cleanup();
             if (prev == UI_SCREEN_LOCK) ui_lock_cleanup();
+            if (prev == UI_SCREEN_SETTINGS) ui_settings_cleanup();
             lv_obj_del(screens[prev]);
             screens[prev] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", prev);
@@ -233,6 +235,7 @@ void ui_manager_go_back(void)
             if (old == UI_SCREEN_CHAT) ui_chat_cleanup();
             if (old == UI_SCREEN_CONNECT) ui_connect_cleanup();
             if (old == UI_SCREEN_LOCK) ui_lock_cleanup();
+            if (old == UI_SCREEN_SETTINGS) ui_settings_cleanup();
             lv_obj_del(screens[old]);
             screens[old] = NULL;
             ESP_LOGI(TAG, "Screen %d deleted from pool", old);
@@ -278,6 +281,10 @@ void ui_manager_lock(void)
     /* Bug #24: Save current screen and active contact for restore on unlock */
     s_locked_screen = current_screen;
     s_locked_contact_idx = smp_get_active_contact();
+    /* Auftrag 2c: Save settings tab if on settings screen */
+    if (current_screen == UI_SCREEN_SETTINGS) {
+        s_locked_settings_tab = ui_settings_get_active_tab();
+    }
     ESP_LOGI(TAG, "SEC-04: Locking device (from screen %d, contact [%d])",
              current_screen, s_locked_contact_idx);
 
@@ -315,6 +322,12 @@ void ui_manager_unlock(void)
         smp_request_load_history(s_locked_contact_idx);
         ui_manager_show_screen(UI_SCREEN_CHAT, LV_SCR_LOAD_ANIM_NONE);
         ui_chat_show_loading();
+    } else if (s_locked_screen == UI_SCREEN_SETTINGS) {
+        /* Auftrag 2c: Restore settings with correct tab */
+        ESP_LOGI(TAG, "SEC-04: Unlocking -> restoring settings (tab %d)",
+                 s_locked_settings_tab);
+        ui_manager_go_back();
+        ui_settings_show_tab(s_locked_settings_tab);
     } else {
         ESP_LOGI(TAG, "SEC-04: Unlocking -> back to screen %d", s_locked_screen);
         ui_manager_go_back();
@@ -322,4 +335,5 @@ void ui_manager_unlock(void)
 
     s_locked_screen = UI_SCREEN_MAIN;
     s_locked_contact_idx = -1;
+    s_locked_settings_tab = 0;
 }
