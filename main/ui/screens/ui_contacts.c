@@ -36,6 +36,19 @@
 #include "smp_history.h"
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
+#include <inttypes.h>          // Session 47: PRId64 for timing
+#include "esp_log.h"
+#include "esp_timer.h"         // Session 47: Timing analysis
+
+/* Session 47 2d: RAM-backed connection status (survives screen rebuilds) */
+typedef struct {
+    uint8_t state;        /* CONN_ST_* */
+    time_t  timestamp;    /* When state was set (for timeout) */
+    char    text[24];     /* Status display text */
+} connect_state_t;
+
+static connect_state_t s_connect[128] = {0};
 
 
 /* ============== Layout (same as ui_chat.c) ============== */
@@ -580,6 +593,9 @@ void ui_contacts_refresh(void)
 {
     if (!list_container) return;
 
+    int64_t t4 = esp_timer_get_time();
+    ESP_LOGI("TIMING", "[4] ui_contacts_refresh() START at %" PRId64 " us", t4);
+
     if (search_active && bottom_bar) {
         rebuild_bottom_bar();
     }
@@ -612,8 +628,125 @@ void ui_contacts_refresh(void)
 
     for (int i = 0; i < MAX_CONTACTS; i++) {
         if (!contacts_db.contacts[i].active) continue;
+
+        /* Session 47 2d: Determine connection status text and name override */
+        const char *status_text = NULL;
+        const char *name_override = NULL;
+        if (s_connect[i].state > CONN_ST_NONE && s_connect[i].state < CONN_ST_DONE) {
+            status_text = s_connect[i].text;
+            /* Show "Neuer Kontakt" if name is still auto-generated */
+            int dummy;
+            if (sscanf(contacts_db.contacts[i].name, "Contact %d", &dummy) == 1) {
+                name_override = "Knock, knock, NEO";
+            }
+        } else if (s_connect[i].state == CONN_ST_FAILED) {
+            status_text = s_connect[i].text;
+        }
+
         ui_contacts_row_create(list_container, i, &contacts_db.contacts[i],
                                totals[i], unreads[i],
+                               name_override, status_text,
                                on_contact_click, on_contact_long_press);
+    }
+
+    int64_t t5 = esp_timer_get_time();
+    ESP_LOGI("TIMING", "[5] ui_contacts_refresh() DONE at %" PRId64 " us (refresh took %" PRId64 " ms)",
+             t5, (t5 - t4) / 1000);
+}
+
+/* ============== Session 47 2d: Connection Status API ============== */
+
+void ui_contacts_set_connect_status(int idx, uint8_t state, const char *text)
+{
+    if (idx < 0 || idx >= 128) return;
+    s_connect[idx].state = state;
+    s_connect[idx].timestamp = time(NULL);
+    if (text) {
+        strncpy(s_connect[idx].text, text, sizeof(s_connect[idx].text) - 1);
+        s_connect[idx].text[sizeof(s_connect[idx].text) - 1] = '\0';
+    } else {
+        s_connect[idx].text[0] = '\0';
+    }
+    ESP_LOGI("CONN_ST", "Contact [%d] state=%d text='%s'", idx, state,
+             s_connect[idx].text);
+}
+
+void ui_contacts_clear_connect_status(int idx)
+{
+    if (idx < 0 || idx >= 128) return;
+    s_connect[idx].state = CONN_ST_NONE;
+    s_connect[idx].timestamp = 0;
+    s_connect[idx].text[0] = '\0';
+}
+
+void ui_contacts_check_connect_timeouts(void)
+{
+    time_t now = time(NULL);
+    bool changed = false;
+
+    for (int i = 0; i < 128; i++) {
+        if (s_connect[i].state == CONN_ST_NONE) continue;
+
+        /* Active handshake: timeout after 60s */
+        if (s_connect[i].state >= CONN_ST_SCANNED &&
+            s_connect[i].state < CONN_ST_DONE &&
+            s_connect[i].state != CONN_ST_FAILED) {
+            if (now - s_connect[i].timestamp > 60) {
+                s_connect[i].state = CONN_ST_FAILED;
+                strncpy(s_connect[i].text, "Timeout",
+                        sizeof(s_connect[i].text) - 1);
+                s_connect[i].timestamp = now;
+                changed = true;
+                ESP_LOGW("CONN_ST", "Contact [%d] connection timeout (60s)", i);
+            }
+        }
+
+        /* Failed: clear after 10s display */
+        if (s_connect[i].state == CONN_ST_FAILED) {
+            if (now - s_connect[i].timestamp > 10) {
+                s_connect[i].state = CONN_ST_NONE;
+                s_connect[i].text[0] = '\0';
+                changed = true;
+                ESP_LOGI("CONN_ST", "Contact [%d] timeout cleared", i);
+            }
+        }
+    }
+
+    if (changed && ui_manager_get_current() == UI_SCREEN_CONTACTS) {
+        ui_contacts_refresh();
+    }
+}
+
+void ui_contacts_update_connecting_status(const char *text)
+{
+    if (!text || !text[0]) return;
+
+    /* Convert to uppercase and strip trailing dots/exclamation */
+    char upper[24];
+    int len = 0;
+    for (int j = 0; text[j] && len < (int)sizeof(upper) - 1; j++) {
+        char ch = text[j];
+        if (ch >= 'a' && ch <= 'z') ch -= 32;
+        upper[len++] = ch;
+    }
+    upper[len] = '\0';
+    /* Strip trailing dots and exclamation marks */
+    while (len > 0 && (upper[len - 1] == '.' || upper[len - 1] == '!')) {
+        upper[--len] = '\0';
+    }
+
+    bool updated = false;
+    for (int i = 0; i < 128; i++) {
+        if (s_connect[i].state == CONN_ST_SCANNED ||
+            s_connect[i].state == CONN_ST_NAME) {
+            strncpy(s_connect[i].text, upper, sizeof(s_connect[i].text) - 1);
+            s_connect[i].text[sizeof(s_connect[i].text) - 1] = '\0';
+            s_connect[i].timestamp = time(NULL);
+            updated = true;
+            ESP_LOGI("CONN_ST", "Contact [%d] status updated: '%s'", i, upper);
+        }
+    }
+    if (updated && ui_manager_get_current() == UI_SCREEN_CONTACTS) {
+        ui_contacts_refresh();
     }
 }

@@ -21,9 +21,14 @@ extern "C" {
 /**
  * Create a contact row with 6 LVGL objects:
  *   1. Accent bar  2. Name  3. Checkmark  4. Count  5. E2EE
+ *
+ * Session 47 2d: name_override replaces c->name when non-NULL.
+ * When status_text is non-NULL, count+E2EE are replaced by pulsing status label.
  */
 lv_obj_t *ui_contacts_row_create(lv_obj_t *parent, int idx, contact_t *c,
                                   uint16_t total, uint16_t unread,
+                                  const char *name_override,
+                                  const char *status_text,
                                   lv_event_cb_t on_click,
                                   lv_event_cb_t on_long_press);
 
