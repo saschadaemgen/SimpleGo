@@ -85,6 +85,19 @@ static ui_screen_t nav_stack_pop(void)
     return UI_SCREEN_MAIN;
 }
 
+/* Session 47 2d: Remove all occurrences of a screen from nav stack */
+void ui_manager_remove_from_nav_stack(ui_screen_t screen)
+{
+    int write = 0;
+    for (int read = 0; read <= nav_stack_top; read++) {
+        if (nav_stack[read] != screen) {
+            nav_stack[write++] = nav_stack[read];
+        }
+    }
+    nav_stack_top = write - 1;
+    ESP_LOGI(TAG, "Removed screen %d from nav stack (depth now: %d)", screen, nav_stack_top + 1);
+}
+
 /* SEC-04: Inactivity timer callback.
  * Checks lv_disp_get_inactive_time() every LOCK_CHECK_INTERVAL ms.
  * If no input for LOCK_TIMEOUT_MS, locks the device. */

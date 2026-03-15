@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
+#include <inttypes.h>          // Session 47: PRId64 for timing
 #include "esp_sntp.h"
 
 #include "freertos/FreeRTOS.h"
@@ -23,6 +24,7 @@
 #include "esp_log.h"
 #include "esp_random.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"        // Session 47: Timing analysis
 #include "nvs_flash.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/entropy.h"
@@ -119,6 +121,15 @@ static void ui_poll_timer_cb(lv_timer_t *t)
 {
     (void)t;
 
+    // Session 47 2d: Check connection timeouts every ~5s (100 ticks x 50ms)
+    {
+        static int s_timeout_counter = 0;
+        if (++s_timeout_counter >= 100) {
+            s_timeout_counter = 0;
+            ui_contacts_check_connect_timeouts();
+        }
+    }
+
     // Session 37b: Progressive history rendering - 3 messages per tick
     // Session 40c: Renders only the window portion [window_start..window_end)
     if (s_hist_rendering && smp_history_batch && smp_history_batch_count > 0) {
@@ -209,6 +220,8 @@ static void ui_poll_timer_cb(lv_timer_t *t)
             case UI_EVT_UPDATE_STATUS:
                 // Session 33 Phase 4A: Update status text
                 ui_connect_set_status(evt.text);
+                // Session 47 2d: Also update contact row status during handshake
+                ui_contacts_update_connecting_status(evt.text);
                 break;
             case UI_EVT_SWITCH_CONTACT:
                 // 35e: Switch chat view to different contact
@@ -244,15 +257,37 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                 }
                 break;
 
-            // Session 47 2d: Connection progress events (log-only, UI handling in next step)
-            case UI_EVT_CONNECT_SCANNED:
-                ESP_LOGI("UI", "CONNECT_SCANNED: contact [%d] - someone scanned QR", evt.contact_idx);
+            // Session 47 2d: Connection progress events
+            case UI_EVT_CONNECT_SCANNED: {
+                int64_t t2 = esp_timer_get_time();
+                ESP_LOGI("TIMING", "[2] CONNECT_SCANNED received in UI timer at %" PRId64 " us", t2);
+
+                ui_contacts_set_connect_status(evt.contact_idx, CONN_ST_SCANNED, "SCANNED");
+
+                int64_t t3 = esp_timer_get_time();
+                ESP_LOGI("TIMING", "[3] show_screen(CONTACTS) called at %" PRId64 " us", t3);
+                ui_manager_show_screen(UI_SCREEN_CONTACTS, LV_SCR_LOAD_ANIM_NONE);
+                // Remove QR screen from nav stack so "back" doesn't return to it
+                ui_manager_remove_from_nav_stack(UI_SCREEN_CONNECT);
+
+                int64_t t3b = esp_timer_get_time();
+                ESP_LOGI("TIMING", "[3b] show_screen done at %" PRId64 " us (delta from [2]: %" PRId64 " ms)",
+                         t3b, (t3b - t2) / 1000);
                 break;
+            }
             case UI_EVT_CONNECT_NAME:
                 ESP_LOGI("UI", "CONNECT_NAME: contact [%d] name='%s'", evt.contact_idx, evt.text);
+                ui_contacts_set_connect_status(evt.contact_idx, CONN_ST_NAME, "EXCHANGING KEYS");
+                if (ui_manager_get_current() == UI_SCREEN_CONTACTS) {
+                    ui_contacts_refresh();
+                }
                 break;
             case UI_EVT_CONNECT_DONE:
                 ESP_LOGI("UI", "CONNECT_DONE: contact [%d] - handshake complete", evt.contact_idx);
+                ui_contacts_clear_connect_status(evt.contact_idx);
+                if (ui_manager_get_current() == UI_SCREEN_CONTACTS) {
+                    ui_contacts_refresh();
+                }
                 break;
         }
     }

@@ -34,6 +34,11 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim);
 ui_screen_t ui_manager_get_current(void);
 void ui_manager_go_back(void);
 
+/** Session 47 2d: Remove a specific screen from the navigation stack.
+ *  Used when auto-navigating away from a screen that should not be
+ *  revisitable via back button (e.g. QR screen after handshake starts). */
+void ui_manager_remove_from_nav_stack(ui_screen_t screen);
+
 /**
  * @brief SEC-04: Lock the device, wiping sensitive memory.
  * Securely zeros PSRAM message cache and LVGL labels, then
