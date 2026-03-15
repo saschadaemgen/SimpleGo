@@ -29,6 +29,7 @@
 #include "smp_handshake.h"
 #include "smp_storage.h"   // NVS persistence
 #include "smp_contacts.h"  // contact index resolution
+#include "smp_tasks.h"    // Session 47: smp_notify_ui_status for connect progress
 
 static const char *TAG = "SMP_PEER";
 
@@ -400,6 +401,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     }
 
     // X3DH sender
+    smp_notify_ui_status("X3DH key agreement...");
     if (!ratchet_x3dh_sender(pending_peer.e2e_key1, pending_peer.e2e_key2, &e2e_params->key1, &e2e_params->key2)) {
         ESP_LOGE(TAG, "[FAIL] X3DH failed!");
         free(e2e_params);
@@ -442,6 +444,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     // needed to decrypt incoming messages from the peer.
 
     ESP_LOGI(TAG, "   [SEC] encConnInfo encrypted: %d bytes", (int)enc_conn_info_len);
+    smp_notify_ui_status("Sending confirmation...");
 
     // ========== Build AgentConfirmation ==========
     uint8_t *agent_msg = malloc(20000);
@@ -723,6 +726,7 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
                 ESP_LOGI(TAG, "|   Now waiting for SimpleX App to process it...               |");
                 ESP_LOGI(TAG, "+----------------------------------------+");
 
+                smp_notify_ui_status("Waiting for peer...");
                 ESP_LOGI(TAG, "");
                 ESP_LOGI(TAG, "   [SEND] Starting HELLO handshake...");
 

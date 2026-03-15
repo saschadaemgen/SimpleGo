@@ -19,6 +19,7 @@
 #include "smp_queue.h"
 #include "reply_queue.h"   // Session 34 Phase 6: per-contact reply queues
 #include "smp_ratchet.h"
+#include "smp_tasks.h"    // Session 47: smp_notify_ui_status for connect progress
 #include "sodium.h"
 
 static const char *TAG = "SMP_PARS";
@@ -283,6 +284,7 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                     }
                     else if (type == 'I') {
                         ESP_LOGI(TAG, "      [OK] INVITATION received!");
+                        smp_notify_ui_status("Invitation received!");
                         
                         int uri_len = 0;
                         char *full_uri = extract_full_invitation_uri(decrypted, dec_len, &uri_len);
@@ -460,9 +462,11 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                 ESP_LOGI(TAG, "      +----------------------------------------+");
                                 
                                 ESP_LOGI(TAG, "");
-                                ESP_LOGI(TAG, "      🚀 Auto-connecting to peer...");
+                                ESP_LOGI(TAG, "      Auto-connecting to peer...");
+                                smp_notify_ui_status("Connecting to peer...");
                                 
                                 if (peer_connect(pending_peer.host, pending_peer.port)) {
+                                    smp_notify_ui_status("Key exchange...");
                                     // Switch ratchet to this contact's slot
                                     int contact_idx = (int)(contact - contacts_db.contacts);
                                     ratchet_set_active(contact_idx);
