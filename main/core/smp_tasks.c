@@ -26,7 +26,9 @@
 #include "smp_handshake.h" // handshake_get_last_msg_id()
 #include "smp_ratchet.h"  // ratchet_set_active()
 #include "smp_history.h"  // encrypted chat history on SD
+#include "ui_splash.h"   // Session 48: boot progress updates
 #include <string.h>
+#include <stdio.h>             // Session 48: snprintf for splash status
 #include <time.h>          // time(NULL) for history timestamps
 #include <sys/socket.h>
 #include "esp_log.h"
@@ -588,26 +590,8 @@ static void app_send_ack(const uint8_t *recipient_id, int recipient_id_len,
     }
 }
 
-// Helper: Request re-subscribe via Ring Buffer
-static void app_request_subscribe_all(void)
-{
-    // Bug #30: De-duplication guard
-    if (s_subscribe_all_pending) {
-        ESP_LOGW(TAG_APP, "APP: [DEDUP] subscribe_all already pending, skipping");
-        return;
-    }
-    s_subscribe_all_pending = true;
-
-    net_cmd_t cmd = {0};
-    cmd.cmd = NET_CMD_SUBSCRIBE_ALL;
-
-    if (xRingbufferSend(app_to_net_buf, &cmd, sizeof(cmd), pdMS_TO_TICKS(1000)) != pdTRUE) {
-        ESP_LOGE(TAG_APP, "APP: Failed to send SUBSCRIBE command!");
-        s_subscribe_all_pending = false;  // Reset on failure
-    } else {
-        ESP_LOGI(TAG_APP, "APP: SUBSCRIBE_ALL command queued");
-    }
-}
+/* Session 48: app_request_subscribe_all() removed. First subscribe in
+ * smp_connect() is sufficient. SUB on already-subscribed queue is noop. */
 
 // Request new contact creation via Network Task
 int smp_request_add_contact(const char *name)
@@ -882,8 +866,10 @@ static void app_init_run(QueueHandle_t kbd_queue, uint8_t **local_block_out)
             ESP_LOGI(TAG_APP, "APP: Marked %d existing contacts as 42d-done (boot)", marked);
     }
 
-    ESP_LOGI(TAG_APP, "APP: Sending initial re-subscribe...");
-    app_request_subscribe_all();
+    /* Session 48: Removed redundant re-subscribe. smp_connect() already
+     * subscribed all queues on the same SSL socket that Network Task
+     * now reads from. SUB on an already-subscribed queue is a noop
+     * (confirmed by Evgeny). Saves ~5 seconds of boot time. */
 
     if (contacts_db.num_contacts > 0) {
         contact_t *c = &contacts_db.contacts[s_active_contact_idx];
@@ -892,8 +878,35 @@ static void app_init_run(QueueHandle_t kbd_queue, uint8_t **local_block_out)
         app_send_ack(c->recipient_id, c->recipient_id_len,
                      empty_msg_id, 0, c->rcv_auth_secret);
     }
-    vTaskDelay(pdMS_TO_TICKS(500));
-    ESP_LOGI(TAG_APP, "APP: Initial re-subscribe sent, entering main loop");
+
+    ESP_LOGI(TAG_APP, "APP: Boot complete, entering main loop");
+
+    /* Session 48: Boot is truly done - signal splash screen */
+    {
+#if defined(CONFIG_NVS_ENCRYPTION)
+        bool vault = true;
+#else
+        bool vault = false;
+#endif
+        uint8_t pq = smp_settings_get_pq_enabled();
+        int layers = pq ? 5 : 4;
+        if (vault && pq) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "eFuse sealed. %d layers. Quantum-ready.", layers);
+            ui_splash_set_status(msg);
+        } else if (vault) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "eFuse sealed. %d layers active.", layers);
+            ui_splash_set_status(msg);
+        } else if (pq) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "%d layers active. Quantum-ready.", layers);
+            ui_splash_set_status(msg);
+        } else {
+            ui_splash_set_status("All systems go.");
+        }
+        ui_splash_set_progress(100);
+    }
 }
 
 static void app_process_deferred_work(void)

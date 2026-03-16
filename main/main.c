@@ -68,6 +68,7 @@
 
 // UI System
 #include "ui_manager.h"
+#include "ui_splash.h"
 #include "ui/screens/ui_connect.h"
 #include "ui_chat.h"
 #include "ui_contacts.h"       // Auftrag 2a: live refresh on incoming message
@@ -343,6 +344,8 @@ static void smp_connect(void) {
     if (ret != 0) goto cleanup;
 
     // ========== Step 1: TCP + TLS ==========
+    ui_splash_set_status("Connecting to server...");
+    ui_splash_set_progress(75);
     ESP_LOGI(TAG, "[1/5] Connecting to %s:%d...", SMP_HOST, SMP_PORT);
     sock = smp_tcp_connect(SMP_HOST, SMP_PORT);
     if (sock < 0) goto cleanup;
@@ -423,6 +426,8 @@ static void smp_connect(void) {
     ESP_LOGI(TAG, "      ClientHello sent!");
 
     // ========== Step 4: Load or Create Contacts ==========
+    ui_splash_set_status("Loading contacts...");
+    ui_splash_set_progress(85);
     ESP_LOGI(TAG, "[4/5] Loading contacts...");
 
     if (!session_restored) {
@@ -448,6 +453,8 @@ static void smp_connect(void) {
     list_contacts();
 
     // ========== Step 5: Subscribe All Contacts ==========
+    ui_splash_set_status("Subscribing to queues...");
+    ui_splash_set_progress(90);
     ESP_LOGI(TAG, "[5/5] Subscribing to queues...");
     subscribe_all_contacts(&ssl, block, session_id);
 
@@ -475,6 +482,9 @@ static void smp_connect(void) {
     ESP_LOGI(TAG, "+--------------------------------------+");
     ESP_LOGI(TAG, "|   App logic on main task (64KB)      |");
     ESP_LOGI(TAG, "+--------------------------------------+");
+
+    /* Session 48: Final splash progress(100) moved to app_init_run()
+     * in smp_tasks.c - fires AFTER re-subscribe is truly complete. */
 
     // This blocks forever (ring buffer read loop)
     smp_app_run(kbd_msg_queue);
@@ -642,8 +652,12 @@ void app_main(void) {
     }
 
     // Storage Phase 2: SD card (after display owns SPI bus)
+    ui_splash_set_status("Mounting secure storage...");
+    ui_splash_set_progress(10);
     smp_storage_init_sd();
 
+    ui_splash_set_status("Connecting to WiFi...");
+    ui_splash_set_progress(20);
     wifi_manager_init();
 
     /* Session 39k: Auto-launch WiFi setup if no credentials stored.
@@ -663,7 +677,9 @@ void app_main(void) {
             ESP_LOGI(TAG, "WiFi: still waiting... (%ds)", wifi_wait_ticks / 10);
         }
     }
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    ui_splash_set_status("WiFi connected");
+    ui_splash_set_progress(40);
+    vTaskDelay(pdMS_TO_TICKS(500));
 
     // ========== Auftrag 35g: NTP Time Sync (non-blocking) ==========
     // Bug #30: Init NTP but don't block boot waiting for sync.
@@ -678,6 +694,8 @@ void app_main(void) {
     // PQ KEM verified in Session 46, crypto task validates on every use.
 
     // Session 46 Teil E: Start PQ crypto task (80 KB PSRAM, for keygen/encap/decap)
+    ui_splash_set_status("Loading quantum encryption...");
+    ui_splash_set_progress(50);
     if (pq_crypto_task_init() != ESP_OK) {
         ESP_LOGE(TAG, "PQ crypto task init failed! PQ operations will block.");
     } else {
@@ -692,6 +710,8 @@ void app_main(void) {
     // Verified in Session 46, crypto correctness proven by successful PQ messages.
 
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========
+    ui_splash_set_status("Restoring encrypted session...");
+    ui_splash_set_progress(60);
     if (smp_storage_exists("rat_00") && smp_storage_exists("queue_our")) {
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "+----------------------------------------+");
