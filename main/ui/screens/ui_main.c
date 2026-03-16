@@ -20,6 +20,7 @@
  */
 #include "ui_main.h"
 #include "ui_theme.h"
+#include "ui_statusbar.h"
 #include "ui_manager.h"
 #include "ui_chat.h"
 #include "smp_types.h"
@@ -35,7 +36,7 @@ static const char *TAG = "UI_MAIN";
 static lv_obj_t *screen         = NULL;
 static lv_obj_t *list_container = NULL;
 static lv_obj_t *empty_label    = NULL;
-static lv_obj_t *hdr_count_lbl  = NULL;
+static lv_obj_t *s_title_lbl    = NULL;  /* Local pointer to OUR title label */
 static lv_timer_t *gear_lp_timer = NULL;
 static lv_timer_t *s_hdr_refresh_timer = NULL;
 
@@ -201,119 +202,7 @@ static lv_obj_t *create_unread_row(lv_obj_t *parent, int idx, contact_t *c,
     return row;
 }
 
-/* ================================================================
- * Pixel-Art Helpers (from ui_create_status_bar)
- * ================================================================ */
-
-/** Helper: tiny filled rect */
-static lv_obj_t *_pixel_rect(lv_obj_t *par, int w, int h,
-                              lv_color_t c, lv_opa_t opa)
-{
-    lv_obj_t *r = lv_obj_create(par);
-    lv_obj_set_size(r, w, h);
-    lv_obj_set_style_bg_color(r, c, 0);
-    lv_obj_set_style_bg_opa(r, opa, 0);
-    lv_obj_set_style_border_width(r, 0, 0);
-    lv_obj_set_style_radius(r, 0, 0);
-    lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(r, LV_OBJ_FLAG_CLICKABLE);
-    return r;
-}
-
-/** Helper: reset obj to invisible container */
-static void _sty_reset(lv_obj_t *o)
-{
-    lv_obj_set_style_bg_opa(o, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(o, 0, 0);
-    lv_obj_set_style_radius(o, 0, 0);
-    lv_obj_set_style_pad_all(o, 0, 0);
-    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(o, LV_OBJ_FLAG_CLICKABLE);
-}
-
-/* ================================================================
- * Combined Bar (Session 40)
- *
- * 26px: [GO] [3 unread]          [12:00] [WiFi▂▃▅▇] [▯▯|]
- *
- * Replaces separate status bar (16px) + header (26px) = 44px
- * Now only 26px + 1px glow = 27px total -> +17px for content
- * ================================================================ */
-
-static void create_main_bar(lv_obj_t *parent)
-{
-    /* ---- Bar background (26px, black) ---- */
-    lv_obj_t *bar = lv_obj_create(parent);
-    lv_obj_set_size(bar, UI_SCREEN_W, MAIN_BAR_H);
-    lv_obj_set_pos(bar, 0, 0);
-    lv_obj_set_style_bg_color(bar, UI_COLOR_BG, 0);
-    lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(bar, 0, 0);
-    lv_obj_set_style_radius(bar, 0, 0);
-    lv_obj_set_style_pad_all(bar, 0, 0);
-    lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
-
-    /* ---- WiFi SSID / Unread count (left, updated by refresh) ---- */
-    hdr_count_lbl = lv_label_create(bar);
-    lv_label_set_text(hdr_count_lbl, "");
-    lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_TEXT_DIM, 0);
-    lv_obj_set_style_text_font(hdr_count_lbl, UI_FONT, 0);
-    lv_obj_align(hdr_count_lbl, LV_ALIGN_LEFT_MID, 6, 0);
-
-    /* ---- Battery tip (rightmost element) ---- */
-    lv_obj_t *bat_tip = _pixel_rect(bar, 2, 5,
-                                     UI_COLOR_PRIMARY, LV_OPA_COVER);
-    lv_obj_align(bat_tip, LV_ALIGN_RIGHT_MID, -4, 0);
-
-    /* ---- Battery body: 18×9, outlined ---- */
-    lv_obj_t *bat_body = lv_obj_create(bar);
-    lv_obj_set_size(bat_body, 20, 11);
-    lv_obj_set_style_bg_opa(bat_body, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(bat_body, 1, 0);
-    lv_obj_set_style_border_color(bat_body, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_radius(bat_body, 1, 0);
-    lv_obj_set_style_pad_all(bat_body, 1, 0);
-    lv_obj_clear_flag(bat_body, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(bat_body, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_align_to(bat_body, bat_tip, LV_ALIGN_OUT_LEFT_MID, -1, 0);
-
-    /* Battery fill: ~70% green inside body */
-    lv_obj_t *bat_fill = _pixel_rect(bat_body, 12, 7,
-                                      UI_COLOR_PRIMARY, LV_OPA_COVER);
-    lv_obj_align(bat_fill, LV_ALIGN_LEFT_MID, 0, 0);
-
-    /* ---- WiFi: 4 ascending bars ---- */
-    lv_obj_t *wifi = lv_obj_create(bar);
-    lv_obj_set_size(wifi, 15, 11);
-    _sty_reset(wifi);
-    lv_obj_align_to(wifi, bat_body, LV_ALIGN_OUT_LEFT_MID, -6, 0);
-
-    /* Bars: 3px wide, heights 3/5/8/11, all solid cyan */
-    static const int bar_h[] = {3, 5, 8, 11};
-    for (int i = 0; i < 4; i++) {
-        lv_obj_t *wb = _pixel_rect(wifi, 3, bar_h[i],
-                                    UI_COLOR_PRIMARY, LV_OPA_COVER);
-        lv_obj_set_pos(wb, i * 4, 11 - bar_h[i]);
-    }
-
-    /* ---- Time: dim cyan ---- */
-    lv_obj_t *time_lbl = lv_label_create(bar);
-    lv_label_set_text(time_lbl, "12:00");
-    lv_obj_set_style_text_color(time_lbl, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_text_font(time_lbl, UI_FONT_MD, 0);
-    lv_obj_align_to(time_lbl, wifi, LV_ALIGN_OUT_LEFT_MID, -6, 0);
-
-    /* ---- Glow line below combined bar ---- */
-    lv_obj_t *glow = lv_obj_create(parent);
-    lv_obj_set_width(glow, LV_PCT(100));
-    lv_obj_set_height(glow, 1);
-    lv_obj_set_pos(glow, 0, GLOW_Y);
-    lv_obj_set_style_bg_color(glow, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_bg_opa(glow, (lv_opa_t)64, 0);
-    lv_obj_set_style_border_width(glow, 0, 0);
-    lv_obj_set_style_radius(glow, 0, 0);
-    lv_obj_clear_flag(glow, LV_OBJ_FLAG_CLICKABLE);
-}
+/* Session 48: Pixel-art and combined bar moved to ui_statusbar.c */
 
 /* ================================================================
  * Bottom Bar (contacts-style: CHATS | NEW | DEV | gear)
@@ -392,7 +281,7 @@ static void create_bottom_bar(lv_obj_t *parent)
 static void hdr_refresh_cb(lv_timer_t *t)
 {
     (void)t;
-    if (!hdr_count_lbl) return;
+    if (!s_title_lbl) return;
 
     /* Count unreads (lightweight -- just count, no SD reads) */
     int unread_count = 0;
@@ -406,18 +295,15 @@ static void hdr_refresh_cb(lv_timer_t *t)
     if (unread_count > 0) {
         char buf[24];
         snprintf(buf, sizeof(buf), LV_SYMBOL_ENVELOPE " %d", unread_count);
-        lv_label_set_text(hdr_count_lbl, buf);
-        lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
+        lv_label_set_text(s_title_lbl, buf);
     } else {
         wifi_status_t ws = wifi_manager_get_status();
         if (ws.connected) {
             char ssid_buf[28];
             snprintf(ssid_buf, sizeof(ssid_buf), "%.24s", ws.ssid);
-            lv_label_set_text(hdr_count_lbl, ssid_buf);
-            lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
+            lv_label_set_text(s_title_lbl, ssid_buf);
         } else {
-            lv_label_set_text(hdr_count_lbl, "No WiFi");
-            lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_TEXT_DIM, 0);
+            lv_label_set_text(s_title_lbl, "No WiFi");
         }
     }
 }
@@ -453,8 +339,10 @@ lv_obj_t *ui_main_create(void)
     screen = lv_obj_create(NULL);
     ui_theme_apply(screen);
 
-    /* Session 40: Combined bar replaces status bar + header */
-    create_main_bar(screen);
+    /* Session 48: Shared status bar (26px, live clock + WiFi + battery).
+     * Returns title label so Main's permanent timer can write safely. */
+    s_title_lbl = ui_statusbar_create(screen, "SimpleGo");
+    ui_statusbar_timer_start();
     create_content_area(screen);
     create_bottom_bar(screen);
 
@@ -521,25 +409,20 @@ void ui_main_refresh(void)
         lv_obj_clear_flag(empty_label, LV_OBJ_FLAG_HIDDEN);
     }
 
-    /* Update combined bar info: unread count OR WiFi SSID */
-    if (hdr_count_lbl) {
+    /* Update status bar title: unread count OR WiFi SSID */
+    if (s_title_lbl) {
         if (unread_count > 0) {
-            /* Unread: blue mail icon + count */
             char buf[24];
             snprintf(buf, sizeof(buf), LV_SYMBOL_ENVELOPE " %d", unread_count);
-            lv_label_set_text(hdr_count_lbl, buf);
-            lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
+            lv_label_set_text(s_title_lbl, buf);
         } else {
-            /* No unread: show connected WiFi SSID */
             wifi_status_t ws = wifi_manager_get_status();
             if (ws.connected) {
                 char ssid_buf[28];
                 snprintf(ssid_buf, sizeof(ssid_buf), "%.24s", ws.ssid);
-                lv_label_set_text(hdr_count_lbl, ssid_buf);
-                lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_PRIMARY, 0);
+                lv_label_set_text(s_title_lbl, ssid_buf);
             } else {
-                lv_label_set_text(hdr_count_lbl, "No WiFi");
-                lv_obj_set_style_text_color(hdr_count_lbl, UI_COLOR_TEXT_DIM, 0);
+                lv_label_set_text(s_title_lbl, "No WiFi");
             }
         }
     }

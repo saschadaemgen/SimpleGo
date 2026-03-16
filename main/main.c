@@ -78,6 +78,18 @@
 
 static const char *TAG = "SMP";
 
+// NTP sync success callback (non-blocking, fires when time is available)
+static void ntp_sync_callback(struct timeval *tv)
+{
+    (void)tv;
+    time_t now = time(NULL);
+    struct tm ti;
+    gmtime_r(&now, &ti);
+    ESP_LOGI(TAG, "NTP synced! %04d-%02d-%02d %02d:%02d:%02d UTC",
+             ti.tm_year + 1900, ti.tm_mon + 1, ti.tm_mday,
+             ti.tm_hour, ti.tm_min, ti.tm_sec);
+}
+
 // Session 37c: RAM copies of Montserrat with German umlaut fallback
 lv_font_t simplego_font_14;
 lv_font_t simplego_font_12;
@@ -659,6 +671,7 @@ void app_main(void) {
     ESP_LOGI(TAG, "Starting NTP sync (non-blocking)...");
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
     esp_sntp_setservername(0, "pool.ntp.org");
+    esp_sntp_set_time_sync_notification_cb(ntp_sync_callback);
     esp_sntp_init();
 
     // Bug #30: sntrup761 standalone test removed (saved ~2200ms)
