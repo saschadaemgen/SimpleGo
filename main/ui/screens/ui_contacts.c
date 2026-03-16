@@ -1,17 +1,15 @@
 /**
  * @file ui_contacts.c
- * @brief Contacts Screen - Matches Chat Layout Pixel-for-Pixel
+ * @brief Contacts Screen
  *
- * Layout (320x240, identical to ui_chat.c):
- *   +-----------------------------------------+
- *   | [GO]        [12:00] [WiFi] [Bat]  18px  |
- *   | ~~~~~~ glow line ~~~~~~~~~~~~~~~~   1px  |
- *   | [<]  Contacts              2/128  26px  |
- *   | ~~~~~~ dim line ~~~~~~~~~~~~~~~~~   1px  |
- *   | Contact rows (scrollable)        158px  |
- *   | < Back                     + New  36px  |
- *   +-----------------------------------------+
- *   Total: 18+1+26+1+158+36 = 240
+ * Layout (320x240):
+ *   Statusbar  26px  [Contacts 2/128]  [HH:MM] [WiFi] [Bat]
+ *   Glow Line   1px
+ *   Contact rows    177px (scrollable)
+ *   Bottom Bar       36px
+ *   Total: 26+1+177+36 = 240
+ *
+ * Session 48: Migrated to shared ui_statusbar (FULL variant).
  *
  * Session 39f: Split into 3 modules:
  *   - ui_contacts.c      (this file - screen, header, bar, search, events)
@@ -26,6 +24,7 @@
 #include "ui_contacts_row.h"
 #include "ui_contacts_popup.h"
 #include "ui_theme.h"
+#include "ui_statusbar.h"
 #include "ui_manager.h"
 #include "ui_chat.h"
 #include "ui_connect.h"
@@ -51,15 +50,12 @@ typedef struct {
 static connect_state_t s_connect[128] = {0};
 
 
-/* ============== Layout (same as ui_chat.c) ============== */
+/* ============== Layout (Session 48: shared statusbar) ============== */
 
-#define HDR_Y           (UI_STATUS_H + 1)
-#define HDR_H           26
-#define DIM_Y           (HDR_Y + HDR_H)
 #define BAR_H           36
 #define BAR_Y           (UI_SCREEN_H - BAR_H)
-#define LIST_Y          (DIM_Y + 1)
-#define SG_LIST_H       (BAR_Y - LIST_Y)
+#define LIST_Y          (UI_STATUSBAR_HEIGHT + 1)         /* 27 */
+#define SG_LIST_H       (BAR_Y - LIST_Y)                  /* 177 */
 
 /* Row styling */
 #define ROW_GAP         2
@@ -70,7 +66,7 @@ static connect_state_t s_connect[128] = {0};
 static lv_obj_t *screen = NULL;
 static lv_obj_t *list_container = NULL;
 static lv_obj_t *empty_label = NULL;
-static lv_obj_t *count_label = NULL;
+static lv_obj_t *s_count_lbl = NULL;  /* Small count label on statusbar */
 static lv_obj_t *bottom_bar = NULL;
 
 /* Search state (37d) */
@@ -82,8 +78,6 @@ static char search_query[32] = {0};
 
 /* ============== Forward Declarations ============== */
 
-static void on_go_back(lv_event_t *e);
-static void on_hdr_back(lv_event_t *e);
 static void on_bar_back(lv_event_t *e);
 static void on_bar_new(lv_event_t *e);
 static void on_bar_search(lv_event_t *e);
@@ -132,69 +126,20 @@ static int count_active(void)
 
 static void update_count_label(void)
 {
-    if (count_label) {
-        int n = count_active();
-        if (n > 0) {
-            lv_label_set_text_fmt(count_label, "%d/%d", n, MAX_CONTACTS);
-        } else {
-            lv_label_set_text(count_label, "");
-        }
+    if (!s_count_lbl) return;
+    int n = count_active();
+    if (n > 0) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d/%d", n, MAX_CONTACTS);
+        lv_label_set_text(s_count_lbl, buf);
+    } else {
+        lv_label_set_text(s_count_lbl, "");
     }
 }
 
 /* ============== Header (same structure as chat) ============== */
 
-static void create_contacts_header(lv_obj_t *parent)
-{
-    lv_obj_t *hdr = lv_obj_create(parent);
-    lv_obj_set_width(hdr, LV_PCT(100));
-    lv_obj_set_height(hdr, HDR_H);
-    lv_obj_set_pos(hdr, 0, HDR_Y);
-    style_black(hdr);
-
-    /* Back arrow */
-    lv_obj_t *back_btn = lv_btn_create(hdr);
-    lv_obj_set_size(back_btn, 24, HDR_H);
-    lv_obj_set_pos(back_btn, 0, 0);
-    lv_obj_set_style_bg_opa(back_btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_opa(back_btn, LV_OPA_20, LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(back_btn, UI_COLOR_ACCENT, LV_STATE_PRESSED);
-    lv_obj_set_style_border_width(back_btn, 0, 0);
-    lv_obj_set_style_radius(back_btn, 0, 0);
-    lv_obj_set_style_shadow_width(back_btn, 0, 0);
-    lv_obj_set_style_pad_all(back_btn, 0, 0);
-
-    lv_obj_t *arrow = lv_label_create(back_btn);
-    lv_label_set_text(arrow, LV_SYMBOL_LEFT);
-    lv_obj_set_style_text_color(arrow, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_text_font(arrow, UI_FONT, 0);
-    lv_obj_center(arrow);
-    lv_obj_add_event_cb(back_btn, on_hdr_back, LV_EVENT_CLICKED, NULL);
-
-    /* "Contacts" title */
-    lv_obj_t *title = lv_label_create(hdr);
-    lv_label_set_text(title, "Contacts");
-    lv_obj_set_style_text_color(title, UI_COLOR_TEXT_WHITE, 0);
-    lv_obj_set_style_text_font(title, UI_FONT, 0);
-    lv_obj_align(title, LV_ALIGN_LEFT_MID, 28, 0);
-
-    /* Contact count */
-    count_label = lv_label_create(hdr);
-    lv_obj_set_style_text_color(count_label, UI_COLOR_TEXT_DIM, 0);
-    lv_obj_set_style_text_font(count_label, UI_FONT_SM, 0);
-    lv_obj_align(count_label, LV_ALIGN_RIGHT_MID, -4, 0);
-
-    /* Dim line below header */
-    lv_obj_t *dim = lv_obj_create(parent);
-    lv_obj_set_width(dim, LV_PCT(100));
-    lv_obj_set_height(dim, 1);
-    lv_obj_set_pos(dim, 0, DIM_Y);
-    lv_obj_set_style_bg_color(dim, UI_COLOR_LINE_DIM, 0);
-    lv_obj_set_style_bg_opa(dim, LV_OPA_50, 0);
-    lv_obj_set_style_border_width(dim, 0, 0);
-    lv_obj_set_style_radius(dim, 0, 0);
-    lv_obj_clear_flag(dim, LV_OBJ_FLAG_CLICKABLE);
-}
+/* Session 48: Header merged into ui_statusbar FULL variant */
 
 /* Thin vertical separator between nav buttons */
 static void create_bar_separator(lv_obj_t *parent, lv_coord_t x)
@@ -475,22 +420,6 @@ static void on_bar_search(lv_event_t *e)
 
 /* ============== Event Handlers ============== */
 
-static void on_go_back(lv_event_t *e)
-{
-    (void)e;
-    if (ui_contacts_popup_active()) { ui_contacts_popup_close(); return; }
-    if (search_active) rebuild_bottom_bar();
-    ui_manager_go_back();
-}
-
-static void on_hdr_back(lv_event_t *e)
-{
-    (void)e;
-    if (ui_contacts_popup_active()) { ui_contacts_popup_close(); return; }
-    if (search_active) rebuild_bottom_bar();
-    ui_manager_go_back();
-}
-
 static void on_bar_back(lv_event_t *e)
 {
     (void)e;
@@ -548,12 +477,15 @@ lv_obj_t *ui_contacts_create(void)
     /* Register popup refresh callback */
     ui_contacts_popup_set_refresh_cb(ui_contacts_refresh);
 
-    /* Status Bar (16px) */
-    lv_obj_t *go_btn = ui_create_status_bar(screen);
-    lv_obj_add_event_cb(go_btn, on_go_back, LV_EVENT_CLICKED, NULL);
+    /* Session 48: Shared status bar (26px, live clock + WiFi + battery) */
+    ui_statusbar_create(screen, "Contacts");
 
-    /* Header (26px) */
-    create_contacts_header(screen);
+    /* Contact count: small dim label after title */
+    s_count_lbl = lv_label_create(screen);
+    lv_label_set_text(s_count_lbl, "");
+    lv_obj_set_style_text_color(s_count_lbl, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(s_count_lbl, UI_FONT_SM, 0);
+    lv_obj_set_pos(s_count_lbl, 78, 8);
 
     /* List area */
     list_container = lv_obj_create(screen);

@@ -7,6 +7,7 @@
  */
 #include "ui_connect.h"
 #include "ui_theme.h"
+#include "ui_statusbar.h"
 #include "ui_manager.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -28,15 +29,18 @@ lv_obj_t *ui_connect_create(void)
     screen = lv_obj_create(NULL);
     ui_theme_apply(screen);
 
-    // Session 33 Phase 4A: Centered title instead of left-aligned header
-    lv_obj_t *title = lv_label_create(screen);
-    lv_label_set_text(title, "Scan with SimpleGo\nor SimpleX App");
-    lv_obj_set_style_text_color(title, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 12);
+    /* Session 48: Shared status bar (26px) */
+    ui_statusbar_create(screen, "Connect");
 
-    // QR Code - Session 33 Phase 4A: Standard BLACK on WHITE (ISO 18004)
-    // Inverted QR codes are NOT readable by SimpleX App scanner!
+    /* Scan instruction */
+    lv_obj_t *hint = lv_label_create(screen);
+    lv_label_set_text(hint, "Scan with SimpleX App");
+    lv_obj_set_style_text_color(hint, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(hint, UI_FONT_SM, 0);
+    lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(hint, LV_ALIGN_TOP_MID, 0, 30);
+
+    /* QR Code - BLACK on WHITE (ISO 18004) */
     qr_code = lv_qrcode_create(screen);
     lv_qrcode_set_size(qr_code, 140);
     lv_qrcode_set_dark_color(qr_code, lv_color_black());
@@ -45,22 +49,22 @@ lv_obj_t *ui_connect_create(void)
     lv_obj_set_style_pad_all(qr_code, 0, 0);
     lv_obj_set_style_border_width(qr_code, 0, 0);
     lv_obj_set_style_outline_width(qr_code, 0, 0);
-    lv_obj_align(qr_code, LV_ALIGN_CENTER, 0, 6);
+    lv_obj_align(qr_code, LV_ALIGN_CENTER, 0, 10);
     lv_obj_add_flag(qr_code, LV_OBJ_FLAG_HIDDEN);
 
-    // Placeholder (hidden when QR is shown)
+    /* Placeholder (hidden when QR is shown) */
     placeholder = lv_label_create(screen);
     lv_label_set_text(placeholder, "Generating...");
     lv_obj_set_style_text_color(placeholder, UI_COLOR_TEXT_DIM, 0);
     lv_obj_align(placeholder, LV_ALIGN_CENTER, 0, 0);
 
-    // Status Label unter QR
+    /* Status Label unter QR */
     status_lbl = lv_label_create(screen);
     lv_label_set_text(status_lbl, "");
     lv_obj_set_style_text_color(status_lbl, UI_COLOR_PRIMARY, 0);
     lv_obj_align(status_lbl, LV_ALIGN_BOTTOM_RIGHT, -5, -8);
 
-    // Nav Bar
+    /* Nav Bar */
     ui_create_nav_bar(screen);
     lv_obj_t *back = ui_create_nav_btn(screen, "BACK", 0);
     lv_obj_add_event_cb(back, on_back, LV_EVENT_CLICKED, NULL);
