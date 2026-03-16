@@ -16,6 +16,7 @@
 #include "ui_statusbar.h"
 #include "ui_theme.h"
 #include "ui_manager.h"
+#include "smp_storage.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include <time.h>
@@ -158,7 +159,7 @@ static void update_wifi_bars(void)
 }
 
 /* ================================================================
- * Clock Update (UTC)
+ * Clock Update (UTC + timezone offset for display)
  * ================================================================ */
 
 static void update_clock(void)
@@ -166,6 +167,7 @@ static void update_clock(void)
     if (!s_time_lbl) return;
 
     time_t now = time(NULL);
+    now += (int32_t)g_tz_offset_hours * 3600;  /* Display offset only */
     struct tm ti;
     gmtime_r(&now, &ti);
 
