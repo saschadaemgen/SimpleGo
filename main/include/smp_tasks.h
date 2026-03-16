@@ -167,6 +167,19 @@ int smp_get_active_contact(void);
  */
 int smp_request_add_contact(const char *name);
 
+/**
+ * @brief Get slot index of a pending (not yet scanned) contact.
+ * @return Slot index (0-127), or -1 if no pending contact
+ */
+int smp_get_pending_contact_slot(void);
+
+/**
+ * @brief Abort a pending contact that was never scanned.
+ * Sets deferred delete flag for App Task (NVS-safe).
+ * Called from UI when user goes back from Connect screen without scan.
+ */
+void smp_abort_pending_contact(void);
+
 /*============================================================================
  * Session 37: History Load (App Task -> UI via shared buffer)
  *

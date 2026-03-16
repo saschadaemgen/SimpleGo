@@ -9,6 +9,7 @@
 #include "ui_theme.h"
 #include "ui_statusbar.h"
 #include "ui_manager.h"
+#include "smp_tasks.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include <string.h>
@@ -20,7 +21,12 @@ static lv_obj_t *qr_code = NULL;
 static lv_obj_t *placeholder = NULL;
 static lv_obj_t *status_lbl = NULL;
 
-static void on_back(lv_event_t *e) { ui_manager_go_back(); }
+static void on_back(lv_event_t *e)
+{
+    (void)e;
+    smp_abort_pending_contact();  /* Session 48: delete if never scanned */
+    ui_manager_go_back();
+}
 
 lv_obj_t *ui_connect_create(void)
 {

@@ -12,6 +12,7 @@
 #include "smp_network.h"   // smp_read_block()
 #include "smp_types.h"     // SMP_BLOCK_SIZE
 #include "smp_contacts.h"  // find_contact_by_recipient_id, contacts_db
+#include "smp_storage.h"   // Session 48: smp_storage_delete for pending contact cleanup
 #include "smp_queue.h"     // our_queue; T4e: queue_reconnect/subscribe/send_key/read_raw/send_ack
 #include "reply_queue.h"   // per-contact reply queues
 #include "smp_e2e.h"       // smp_e2e_decrypt_reply_message()
@@ -26,7 +27,6 @@
 #include "smp_handshake.h" // handshake_get_last_msg_id()
 #include "smp_ratchet.h"  // ratchet_set_active()
 #include "smp_history.h"  // encrypted chat history on SD
-#include "ui_splash.h"   // Session 48: boot progress updates
 #include <string.h>
 #include <stdio.h>             // Session 48: snprintf for splash status
 #include <time.h>          // time(NULL) for history timestamps
@@ -105,6 +105,9 @@ static volatile bool s_subscribe_all_pending = false;
 
 // History load request flag (UI -> App Task)
 static volatile int s_history_load_pending = -1;  // slot to load, -1 = none
+
+// Session 48: Pending contact delete (UI -> App Task, NVS-safe)
+static volatile int s_pending_delete_slot = -1;
 
 // Shared buffer for history batch (App Task writes, UI timer reads)
 history_message_t *smp_history_batch      = NULL;
@@ -628,6 +631,37 @@ int smp_request_add_contact(const char *name)
     return 0;
 }
 
+/* Session 48: Pending contact abort (back from Connect without scan) */
+
+int smp_get_pending_contact_slot(void)
+{
+    int slot = s_handshake_contact_idx;
+    if (slot < 0 || slot >= MAX_CONTACTS) return -1;
+    if (is_42d_done(slot)) return -1;
+    if ((s_scanned_notified[slot / 8] >> (slot % 8)) & 1) return -1;
+    return slot;
+}
+
+void smp_abort_pending_contact(void)
+{
+    int slot = smp_get_pending_contact_slot();
+    if (slot < 0) {
+        ESP_LOGI(TAG_APP, "APP: No pending contact to abort");
+        return;
+    }
+    ESP_LOGI(TAG_APP, "APP: Aborting pending contact [%d] '%s'",
+             slot, contacts_db.contacts[slot].name);
+
+    /* Deactivate in memory immediately so contacts list refresh
+     * (triggered by go_back) never shows the dead contact. */
+    contacts_db.contacts[slot].active = false;
+    if (contacts_db.num_contacts > 0) contacts_db.num_contacts--;
+
+    /* NVS cleanup deferred to App Task (Internal SRAM stack required) */
+    s_pending_delete_slot = slot;
+    s_handshake_contact_idx = -1;
+}
+
 // ============== UI Notification Helpers ==============
 
 void smp_notify_ui_message(const char *text, bool is_outgoing, uint32_t msg_seq, int contact_idx)
@@ -880,33 +914,6 @@ static void app_init_run(QueueHandle_t kbd_queue, uint8_t **local_block_out)
     }
 
     ESP_LOGI(TAG_APP, "APP: Boot complete, entering main loop");
-
-    /* Session 48: Boot is truly done - signal splash screen */
-    {
-#if defined(CONFIG_NVS_ENCRYPTION)
-        bool vault = true;
-#else
-        bool vault = false;
-#endif
-        uint8_t pq = smp_settings_get_pq_enabled();
-        int layers = pq ? 5 : 4;
-        if (vault && pq) {
-            char msg[64];
-            snprintf(msg, sizeof(msg), "eFuse sealed. %d layers. Quantum-ready.", layers);
-            ui_splash_set_status(msg);
-        } else if (vault) {
-            char msg[64];
-            snprintf(msg, sizeof(msg), "eFuse sealed. %d layers active.", layers);
-            ui_splash_set_status(msg);
-        } else if (pq) {
-            char msg[64];
-            snprintf(msg, sizeof(msg), "%d layers active. Quantum-ready.", layers);
-            ui_splash_set_status(msg);
-        } else {
-            ui_splash_set_status("All systems go.");
-        }
-        ui_splash_set_progress(100);
-    }
 }
 
 static void app_process_deferred_work(void)
@@ -914,6 +921,39 @@ static void app_process_deferred_work(void)
     if (s_contacts_dirty) {
         s_contacts_dirty = false;
         save_contacts_to_nvs();
+    }
+
+    /* Session 48: NVS cleanup for aborted pending contact.
+     * Memory deactivation already happened in smp_abort_pending_contact().
+     * This just cleans up the NVS keys (requires Internal SRAM stack). */
+    if (s_pending_delete_slot >= 0) {
+        int slot = s_pending_delete_slot;
+        s_pending_delete_slot = -1;
+
+        if (slot >= 0 && slot < MAX_CONTACTS) {
+            ESP_LOGI(TAG_APP, "APP: NVS cleanup for aborted contact [%d]", slot);
+
+            /* Clean NVS keys for this slot */
+            uint8_t s = (uint8_t)slot;
+            char key[20];
+            snprintf(key, sizeof(key), "ratchet_%02u", s);
+            smp_storage_delete(key);
+            snprintf(key, sizeof(key), "queue_rcv_%02u", s);
+            smp_storage_delete(key);
+            snprintf(key, sizeof(key), "queue_snd_%02u", s);
+            smp_storage_delete(key);
+            snprintf(key, sizeof(key), "rq_%02u", s);
+            smp_storage_delete(key);
+
+            /* Clear 42d + scanned bitmaps */
+            smp_clear_42d(slot);
+
+            /* Persist contact list (slot now inactive) */
+            save_contacts_to_nvs();
+
+            ESP_LOGI(TAG_APP, "APP: Pending contact [%d] NVS cleanup done (%d remaining)",
+                     slot, contacts_db.num_contacts);
+        }
     }
 
     if (s_rq_save_pending >= 0) {
