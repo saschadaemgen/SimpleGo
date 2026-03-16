@@ -27,6 +27,7 @@
 #include "smp_tasks.h"
 #include "smp_contacts.h"
 #include "smp_history.h"
+#include "smp_storage.h"
 #include "wifi_manager.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
@@ -314,6 +315,7 @@ static void hdr_refresh_cb(lv_timer_t *t)
     /* Session 48: Update clock via local pointer (survives screen switches) */
     if (s_time_lbl) {
         time_t now = time(NULL);
+        now += (int32_t)g_tz_offset_hours * 3600;
         struct tm ti;
         gmtime_r(&now, &ti);
         char tbuf[8];
