@@ -437,6 +437,34 @@ bool storage_has_display_name(void)
     return smp_storage_exists(DISPLAY_NAME_NVS_KEY);
 }
 
+// ============== Timezone Offset (Session 48) ==============
+
+#define TZ_OFFSET_NVS_KEY  "tz_offset"
+
+int8_t g_tz_offset_hours = 0;
+
+void storage_load_tz_offset(void)
+{
+    int8_t val = 0;
+    size_t out_len = 0;
+    esp_err_t ret = smp_storage_load_blob(TZ_OFFSET_NVS_KEY, &val, sizeof(val), &out_len);
+    if (ret == ESP_OK && out_len == sizeof(val) && val >= -12 && val <= 14) {
+        g_tz_offset_hours = val;
+    } else {
+        g_tz_offset_hours = 0;
+    }
+    ESP_LOGI(TAG, "Timezone offset: UTC%+d", g_tz_offset_hours);
+}
+
+void storage_set_tz_offset(int8_t offset)
+{
+    if (offset < -12) offset = -12;
+    if (offset > 14) offset = 14;
+    g_tz_offset_hours = offset;
+    smp_storage_save_blob(TZ_OFFSET_NVS_KEY, &offset, sizeof(offset));
+    ESP_LOGI(TAG, "Timezone offset saved: UTC%+d", offset);
+}
+
 // ============== Diagnostics ==============
 
 void smp_storage_print_info(void) {

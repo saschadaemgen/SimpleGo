@@ -43,6 +43,7 @@ static lv_obj_t *s_lvgl_val     = NULL;
 static lv_obj_t *s_wifi_val     = NULL;   /* WiFi signal strength */
 static lv_obj_t *s_name_val     = NULL;
 static lv_obj_t *s_brand_pq     = NULL;   /* PQ status in branding row (clickable) */
+static lv_obj_t *s_tz_val       = NULL;   /* Timezone offset label */
 static lv_timer_t *s_refresh_timer = NULL;
 
 /* Name editor overlay */
@@ -50,6 +51,36 @@ static lv_obj_t *s_name_overlay    = NULL;
 static lv_obj_t *s_name_ta         = NULL;
 static lv_group_t *s_name_group    = NULL;
 static lv_group_t *s_name_prev_group = NULL;
+
+/* ================================================================
+ * Timezone Offset (Session 48)
+ * ================================================================ */
+
+static void update_tz_label(void)
+{
+    if (!s_tz_val) return;
+    char buf[12];
+    snprintf(buf, sizeof(buf), "UTC%+d", g_tz_offset_hours);
+    lv_label_set_text(s_tz_val, buf);
+}
+
+static void on_tz_minus(lv_event_t *e)
+{
+    (void)e;
+    if (g_tz_offset_hours > -12) {
+        storage_set_tz_offset(g_tz_offset_hours - 1);
+        update_tz_label();
+    }
+}
+
+static void on_tz_plus(lv_event_t *e)
+{
+    (void)e;
+    if (g_tz_offset_hours < 14) {
+        storage_set_tz_offset(g_tz_offset_hours + 1);
+        update_tz_label();
+    }
+}
 
 /* ================================================================
  * Helpers
@@ -444,12 +475,65 @@ void settings_create_info(lv_obj_t *parent)
         "LVGL", "...", UI_COLOR_PRIMARY,
         &s_psram_val, &s_lvgl_val);
 
-    /* === Row 6: Server === */
+    /* === Row 6: Server | Time [-] UTC+1 [+] === */
     {
         lv_obj_t *row = create_row_base(s_list);
+
+        /* Left: Server */
         create_accent(row, 6, UI_COLOR_PRIMARY);
         create_key(row, L_KEY_X, "Server");
         create_val(row, L_VAL_X, "simplego", UI_COLOR_PRIMARY);
+
+        /* Right: Time with [-] value [+] */
+        create_accent(row, R_ACCENT_X, UI_COLOR_PRIMARY);
+        create_key(row, R_KEY_X, "Time");
+
+        /* Minus button (14x14 square) */
+        lv_obj_t *btn_m = lv_btn_create(row);
+        lv_obj_set_size(btn_m, 14, 14);
+        lv_obj_align(btn_m, LV_ALIGN_LEFT_MID, R_VAL_X, 0);
+        lv_obj_set_style_bg_opa(btn_m, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_bg_opa(btn_m, LV_OPA_20, LV_STATE_PRESSED);
+        lv_obj_set_style_bg_color(btn_m, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(btn_m, 1, 0);
+        lv_obj_set_style_border_color(btn_m, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_radius(btn_m, 1, 0);
+        lv_obj_set_style_shadow_width(btn_m, 0, 0);
+        lv_obj_set_style_pad_all(btn_m, 0, 0);
+        lv_obj_t *ml = lv_label_create(btn_m);
+        lv_label_set_text(ml, "-");
+        lv_obj_set_style_text_color(ml, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(ml, UI_FONT_SM, 0);
+        lv_obj_center(ml);
+        lv_obj_add_event_cb(btn_m, on_tz_minus, LV_EVENT_CLICKED, NULL);
+
+        /* UTC offset value */
+        s_tz_val = lv_label_create(row);
+        char tz_buf[12];
+        snprintf(tz_buf, sizeof(tz_buf), "UTC%+d", g_tz_offset_hours);
+        lv_label_set_text(s_tz_val, tz_buf);
+        lv_obj_set_style_text_color(s_tz_val, UI_COLOR_PRIMARY, 0);
+        lv_obj_set_style_text_font(s_tz_val, UI_FONT_SM, 0);
+        lv_obj_align(s_tz_val, LV_ALIGN_LEFT_MID, R_VAL_X + 18, 0);
+
+        /* Plus button (14x14 square) */
+        lv_obj_t *btn_p = lv_btn_create(row);
+        lv_obj_set_size(btn_p, 14, 14);
+        lv_obj_align(btn_p, LV_ALIGN_LEFT_MID, R_VAL_X + 58, 0);
+        lv_obj_set_style_bg_opa(btn_p, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_bg_opa(btn_p, LV_OPA_20, LV_STATE_PRESSED);
+        lv_obj_set_style_bg_color(btn_p, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(btn_p, 1, 0);
+        lv_obj_set_style_border_color(btn_p, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_radius(btn_p, 1, 0);
+        lv_obj_set_style_shadow_width(btn_p, 0, 0);
+        lv_obj_set_style_pad_all(btn_p, 0, 0);
+        lv_obj_t *pl = lv_label_create(btn_p);
+        lv_label_set_text(pl, "+");
+        lv_obj_set_style_text_color(pl, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(pl, UI_FONT_SM, 0);
+        lv_obj_center(pl);
+        lv_obj_add_event_cb(btn_p, on_tz_plus, LV_EVENT_CLICKED, NULL);
     }
 
     /* Initial refresh + timer */
@@ -468,6 +552,7 @@ void settings_nullify_info_pointers(void)
     s_list = NULL;
     s_heap_val = s_psram_val = s_lvgl_val = s_wifi_val = s_name_val = NULL;
     s_brand_pq = NULL;
+    s_tz_val = NULL;
 }
 
 void settings_info_refresh(void) { refresh_values(); }

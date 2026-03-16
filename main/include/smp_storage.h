@@ -232,6 +232,23 @@ esp_err_t storage_set_display_name(const char *name);
  */
 bool storage_has_display_name(void);
 
+// ============== Timezone Offset (Session 48) ==============
+
+/** Global UTC offset in hours (-12 to +14). Display only, internal stays UTC. */
+extern int8_t g_tz_offset_hours;
+
+/**
+ * Load timezone offset from NVS into g_tz_offset_hours.
+ * Sets 0 (UTC) if no stored value. Call at boot before first clock display.
+ */
+void storage_load_tz_offset(void);
+
+/**
+ * Save timezone offset to NVS and update g_tz_offset_hours.
+ * @param offset  Hours from UTC (-12 to +14)
+ */
+void storage_set_tz_offset(int8_t offset);
+
 // ============== Future: Typed Convenience Functions (Auftrag 50b) ==============
 
 // esp_err_t smp_storage_save_ratchet(uint8_t contact_idx, const void *blob, size_t len);
