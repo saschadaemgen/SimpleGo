@@ -17,6 +17,7 @@
 #include "ui_chat_bubble.h"
 #include "ui_theme.h"
 #include "smp_history.h"       /* HISTORY_DISPLAY_TEXT for bubble truncation */
+#include "smp_storage.h"       /* Session 48: g_tz_offset_hours for display timestamps */
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
@@ -86,8 +87,9 @@ void chat_bubble_cleanup(void)
 static void get_timestamp(char *buf, size_t len)
 {
     time_t now = time(NULL);
+    now += (int32_t)g_tz_offset_hours * 3600;  /* Session 48: display offset */
     struct tm ti;
-    localtime_r(&now, &ti);
+    gmtime_r(&now, &ti);
     if (ti.tm_year > 70) {
         char day[8], hm[8];
         strftime(day, sizeof(day), "%a", &ti);
@@ -105,8 +107,9 @@ static void format_history_timestamp(int64_t ts, char *buf, size_t len)
         return;
     }
     time_t t = (time_t)ts;
+    t += (int32_t)g_tz_offset_hours * 3600;  /* Session 48: display offset */
     struct tm ti;
-    localtime_r(&t, &ti);
+    gmtime_r(&t, &ti);
     if (ti.tm_year > 70) {
         char day[8], hm[8];
         strftime(day, sizeof(day), "%a", &ti);
