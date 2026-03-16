@@ -15,6 +15,7 @@
 #include "ui_settings.h"
 #include "ui_name_setup.h"
 #include "ui_lock.h"
+#include "ui_screensaver.h"
 #include "wifi_manager.h"
 #include "smp_storage.h"
 #include "smp_tasks.h"         // Bug #24: smp_get/set_active_contact, smp_request_load_history
@@ -26,8 +27,13 @@
 extern void ui_chat_cleanup(void);
 extern void ui_connect_cleanup(void);
 extern void ui_lock_cleanup(void);
+extern void ui_screensaver_cleanup(void);
 
 static const char *TAG = "UI_MGR";
+
+/* Session 48: Display lock mode (0=Simple, 1=Matrix) */
+static bool s_matrix_mode = false;
+#define NVS_KEY_DISPLAY_LOCK  "disp_lock"
 
 static lv_obj_t *screens[UI_SCREEN_COUNT] = {NULL};
 static ui_screen_t current_screen = UI_SCREEN_SPLASH;
@@ -165,7 +171,11 @@ void ui_manager_show_screen(ui_screen_t screen, lv_scr_load_anim_t anim)
             /* Null dangling pointers BEFORE destroying LVGL objects */
             if (prev == UI_SCREEN_CHAT) ui_chat_cleanup();
             if (prev == UI_SCREEN_CONNECT) ui_connect_cleanup();
-            if (prev == UI_SCREEN_LOCK) ui_lock_cleanup();
+            if (prev == UI_SCREEN_LOCK) {
+                if (s_matrix_mode) ui_screensaver_cleanup();
+                else ui_lock_cleanup();
+                s_matrix_mode = false;
+            }
             if (prev == UI_SCREEN_SETTINGS) ui_settings_cleanup();
             lv_obj_del(screens[prev]);
             screens[prev] = NULL;
@@ -249,7 +259,11 @@ void ui_manager_go_back(void)
             /* Null dangling pointers BEFORE destroying LVGL objects */
             if (old == UI_SCREEN_CHAT) ui_chat_cleanup();
             if (old == UI_SCREEN_CONNECT) ui_connect_cleanup();
-            if (old == UI_SCREEN_LOCK) ui_lock_cleanup();
+            if (old == UI_SCREEN_LOCK) {
+                if (s_matrix_mode) ui_screensaver_cleanup();
+                else ui_lock_cleanup();
+                s_matrix_mode = false;
+            }
             if (old == UI_SCREEN_SETTINGS) ui_settings_cleanup();
             lv_obj_del(screens[old]);
             screens[old] = NULL;
@@ -309,9 +323,30 @@ void ui_manager_lock(void)
      * wiped during previous navigation cleanup - this is a no-op. */
     ui_chat_secure_wipe();
 
-    /* Navigate to lock screen. Normal cleanup path handles the rest:
-     * if current is CHAT, show_screen calls ui_chat_cleanup() which
-     * does a second wipe (harmless, sodium_memzero is idempotent). */
+    /* Session 48: Read display lock mode from NVS (0=Simple, 1=Matrix) */
+    {
+        uint8_t mode = 0;
+        size_t out_len = 0;
+        if (smp_storage_load_blob(NVS_KEY_DISPLAY_LOCK, &mode,
+                                   sizeof(mode), &out_len) == ESP_OK
+            && out_len == 1 && mode == 1) {
+            s_matrix_mode = true;
+        } else {
+            s_matrix_mode = false;
+        }
+    }
+
+    /* Pre-create the right lock screen. show_screen() skips creation
+     * if screens[UI_SCREEN_LOCK] is already set. */
+    if (s_matrix_mode) {
+        screens[UI_SCREEN_LOCK] = ui_screensaver_create();
+        ESP_LOGI(TAG, "SEC-04: Matrix screensaver mode");
+    } else {
+        screens[UI_SCREEN_LOCK] = ui_lock_create();
+        ESP_LOGI(TAG, "SEC-04: Simple lock screen mode");
+    }
+
+    /* Navigate to lock screen. Normal cleanup path handles the rest. */
     ui_manager_show_screen(UI_SCREEN_LOCK, LV_SCR_LOAD_ANIM_NONE);
 }
 
