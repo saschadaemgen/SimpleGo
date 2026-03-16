@@ -88,6 +88,21 @@ static void splash_poll_cb(lv_timer_t *t)
 {
     (void)t;
 
+    /* Guard: if another screen replaced splash (e.g. WiFi setup),
+     * kill the timer and null all pointers to prevent writes
+     * to destroyed LVGL objects. */
+    if (screen && lv_scr_act() != screen) {
+        if (s_poll_timer) {
+            lv_timer_delete(s_poll_timer);
+            s_poll_timer = NULL;
+        }
+        screen = NULL;
+        s_progress_bar = NULL;
+        s_progress_bg = NULL;
+        s_status_lbl = NULL;
+        return;
+    }
+
     if (s_status_dirty && s_status_lbl) {
         s_status_dirty = false;
         lv_label_set_text(s_status_lbl, s_status_buf);
