@@ -30,7 +30,7 @@ lv_obj_t *ui_connect_create(void)
     ui_theme_apply(screen);
 
     /* Session 48: Shared status bar (26px) */
-    ui_statusbar_create(screen, "Connect");
+    ui_statusbar_create(screen, "Connect", NULL);
 
     /* Scan instruction */
     lv_obj_t *hint = lv_label_create(screen);

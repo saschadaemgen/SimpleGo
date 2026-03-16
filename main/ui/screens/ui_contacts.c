@@ -478,7 +478,7 @@ lv_obj_t *ui_contacts_create(void)
     ui_contacts_popup_set_refresh_cb(ui_contacts_refresh);
 
     /* Session 48: Shared status bar (26px, live clock + WiFi + battery) */
-    ui_statusbar_create(screen, "Contacts");
+    ui_statusbar_create(screen, "Contacts", NULL);
 
     /* Contact count: small dim label after title */
     s_count_lbl = lv_label_create(screen);
