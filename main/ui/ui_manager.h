@@ -51,6 +51,12 @@ void ui_manager_lock(void);
  */
 void ui_manager_unlock(void);
 
+/** Session 48: Configurable lock timer */
+uint8_t ui_manager_get_lock_timer_idx(void);
+const char *ui_manager_get_lock_timer_label(uint8_t idx);
+uint8_t ui_manager_get_lock_timer_count(void);
+void ui_manager_set_lock_timer_idx(uint8_t idx);
+
 #ifdef __cplusplus
 }
 #endif

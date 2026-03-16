@@ -40,9 +40,21 @@ static ui_screen_t current_screen = UI_SCREEN_SPLASH;
 static bool s_name_check_done = false;  /* Session 43: one-shot first-boot name check */
 
 /* SEC-04: Inactivity lock timer */
-#define LOCK_TIMEOUT_MS      60000   /* 60 seconds inactivity to lock */
 #define LOCK_CHECK_INTERVAL  2000    /* Check every 2 seconds */
 static lv_timer_t *s_lock_timer = NULL;
+
+/* Session 48: Configurable lock timeout */
+#define NVS_KEY_LOCK_TIMER   "lock_timer"
+static const uint16_t LOCK_TIMER_VALUES[] = {5, 10, 20, 30, 60, 300, 900};
+static const char    *LOCK_TIMER_LABELS[] = {"5s","10s","20s","30s","60s","5min","15min"};
+#define LOCK_TIMER_COUNT     7
+#define LOCK_TIMER_DEFAULT   4      /* index 4 = 60s */
+static uint8_t s_lock_timer_idx = LOCK_TIMER_DEFAULT;
+
+static uint32_t get_lock_timeout_ms(void)
+{
+    return (uint32_t)LOCK_TIMER_VALUES[s_lock_timer_idx] * 1000;
+}
 
 /* Bug #24: Remember screen and contact before lock for restore on unlock */
 static ui_screen_t s_locked_screen = UI_SCREEN_MAIN;
@@ -108,7 +120,7 @@ void ui_manager_remove_from_nav_stack(ui_screen_t screen)
 
 /* SEC-04: Inactivity timer callback.
  * Checks lv_disp_get_inactive_time() every LOCK_CHECK_INTERVAL ms.
- * If no input for LOCK_TIMEOUT_MS, locks the device. */
+ * Locks when inactivity exceeds configurable threshold. */
 static void lock_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
@@ -120,10 +132,11 @@ static void lock_timer_cb(lv_timer_t *timer)
     lv_disp_t *disp = lv_disp_get_default();
     if (!disp) return;
 
+    uint32_t timeout = get_lock_timeout_ms();
     uint32_t inactive = lv_disp_get_inactive_time(disp);
-    if (inactive >= LOCK_TIMEOUT_MS) {
+    if (inactive >= timeout) {
         ESP_LOGI(TAG, "SEC-04: Inactivity %u ms >= %u ms, locking",
-                 (unsigned)inactive, (unsigned)LOCK_TIMEOUT_MS);
+                 (unsigned)inactive, (unsigned)timeout);
         ui_manager_lock();
     }
 }
@@ -132,7 +145,21 @@ esp_err_t ui_manager_init(void)
 {
     ESP_LOGI(TAG, "Init...");
     ui_theme_init();
-    
+
+    /* Session 48: Load lock timer index from NVS */
+    {
+        uint8_t idx = LOCK_TIMER_DEFAULT;
+        size_t out_len = 0;
+        if (smp_storage_load_blob(NVS_KEY_LOCK_TIMER, &idx,
+                                   sizeof(idx), &out_len) == ESP_OK
+            && out_len == 1 && idx < LOCK_TIMER_COUNT) {
+            s_lock_timer_idx = idx;
+        }
+        ESP_LOGI(TAG, "Lock timer: %s (%u ms)",
+                 LOCK_TIMER_LABELS[s_lock_timer_idx],
+                 (unsigned)get_lock_timeout_ms());
+    }
+
     screens[UI_SCREEN_SPLASH] = ui_splash_create();
     lv_scr_load(screens[UI_SCREEN_SPLASH]);
     
@@ -140,8 +167,8 @@ esp_err_t ui_manager_init(void)
 
     /* SEC-04: Start inactivity monitoring for auto-lock */
     s_lock_timer = lv_timer_create(lock_timer_cb, LOCK_CHECK_INTERVAL, NULL);
-    ESP_LOGI(TAG, "SEC-04: Lock timer started (%d ms timeout, %d ms check)",
-             LOCK_TIMEOUT_MS, LOCK_CHECK_INTERVAL);
+    ESP_LOGI(TAG, "SEC-04: Lock timer started (%u ms timeout, %d ms check)",
+             (unsigned)get_lock_timeout_ms(), LOCK_CHECK_INTERVAL);
 
     return ESP_OK;
 }
@@ -396,4 +423,31 @@ void ui_manager_unlock(void)
     s_locked_screen = UI_SCREEN_MAIN;
     s_locked_contact_idx = -1;
     s_locked_settings_tab = 0;
+}
+
+/* ============== Session 48: Lock Timer Settings API ============== */
+
+uint8_t ui_manager_get_lock_timer_idx(void)
+{
+    return s_lock_timer_idx;
+}
+
+const char *ui_manager_get_lock_timer_label(uint8_t idx)
+{
+    if (idx >= LOCK_TIMER_COUNT) idx = LOCK_TIMER_DEFAULT;
+    return LOCK_TIMER_LABELS[idx];
+}
+
+uint8_t ui_manager_get_lock_timer_count(void)
+{
+    return LOCK_TIMER_COUNT;
+}
+
+void ui_manager_set_lock_timer_idx(uint8_t idx)
+{
+    if (idx >= LOCK_TIMER_COUNT) idx = LOCK_TIMER_DEFAULT;
+    s_lock_timer_idx = idx;
+    smp_storage_save_blob(NVS_KEY_LOCK_TIMER, &idx, sizeof(idx));
+    ESP_LOGI(TAG, "Lock timer set: %s (%u ms)",
+             LOCK_TIMER_LABELS[idx], (unsigned)get_lock_timeout_ms());
 }
