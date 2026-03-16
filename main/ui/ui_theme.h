@@ -71,14 +71,7 @@ lv_obj_t *ui_create_btn(lv_obj_t *parent, const char *text, lv_coord_t x, lv_coo
 lv_obj_t *ui_create_tab_btn(lv_obj_t *parent, const char *text, int index, int total, bool active);
 lv_obj_t *ui_create_switch(lv_obj_t *parent, const char *label, lv_coord_t x, lv_coord_t y, bool state);
 
-/**
- * @brief Create v2 status bar with hand-drawn WiFi bars and battery
- * @return GO button object (caller attaches click handler)
- *
- * Matches mockup v5: 14px bar, 4 ascending WiFi bars, outlined battery
- * with green fill, dim cyan time label.  Adds 1px glow line below bar.
- */
-lv_obj_t *ui_create_status_bar(lv_obj_t *parent);
+/* Session 48: ui_create_status_bar removed. Use ui_statusbar.h instead. */
 
 /**
  * @brief Session 39f: Centralized style helpers
