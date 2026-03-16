@@ -26,15 +26,27 @@ extern "C" {
 /** Status bar height (both variants) */
 #define UI_STATUSBAR_HEIGHT  26
 
+/** Widget pointers returned by ui_statusbar_create().
+ *  Permanent screens (Main) keep a local copy so their refresh
+ *  timer can write directly even after ephemeral screens
+ *  overwrite the global pointers. */
+typedef struct {
+    lv_obj_t *title;
+    lv_obj_t *time;
+    lv_obj_t *wifi_bars[4];
+} statusbar_widgets_t;
+
 /**
  * @brief FULL variant: screen name left, clock + WiFi + battery right
  * @param parent  Screen object to attach to
  * @param screen_name  Name shown on the left (e.g. "SimpleGo", "Contacts")
- * @return The bar container object
+ * @param out  If non-NULL, filled with widget pointers for local use
+ * @return The title label object
  *
- * Used by: Main, Contacts, Settings, Connect, Developer, Name Setup
+ * Used by: Main, Contacts, Settings, Connect
  */
-lv_obj_t *ui_statusbar_create(lv_obj_t *parent, const char *screen_name);
+lv_obj_t *ui_statusbar_create(lv_obj_t *parent, const char *screen_name,
+                               statusbar_widgets_t *out);
 
 /**
  * @brief CHAT variant: back arrow + contact name left, PQ status right

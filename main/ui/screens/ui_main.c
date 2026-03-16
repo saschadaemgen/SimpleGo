@@ -28,15 +28,19 @@
 #include "smp_contacts.h"
 #include "smp_history.h"
 #include "wifi_manager.h"
+#include "esp_wifi.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 static const char *TAG = "UI_MAIN";
 static lv_obj_t *screen         = NULL;
 static lv_obj_t *list_container = NULL;
 static lv_obj_t *empty_label    = NULL;
 static lv_obj_t *s_title_lbl    = NULL;  /* Local pointer to OUR title label */
+static lv_obj_t *s_time_lbl     = NULL;  /* Local pointer to OUR clock label */
+static lv_obj_t *s_wifi_bars[4] = {NULL}; /* Local pointers to OUR WiFi bars */
 static lv_timer_t *gear_lp_timer = NULL;
 static lv_timer_t *s_hdr_refresh_timer = NULL;
 
@@ -306,6 +310,37 @@ static void hdr_refresh_cb(lv_timer_t *t)
             lv_label_set_text(s_title_lbl, "No WiFi");
         }
     }
+
+    /* Session 48: Update clock via local pointer (survives screen switches) */
+    if (s_time_lbl) {
+        time_t now = time(NULL);
+        struct tm ti;
+        gmtime_r(&now, &ti);
+        char tbuf[8];
+        if (ti.tm_year > 70) {
+            snprintf(tbuf, sizeof(tbuf), "%02d:%02d", ti.tm_hour, ti.tm_min);
+        } else {
+            snprintf(tbuf, sizeof(tbuf), "--:--");
+        }
+        lv_label_set_text(s_time_lbl, tbuf);
+    }
+
+    /* Session 48: Update WiFi bars via local pointers */
+    {
+        wifi_ap_record_t ap_info;
+        int bars = 0;
+        if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+            if (ap_info.rssi >= -50)      bars = 4;
+            else if (ap_info.rssi >= -65) bars = 3;
+            else if (ap_info.rssi >= -75) bars = 2;
+            else                          bars = 1;
+        }
+        for (int i = 0; i < 4; i++) {
+            if (!s_wifi_bars[i]) continue;
+            lv_obj_set_style_bg_opa(s_wifi_bars[i],
+                                     (i < bars) ? LV_OPA_COVER : LV_OPA_30, 0);
+        }
+    }
 }
 
 /* ================================================================
@@ -341,7 +376,14 @@ lv_obj_t *ui_main_create(void)
 
     /* Session 48: Shared status bar (26px, live clock + WiFi + battery).
      * Returns title label so Main's permanent timer can write safely. */
-    s_title_lbl = ui_statusbar_create(screen, "SimpleGo");
+    /* Session 48: Capture ALL widget pointers locally so Main's
+     * permanent timer can update title, clock, and WiFi bars even
+     * after ephemeral screens overwrite the global statusbar state. */
+    statusbar_widgets_t sb = {0};
+    ui_statusbar_create(screen, "SimpleGo", &sb);
+    s_title_lbl = sb.title;
+    s_time_lbl  = sb.time;
+    for (int i = 0; i < 4; i++) s_wifi_bars[i] = sb.wifi_bars[i];
     ui_statusbar_timer_start();
     create_content_area(screen);
     create_bottom_bar(screen);

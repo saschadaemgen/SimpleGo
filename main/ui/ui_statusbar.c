@@ -199,7 +199,8 @@ static void draw_glow(lv_obj_t *parent)
  * FULL Variant: Screen name + Clock + WiFi + Battery
  * ================================================================ */
 
-lv_obj_t *ui_statusbar_create(lv_obj_t *parent, const char *screen_name)
+lv_obj_t *ui_statusbar_create(lv_obj_t *parent, const char *screen_name,
+                               statusbar_widgets_t *out)
 {
     s_is_chat = false;
     s_chat_name_lbl = NULL;
@@ -244,8 +245,13 @@ lv_obj_t *ui_statusbar_create(lv_obj_t *parent, const char *screen_name)
     update_clock();
     update_wifi_bars();
 
-    /* Return title label so caller can keep a local pointer
-     * (Main screen needs this for its own dynamic refresh timer) */
+    /* Fill output struct so permanent screens can keep local pointers */
+    if (out) {
+        out->title = s_title_lbl;
+        out->time  = s_time_lbl;
+        for (int i = 0; i < 4; i++) out->wifi_bars[i] = s_wifi_bars[i];
+    }
+
     return s_title_lbl;
 }
 
