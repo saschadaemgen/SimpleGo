@@ -619,56 +619,50 @@ void settings_create_info(lv_obj_t *parent)
         lv_obj_add_event_cb(btn_p, on_tz_plus, LV_EVENT_CLICKED, NULL);
     }
 
-    /* === Row 7: Display Lock [Simple] [Matrix] === */
+    /* === Row 7: Lock Sim|Mtx | Timeout [-] 60s [+] === */
     {
         uint8_t cur_mode = get_lock_mode();
+        uint8_t cur_idx = ui_manager_get_lock_timer_idx();
 
         lv_obj_t *row = create_row_base(s_list);
+
+        /* Left: Lock mode toggle */
         create_accent(row, 6, UI_COLOR_PRIMARY);
         create_key(row, L_KEY_X, "Lock");
 
-        /* "Simple" option */
         s_lock_simple = lv_label_create(row);
-        lv_label_set_text(s_lock_simple, "Simple");
+        lv_label_set_text(s_lock_simple, "Sim");
         lv_obj_set_style_text_color(s_lock_simple,
             cur_mode == 0 ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
         lv_obj_set_style_text_font(s_lock_simple, UI_FONT_SM, 0);
         lv_obj_align(s_lock_simple, LV_ALIGN_LEFT_MID, L_VAL_X, 0);
         lv_obj_add_flag(s_lock_simple, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_ext_click_area(s_lock_simple, 8);
+        lv_obj_set_ext_click_area(s_lock_simple, 6);
         lv_obj_add_event_cb(s_lock_simple, on_lock_simple, LV_EVENT_CLICKED, NULL);
 
-        /* Separator */
         lv_obj_t *sep = lv_label_create(row);
         lv_label_set_text(sep, "|");
         lv_obj_set_style_text_color(sep, UI_COLOR_LINE_DIM, 0);
         lv_obj_set_style_text_font(sep, UI_FONT_SM, 0);
-        lv_obj_align(sep, LV_ALIGN_LEFT_MID, L_VAL_X + 40, 0);
+        lv_obj_align(sep, LV_ALIGN_LEFT_MID, L_VAL_X + 22, 0);
 
-        /* "Matrix" option */
         s_lock_matrix = lv_label_create(row);
-        lv_label_set_text(s_lock_matrix, "Matrix");
+        lv_label_set_text(s_lock_matrix, "Mtx");
         lv_obj_set_style_text_color(s_lock_matrix,
             cur_mode == 1 ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
         lv_obj_set_style_text_font(s_lock_matrix, UI_FONT_SM, 0);
-        lv_obj_align(s_lock_matrix, LV_ALIGN_LEFT_MID, L_VAL_X + 50, 0);
+        lv_obj_align(s_lock_matrix, LV_ALIGN_LEFT_MID, L_VAL_X + 30, 0);
         lv_obj_add_flag(s_lock_matrix, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_ext_click_area(s_lock_matrix, 8);
+        lv_obj_set_ext_click_area(s_lock_matrix, 6);
         lv_obj_add_event_cb(s_lock_matrix, on_lock_matrix, LV_EVENT_CLICKED, NULL);
-    }
 
-    /* === Row 8: Lock Timer [ - ] 60s [ + ] === */
-    {
-        lv_obj_t *row = create_row_base(s_list);
-        create_accent(row, 6, UI_COLOR_PRIMARY);
-        create_key(row, L_KEY_X, "Timeout");
+        /* Right: Timeout with [-] value [+] */
+        create_accent(row, R_ACCENT_X, UI_COLOR_PRIMARY);
+        create_key(row, R_KEY_X, "Timer");
 
-        uint8_t cur_idx = ui_manager_get_lock_timer_idx();
-
-        /* Minus button (14x14 square) */
         lv_obj_t *btn_m = lv_btn_create(row);
         lv_obj_set_size(btn_m, 14, 14);
-        lv_obj_align(btn_m, LV_ALIGN_LEFT_MID, L_VAL_X, 0);
+        lv_obj_align(btn_m, LV_ALIGN_LEFT_MID, R_VAL_X, 0);
         lv_obj_set_style_bg_opa(btn_m, LV_OPA_TRANSP, 0);
         lv_obj_set_style_bg_opa(btn_m, LV_OPA_20, LV_STATE_PRESSED);
         lv_obj_set_style_bg_color(btn_m, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
@@ -684,18 +678,16 @@ void settings_create_info(lv_obj_t *parent)
         lv_obj_center(ml);
         lv_obj_add_event_cb(btn_m, on_timer_minus, LV_EVENT_CLICKED, NULL);
 
-        /* Timer value */
         s_lock_timer_val = lv_label_create(row);
         lv_label_set_text(s_lock_timer_val,
             ui_manager_get_lock_timer_label(cur_idx));
         lv_obj_set_style_text_color(s_lock_timer_val, UI_COLOR_PRIMARY, 0);
         lv_obj_set_style_text_font(s_lock_timer_val, UI_FONT_SM, 0);
-        lv_obj_align(s_lock_timer_val, LV_ALIGN_LEFT_MID, L_VAL_X + 20, 0);
+        lv_obj_align(s_lock_timer_val, LV_ALIGN_LEFT_MID, R_VAL_X + 18, 0);
 
-        /* Plus button (14x14 square) */
         lv_obj_t *btn_p = lv_btn_create(row);
         lv_obj_set_size(btn_p, 14, 14);
-        lv_obj_align(btn_p, LV_ALIGN_LEFT_MID, L_VAL_X + 58, 0);
+        lv_obj_align(btn_p, LV_ALIGN_LEFT_MID, R_VAL_X + 58, 0);
         lv_obj_set_style_bg_opa(btn_p, LV_OPA_TRANSP, 0);
         lv_obj_set_style_bg_opa(btn_p, LV_OPA_20, LV_STATE_PRESSED);
         lv_obj_set_style_bg_color(btn_p, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
