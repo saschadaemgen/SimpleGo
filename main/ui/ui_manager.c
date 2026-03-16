@@ -13,7 +13,6 @@
 #include "ui_contacts.h"
 #include "ui_connect.h"
 #include "ui_settings.h"
-#include "ui_developer.h"
 #include "ui_name_setup.h"
 #include "ui_lock.h"
 #include "wifi_manager.h"
@@ -58,7 +57,6 @@ static const screen_create_fn screen_creators[UI_SCREEN_COUNT] = {
     [UI_SCREEN_CONTACTS]  = ui_contacts_create,
     [UI_SCREEN_CONNECT]   = ui_connect_create,
     [UI_SCREEN_SETTINGS]  = ui_settings_create,
-    [UI_SCREEN_DEVELOPER] = ui_developer_create,
     [UI_SCREEN_NAME_SETUP] = ui_name_setup_create,
     [UI_SCREEN_LOCK]       = ui_lock_create,
 };
