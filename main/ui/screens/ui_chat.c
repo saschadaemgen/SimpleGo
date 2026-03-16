@@ -2,16 +2,14 @@
  * @file ui_chat.c
  * @brief Chat Screen - Cyberpunk Messenger (Mockup v5)
  *
- * Layout (320×240, edge-to-edge):
- *   ┌------------------------------------┐
- *   │ Status Bar  16px                 │
- *   │ Glow Line    1px                 │
- *   │ Chat Header 26px                 │
- *   │ Dim Line     1px                 │
- *   │ Messages   160px (scrollable)    │
- *   │ Input Bar   36px                 │
- *   └------------------------------------┘
- *   Total: 16+1+26+1+160+36 = 240 ✓
+ * Layout (320x240, edge-to-edge):
+ *   Chat Header 26px  [<] [Name] [PQ Status]
+ *   Dim Line     1px
+ *   Messages   177px  (scrollable)
+ *   Input Bar   36px
+ *   Total: 26+1+177+36 = 240
+ *
+ * Session 48: Removed legacy 16px status bar. Header at y=0.
  *
  * Bubble rendering extracted to ui_chat_bubble.c
  *              Style helpers centralized in ui_theme.c
@@ -40,15 +38,15 @@ extern void chat_bubble_cleanup(void);
 
 static const char *TAG = "UI_CHAT";
 
-/* ============== Layout Constants ============== */
+/* ============== Layout Constants (Session 48: status bar removed) ============== */
 
-#define HDR_Y               (UI_STATUS_H + 1)               /* 17 */
+#define HDR_Y               0                                /* Header at top */
 #define HDR_H               26
-#define DIM_Y               (HDR_Y + HDR_H)                  /* 43 */
+#define DIM_Y               (HDR_Y + HDR_H)                  /* 26 */
 #define INPUT_H             36
 #define INPUT_Y             (UI_SCREEN_H - INPUT_H)          /* 204 */
-#define MSG_Y               (DIM_Y + 1)                      /* 44 */
-#define MSG_H               (INPUT_Y - MSG_Y)                /* 160 */
+#define MSG_Y               (DIM_Y + 1)                      /* 27 */
+#define MSG_H               (INPUT_Y - MSG_Y)                /* 177 */
 #define MSG_PAD_SIDE        6
 
 /* Input bar */
@@ -329,14 +327,10 @@ lv_obj_t *ui_chat_create(void)
     screen = lv_obj_create(NULL);
     ui_theme_apply(screen);
 
-    /* Status Bar (16px) */
-    lv_obj_t *go_btn = ui_create_status_bar(screen);
-    lv_obj_add_event_cb(go_btn, on_back, LV_EVENT_CLICKED, NULL);
-
-    /* Chat Header (26px) */
+    /* Chat Header (26px, at top - no status bar above) */
     header_label = create_chat_header(screen);
 
-    /* Messages (160px) */
+    /* Messages (177px, was 160px - gained 17px from removed status bar) */
     msg_container = lv_obj_create(screen);
     lv_obj_set_width(msg_container, LV_PCT(100));
     lv_obj_set_height(msg_container, MSG_H);
@@ -478,7 +472,7 @@ static void on_send_click(lv_event_t *e)
 
 /* ============== Name Truncation ============== */
 
-#define CHAT_NAME_MAX  20
+#define CHAT_NAME_MAX  18
 
 static void truncate_chat_name(char *dst, const char *src, size_t dst_size)
 {
