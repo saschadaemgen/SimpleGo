@@ -1,45 +1,37 @@
 
-## Status after Session 46 - 2026-03-12 (Codename MEGABLAST)
+## Status after Session 47 - 2026-03-16
 
-### WORLD FIRST: Post-Quantum Double Ratchet on Dedicated Hardware
-- First quantum-resistant message received: 2026-03-12, 09:16 CET
-- SimpleX Chat App confirms "Quantum Resistant" for SimpleGo contact
-- sntrup761 KEM integrated into X448 Double Ratchet (hybrid PQ)
-- Five encryption layers per message (was four before MEGABLAST)
-- **6/6 Security Findings CLOSED**
-
-### Security: ALL FINDINGS CLOSED
-- SEC-01 CLOSED: sodium_memzero on PSRAM cache (S45)
-- SEC-02 CLOSED: HMAC NVS vault, eFuse BLOCK_KEY1 (S45)
-- SEC-03 CLOSED: mbedtls_platform_zeroize (S42)
-- SEC-04 CLOSED: Auto-lock 60s + memory wipe (S45)
-- SEC-05 CLOSED: Device-bound HKDF, chip MAC (S45)
-- SEC-06 CLOSED: sntrup761 post-quantum KEM (S46 MEGABLAST)
+### UX Overhaul (Session 47)
+- QR connection flow: 16 live status stages with auto-navigation and opacity pulsing
+- Auto-open removed: incoming messages no longer hijack current screen
+- Lock screen restore: chat and settings tab preserved across lock/unlock
+- NVS partition: 128 KB to 1 MB (128 PQ contacts at 5.7 KB each)
+- PQ chat header: Blue (quantum-resistant) / Yellow (negotiating) / Green (standard)
+- Global PQ toggle in Settings (new connections only)
+- Per-contact PQ toggle: impossible without Queue Rotation (abandoned after 3 attempts)
+- BACKLOG.md introduced (7 categories, 36 entries)
+- 25 files changed, 7 bugs closed
 
 ### Firmware
-- SMP implementation with post-quantum double ratchet
-- 128 contacts (14 with PQ state due to NVS capacity)
+- Post-quantum Double Ratchet (sntrup761, five encryption layers)
+- 128 contacts with full PQ state (NVS 1 MB)
 - AES-256-GCM encrypted SD history, WiFi Manager
-- Display name with first-boot prompt, auto-lock screen
-- HMAC NVS vault, device-bound HKDF
-- sntrup761 background keygen (1.85s, hidden from user)
-- PQ header: 2310 bytes, anti-downgrade padding
-- 47 source files + 60 sntrup761 component files
-
-### Memory After MEGABLAST
-- Flash: 1.85 MB (+30 KB sntrup761)
-- PSRAM ratchet: 722 KB (was 66 KB, +656 KB PQ fields)
-- PSRAM crypto task: 80 KB
-- PSRAM free: 7.21 MB
+- Display name, auto-lock with memory wipe, HMAC NVS vault
+- 16-stage connection flow with live status
+- 6/6 Security Findings CLOSED
 
 ### Bugs
-- Bug #20: SEND after 6+ hours idle (KNOWN)
-- Bug #21: SD phantom counter (LOW)
-- Bug #22: Standby freeze returning from lock (NEW, not PQ-related)
+- #22 CLOSED: Standby freeze (settings timer cleanup)
+- #23 CLOSED: LVGL stack overflow (heap allocation)
+- #24 CLOSED: Empty chat after lock (screen restore)
+- #25 OPEN: Timer crash ui_settings_info.c (Szenni)
+- #26 CLOSED: PQ NVS ghost cleanup on delete
+- #27 OPEN: QR after kernel panic (Szenni)
+- #28 OPEN: NTP sync (Szenni)
+- #29 CLOSED: Unicode emoji crash
 
 ### Open Items
-- Bug #22 investigation (Session 47)
-- NVS partition resize for full 128 PQ contacts (Kickstarter)
-- sntrup761 boot test removal (after stability confirmed)
-- PQ keygen optimization (deferred, pre-computation sufficient)
+- Aufgabe 2d events re-commit (lost in git checkout)
+- Per-contact PQ via Queue Rotation (future)
+- Boot test removal, stability optimization
 - Alpha firmware binary for simplego.dev/installer

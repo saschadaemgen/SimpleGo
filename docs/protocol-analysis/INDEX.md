@@ -3,6 +3,11 @@ slug: /protocol-analysis/session-index
 title: Session Index
 ---
 
+## Session 47 - 2026-03-15 to 2026-03-16
+**Type:** UX Overhaul + Security Fixes
+**File:** 46_PART44_SESSION_47.md
+**Summary:** Most extensive UX session. 7 bugs closed (#22 standby freeze root cause, #23 LVGL stack overflow, #24 chat restore, #26 PQ NVS ghost cleanup, #29 Unicode). NVS partition 128 KB to 1 MB (128 PQ contacts). QR connection flow redesigned with 16 live status stages and auto-navigation. PQ display in chat header (3 states). Global PQ toggle in Settings. Per-contact PQ toggle attempted and abandoned -- state machine cannot be unilaterally disabled. Future: Queue Rotation. BACKLOG.md introduced. 25 files changed.
+
 ## Session 46 - 2026-03-11 to 2026-03-12 (Codename MEGABLAST)
 **Type:** Post-Quantum Implementation Session
 **File:** 45_PART43_SESSION_46.md

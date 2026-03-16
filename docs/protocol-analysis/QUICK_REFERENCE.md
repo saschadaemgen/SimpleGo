@@ -3611,3 +3611,129 @@ SEC-06 CLOSED (S46): sntrup761 PQ KEM in Double Ratchet (MEGABLAST)
 *22 Milestones Achieved*
 *First quantum-resistant message: 2026-03-12, 09:16 CET*
 *Next: Session 47 -- Bug #22, Alpha release, NVS partition resize*
+
+---
+
+## Section 46: Session 47 -- UX Overhaul, NVS Resize, PQ UI
+
+### 46.1 NVS Partition Layout
+
+```
+OLD: NVS 128 KB -> only ~14 PQ contacts
+NEW: NVS 1 MB  -> full 128 PQ contacts
+
+Calculation:
+  128 contacts x 5.7 KB (classical 520B + PQ 5123B + 7 NVS keys overhead)
+  = 730 KB data + 294 KB reserve = 1024 KB
+
+partitions.csv:
+  nvs, data, nvs, 0x9000, 0x100000     (was 0x20000)
+  factory, app, factory, 0x110000, ...  (moved for alignment)
+
+Flash: erase-flash required (partition table change)
+eFuse HMAC (SEC-02, BLOCK_KEY1): remains intact
+```
+
+### 46.2 QR Connection Flow (16 Stages)
+
+```
+Trigger: Contact Queue MSG (~1s after scan, was Reply Queue ~9s)
+Event-to-UI: 260ms (144ms screen switch + 34ms queue + 90ms refresh)
+
+RAM array: s_connect[128] survives screen switches
+Auto-nav: QR screen -> contact list on CONNECT_SCANNED
+Animated: "(Knock, knock, NEO)" with . .. ... cycle (1.5s)
+
+16 uppercase stages with opacity pulsing:
+  1. SCANNED                    9. DECRYPTING PEER INFO
+  2. INVITATION RECEIVED       10. PEER INFO RECEIVED
+  3. CONNECTING TO PEER        11. NAME RECEIVED
+  4. KEY EXCHANGE              12. EXCHANGING KEYS
+  5. X3DH KEY AGREEMENT       13. SECURING CHANNEL
+  6. SENDING CONFIRMATION      14. SENDING HELLO
+  7. WAITING FOR PEER          15. WAITING FOR PEER
+  8. DECRYPTING                16. CONNECTED -> normal
+
+Timeout: 60s -> "TIMEOUT" -> cleanup after 10s
+
+Backend events:
+  UI_EVT_CONNECT_SCANNED (first server response)
+  UI_EVT_CONNECT_NAME (contact name received)
+  UI_EVT_CONNECT_DONE (connection complete)
+```
+
+### 46.3 PQ Chat Header Display
+
+```
+Three states (read-only, not clickable):
+
+  Blue:   "E2EE Quantum-Resistant"  (pq_active=1 AND pq_kem_state=2)
+  Yellow: "PQ Negotiation..."       (pq_active=1 AND pq_kem_state=1)
+  Green:  "E2EE Standard"           (pq_active=0)
+
+ui_chat_update_pq_status(): reads ratchet state only.
+Called on: chat open, after message receipt, contact switch.
+```
+
+### 46.4 Per-Contact PQ Toggle: Why Impossible
+
+```
+PQ state machine has 3 properties that prevent unilateral disable:
+
+1. pq_recv_process() resets pq_active=1 on every incoming PQ message
+   (smp_ratchet.c lines 696, 737, 795)
+
+2. pending_ss is mixed into root key derivation (HKDF IKM).
+   Dropping it unilaterally: root keys diverge, decrypt fails.
+
+3. Keypair rotation on EVERY incoming message (line 774: new keypair,
+   line 767: delete old SK). Peer encrypts with old PK, we deleted SK.
+
+Solution: Queue Rotation / Address Renewal
+  Build new connection with same contact, desired PQ setting.
+  Chat history stays linked on SD.
+
+Workaround: Global toggle + delete/reconnect.
+```
+
+### 46.5 ratchet_wipe_slot() Pattern
+
+```c
+void ratchet_wipe_slot(int idx) {
+    // 1. sodium_memzero on PSRAM ratchet slot (5.7 KB)
+    // 2. If deleted contact is active: active_slot = 0xFF
+    // 3. Erase classical NVS: rat_XX
+    // 4. Erase 7 PQ NVS keys: pq_XX_{act,st,opk,osk,ppk,ct,ss}
+    // 5. Clear 42d bitmap bit
+}
+
+// Must be called from BOTH delete paths:
+//   remove_contact() in smp_contacts.c (network DEL)
+//   on_popup_delete() in ui_contacts_popup.c (UI popup)
+```
+
+### 46.6 Lock Screen State Restore
+
+```
+ui_manager_lock():
+  Save: s_lock_prev_screen, s_lock_contact_idx, s_lock_settings_tab
+  Wipe: ui_chat_secure_wipe()
+  Navigate: lock screen
+
+ui_manager_unlock():
+  If prev was CHAT:
+    smp_set_active_contact(saved_idx)
+    ui_chat_set_contact(name)
+    Load history, restore bubbles
+  If prev was SETTINGS:
+    Restore active tab
+  Else: go_back()
+```
+
+---
+
+*Quick Reference v42.0*
+*Last updated: March 16, 2026 - Session 47*
+*Status: UX Overhaul -- NVS 1 MB, QR 16-Stage Flow, PQ UI*
+*22 Milestones Achieved*
+*Next: Session 48 -- Events re-commit, boot test removal, alpha release*

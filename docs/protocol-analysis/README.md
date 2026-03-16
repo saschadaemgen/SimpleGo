@@ -8,7 +8,21 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: Codename MEGABLAST - Post-Quantum Double Ratchet (2026-03-12 Session 46)
+## LATEST: UX Overhaul, NVS 1 MB, QR 16-Stage Flow, PQ UI (2026-03-16 Session 47)
+
+```
+Most extensive UX session. 7 bugs closed. 25 files changed.
+NVS: 128 KB to 1 MB (full 128 PQ contacts).
+QR flow: 16 live status stages, auto-navigation, 260ms latency.
+PQ header: Blue (quantum-resistant) / Yellow (negotiating) / Green.
+Per-contact PQ toggle: abandoned (state machine analysis).
+Bug #22 root cause found: settings timer cleanup.
+Bug #23: heap alloc for 5.7 KB ratchet_state_t.
+Bug #26: PQ NVS ghost cleanup (7 keys, 5.2 KB/contact).
+7 lessons (#251-#257). BACKLOG.md introduced.
+```
+
+## Session 46: Codename MEGABLAST - Post-Quantum Double Ratchet (2026-03-12)
 
 ```
 WORLD FIRST: Quantum-resistant messenger on dedicated embedded hardware.
@@ -554,6 +568,35 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **44** | **Mar 8** | **Hardware Class 1 Security Architecture (15 docs)** | **5 lessons, Bug #20 demoted** |
 | **45** | **Mar 10** | **Security Implementation: 5/6 Findings CLOSED** | **5 lessons, SEC-01/02/04/05** |
 | **46** | **Mar 11-12** | **MEGABLAST: Post-Quantum Double Ratchet - WORLD FIRST** | **8 lessons, 6/6 SEC CLOSED** |
+| **47** | **Mar 15-16** | **UX Overhaul: NVS 1 MB, QR 16-Stage, PQ UI, 7 Bugs** | **7 lessons, Per-Contact PQ abandoned** |
+
+---
+
+## Session 47 Key Achievements -- UX Overhaul
+
+```
+NVS partition: 128 KB to 1 MB (128 PQ contacts at 5.7 KB each)
+
+QR connection flow: 16 live status stages with auto-navigation
+  Contact Queue trigger (~1s vs 9s), 260ms event-to-UI latency
+  "(Knock, knock, NEO)" animated dots, 60s timeout
+
+PQ chat header: Blue/Yellow/Green status display
+  Global PQ toggle in Settings (new connections only)
+  Per-contact PQ toggle: IMPOSSIBLE (state machine analysis)
+  Future solution: Queue Rotation / Address Renewal
+
+7 bugs closed:
+  #22 CLOSED: Settings timer cleanup (actual standby freeze cause)
+  #23 CLOSED: Heap alloc for 5.7 KB ratchet_state_t
+  #24 CLOSED: Chat + settings restore after lock screen
+  #26 CLOSED: PQ NVS ghost cleanup (7 keys, 5.2 KB/contact)
+  #29 CLOSED: Unicode emoji -> ASCII tags
+  + mbedTLS format fix, nav-stack fix, 5 inline fixes
+
+BACKLOG.md introduced (7 categories, 36 entries)
+25 files changed
+```
 
 ---
 
@@ -1692,4 +1735,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 12, 2026 - Session 46 Codename MEGABLAST (First Quantum-Resistant Dedicated Hardware Messenger)*
+*Last updated: March 16, 2026 - Session 47 (UX Overhaul: NVS 1 MB, QR 16-Stage Flow, PQ UI)*

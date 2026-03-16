@@ -3223,3 +3223,191 @@ Layer 4:  TLS 1.3 (transport)
 *Security: 6/6 ALL CLOSED*
 *First quantum-resistant message: 2026-03-12, 09:16 CET*
 *The first quantum-resistant dedicated hardware messenger in the world.*
+
+---
+
+## Session 47 -- 2026-03-15 to 2026-03-16 (UX Overhaul)
+
+### Most Extensive UX Session -- 7 Bugs Closed, 25 Files Changed
+
+### Bug #22 CLOSED: Standby Freeze (Root Cause Found!)
+
+```
+Previous theory (Session 46): LVGL stack overflow.
+ACTUAL root cause: WiFi timers in Settings screen ran after screen destroy,
+accessing destroyed LVGL objects.
+
+Fix: ui_settings_cleanup() stops all timers and nulls all pointers
+before Settings screen deletion. Pattern: every ephemeral screen
+with timers needs a cleanup function.
+```
+
+### Bug #23 CLOSED (CRITICAL): LVGL Stack Overflow on Chat Switch
+
+```
+Root cause:
+  ratchet_state_t grew to ~5.7 KB after PQ (was 520 bytes).
+  ratchet_load_state() placed it as local variable on stack.
+  LVGL task has only 8 KB stack.
+  After SEC-01 PSRAM wipe on chat switch, NVS fallback triggered.
+
+Codepath:
+  on_contact_click() -> smp_set_active_contact() -> ratchet_set_active()
+  -> PSRAM slot empty after wipe -> ratchet_load_state()
+  -> ratchet_state_t on stack -> OVERFLOW
+
+Fix:
+  heap_caps_malloc(sizeof(ratchet_state_t), MALLOC_CAP_SPIRAM)
+  sodium_memzero before heap_caps_free on all 4 exit paths.
+```
+
+### Bug #24 CLOSED: Empty Chat After Lock Screen Unlock
+
+```
+Root cause:
+  Chat screen is ephemeral, destroyed on lock.
+  Navigation stack stores only screen IDs, not parameters.
+
+Fix:
+  ui_manager_lock(): save active contact index + screen to statics.
+  ui_manager_unlock(): if previous was CHAT, full restore
+  (smp_set_active_contact, ui_chat_set_contact, history load).
+  Same mechanism for Settings tab restore.
+```
+
+### Bug #26 CLOSED (CRITICAL): Contact Delete PQ NVS Ghosts
+
+```
+Two separate delete codepaths, both with identical gaps:
+  remove_contact() in smp_contacts.c (network DEL)
+  on_popup_delete() in ui_contacts_popup.c (local delete)
+
+7 PQ NVS keys remained as ghosts per deleted contact:
+  pq_XX_act, pq_XX_st, pq_XX_opk, pq_XX_osk, pq_XX_ppk, pq_XX_ct, pq_XX_ss
+  = ~5.2 KB NVS garbage, 1795 bytes cryptographic key material
+
+Fix:
+  New ratchet_wipe_slot(): sodium_memzero on PSRAM slot,
+  working copy handling (active_slot to 0xFF if deleted contact active),
+  cleanup in both delete paths. Post-delete: navigate to contact list.
+```
+
+### Bug #29 CLOSED: Unicode Emoji Crashes idf_monitor
+
+```
+24 lines with emojis and box-drawing in smp_contacts.c.
+idf_monitor uses cp1252, crashes on UTF-8 multi-byte.
+Fix: All replaced with ASCII tags ([OK], [FAIL], [NEW], [DEL], etc.).
+```
+
+### NVS Partition Resize
+
+```
+128 KB -> 1 MB
+
+Calculation:
+  128 contacts x 5.7 KB = 730 KB data
+  + 294 KB reserve (wear-leveling, GC, page headers)
+  = 1024 KB (1 MB)
+
+Old: only ~14 PQ contacts fit
+New: full 128 PQ contacts
+
+Factory partition moved to 0x110000 (64 KB aligned).
+eFuse HMAC (SEC-02, BLOCK_KEY1) remains intact.
+Flash method: erase-flash required (partition table changed).
+```
+
+### QR Connection Flow: 16 Live Status Stages
+
+```
+Auto-navigate from QR screen to contact list on first server response.
+RAM-backed s_connect[128] array survives screen switches.
+
+16 stages (uppercase, opacity pulsing):
+  1. SCANNED
+  2. INVITATION RECEIVED
+  3. CONNECTING TO PEER
+  4. KEY EXCHANGE
+  5. X3DH KEY AGREEMENT (~3s, X448)
+  6. SENDING CONFIRMATION
+  7. WAITING FOR PEER
+  8. DECRYPTING
+  9. DECRYPTING PEER INFO (~3s, PQ)
+  10. PEER INFO RECEIVED
+  11. NAME RECEIVED
+  12. EXCHANGING KEYS
+  13. SECURING CHANNEL
+  14. SENDING HELLO
+  15. WAITING FOR PEER
+  16. CONNECTED -> normal contact
+
+Trigger: Contact Queue MSG (~1s) instead of Reply Queue MSG (~9s).
+Event-to-UI latency: 260ms measured.
+60-second timeout with auto-cleanup.
+```
+
+### Per-Contact PQ Toggle: ABANDONED
+
+```
+3 attempts, all failed:
+
+Attempt 1: Set pq_active=0.
+  pq_recv_process() resets to 1 on every incoming PQ message.
+
+Attempt 2: pq_user_disabled flag.
+  Sending without PQ drops pending_ss from root key derivation.
+  Peer still includes it. Root keys diverge. Decrypt failure.
+
+Attempt 3: Deep analysis.
+  PQ state machine rotates keypairs on EVERY incoming message.
+  Peer encrypts with our old PK, but we deleted the SK.
+
+Conclusion: PQ cannot be unilaterally disabled on running connection.
+SimpleX Chat also does not have this feature.
+Future: Queue Rotation / Address Renewal.
+```
+
+### PQ UI: Settings Toggle + Chat Header
+
+```
+Settings INFO tab:
+  NVS Status (VAULT/OPEN) | eFuse Status (BURNED/NONE) | PQ Toggle
+  "E2EE PQ" (blue) when on, "E2EE" (green) when off
+  Toggle: new connections only
+
+Chat header (read-only):
+  Blue: "E2EE Quantum-Resistant" (pq_active=1, kem_state=2)
+  Yellow: "PQ Negotiation..." (pq_active=1, kem_state=1)
+  Green: "E2EE Standard" (pq_active=0)
+```
+
+### Additional Bugs Fixed Inline
+
+```
+mbedTLS format: cast (unsigned int)(-ret) in SIMPLEX PATCH
+Nav-stack QR: ui_manager_remove_from_nav_stack(UI_SCREEN_CONNECT)
+Bitmap reset: s_scanned_notified to file-scope, clear on create/delete
+DECRYPTING spam: guard with s_handshake_contact_idx
+PQ NVS load: pq_nvs_load(idx) in ratchet_set_active fallback
+PQ header timing: call in create() and switch_contact()
+Alice default: hardcoded "Alice" replaced with empty string
+```
+
+### New Lessons Learned (Session 47)
+
+251. **ratchet_state_t at ~5.7 KB must NEVER be on a task stack < 16 KB** - LVGL has 8 KB. Use heap_caps_malloc(MALLOC_CAP_SPIRAM) with sodium_memzero on all exit paths. Bug #23 crashed reliably on every chat switch (Session 47)
+252. **Ephemeral screens need RAM-backing for persistent state** - Status info surviving screen switches belongs in static RAM vars, not LVGL labels. s_connect[128] pattern: RAM array as truth source, UI reads on refresh (Session 47)
+253. **Every LVGL timer in an ephemeral screen MUST be cleaned on destroy** - Bug #22 root cause: WiFi timers accessing destroyed objects. ui_settings_cleanup() pattern: stop timers, null pointers, call before lv_obj_del (Session 47)
+254. **PQ state machine cannot be unilaterally disabled on running connection** - pending_ss mixed into root key derivation. Unilateral removal diverges chains. Keypair rotation on every incoming message prevents holding old state. Only solution: Queue Rotation (Session 47)
+255. **Trigger timing is critical for UX** - Reply Queue MSG (9s) vs Contact Queue MSG (1s) = 8 seconds perceived difference. Use earliest reliable signal. Measured: 260ms event-to-UI latency (Session 47)
+256. **git checkout for failed experiments** - Per-contact PQ toggle: 3 attempts, all rolled back cleanly. Prepared fields (pq_user_disabled) left in for future Queue Rotation (Session 47)
+257. **Contact delete must clean ALL layers including PQ** - 7 PQ NVS keys per contact = 5.2 KB garbage with 1795 bytes key material. ratchet_wipe_slot() with sodium_memzero. Both delete codepaths must call it (Session 47)
+
+---
+
+*Bug Tracker v43.0*
+*Last updated: March 16, 2026 - Session 47*
+*Total bugs documented: 78 (7 closed in S47, 3 open from community) + Bug E*
+*257 lessons learned*
+*Session 47: UX Overhaul -- NVS 1 MB, QR 16-Stage Flow, PQ UI, Per-Contact PQ Abandoned*
