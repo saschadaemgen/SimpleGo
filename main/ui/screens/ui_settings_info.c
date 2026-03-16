@@ -90,6 +90,7 @@ static void on_tz_plus(lv_event_t *e)
 
 static lv_obj_t *s_lock_simple = NULL;
 static lv_obj_t *s_lock_matrix = NULL;
+static lv_obj_t *s_lock_timer_val = NULL;
 
 static uint8_t get_lock_mode(void)
 {
@@ -131,6 +132,37 @@ static void on_lock_matrix(lv_event_t *e)
     smp_storage_save_blob(NVS_KEY_DISPLAY_LOCK, &mode, sizeof(mode));
     update_lock_labels(1);
     ESP_LOGI("UI_INFO", "Display lock mode: Matrix");
+}
+
+/* ================================================================
+ * Lock Timer +/- (Session 48)
+ * ================================================================ */
+
+static void update_lock_timer_label(void)
+{
+    if (!s_lock_timer_val) return;
+    uint8_t idx = ui_manager_get_lock_timer_idx();
+    lv_label_set_text(s_lock_timer_val, ui_manager_get_lock_timer_label(idx));
+}
+
+static void on_timer_minus(lv_event_t *e)
+{
+    (void)e;
+    uint8_t idx = ui_manager_get_lock_timer_idx();
+    if (idx > 0) {
+        ui_manager_set_lock_timer_idx(idx - 1);
+        update_lock_timer_label();
+    }
+}
+
+static void on_timer_plus(lv_event_t *e)
+{
+    (void)e;
+    uint8_t idx = ui_manager_get_lock_timer_idx();
+    if (idx < ui_manager_get_lock_timer_count() - 1) {
+        ui_manager_set_lock_timer_idx(idx + 1);
+        update_lock_timer_label();
+    }
 }
 
 /* ================================================================
@@ -625,6 +657,61 @@ void settings_create_info(lv_obj_t *parent)
         lv_obj_add_event_cb(s_lock_matrix, on_lock_matrix, LV_EVENT_CLICKED, NULL);
     }
 
+    /* === Row 8: Lock Timer [ - ] 60s [ + ] === */
+    {
+        lv_obj_t *row = create_row_base(s_list);
+        create_accent(row, 6, UI_COLOR_PRIMARY);
+        create_key(row, L_KEY_X, "Timeout");
+
+        uint8_t cur_idx = ui_manager_get_lock_timer_idx();
+
+        /* Minus button (14x14 square) */
+        lv_obj_t *btn_m = lv_btn_create(row);
+        lv_obj_set_size(btn_m, 14, 14);
+        lv_obj_align(btn_m, LV_ALIGN_LEFT_MID, L_VAL_X, 0);
+        lv_obj_set_style_bg_opa(btn_m, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_bg_opa(btn_m, LV_OPA_20, LV_STATE_PRESSED);
+        lv_obj_set_style_bg_color(btn_m, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(btn_m, 1, 0);
+        lv_obj_set_style_border_color(btn_m, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_radius(btn_m, 1, 0);
+        lv_obj_set_style_shadow_width(btn_m, 0, 0);
+        lv_obj_set_style_pad_all(btn_m, 0, 0);
+        lv_obj_t *ml = lv_label_create(btn_m);
+        lv_label_set_text(ml, "-");
+        lv_obj_set_style_text_color(ml, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(ml, UI_FONT_SM, 0);
+        lv_obj_center(ml);
+        lv_obj_add_event_cb(btn_m, on_timer_minus, LV_EVENT_CLICKED, NULL);
+
+        /* Timer value */
+        s_lock_timer_val = lv_label_create(row);
+        lv_label_set_text(s_lock_timer_val,
+            ui_manager_get_lock_timer_label(cur_idx));
+        lv_obj_set_style_text_color(s_lock_timer_val, UI_COLOR_PRIMARY, 0);
+        lv_obj_set_style_text_font(s_lock_timer_val, UI_FONT_SM, 0);
+        lv_obj_align(s_lock_timer_val, LV_ALIGN_LEFT_MID, L_VAL_X + 20, 0);
+
+        /* Plus button (14x14 square) */
+        lv_obj_t *btn_p = lv_btn_create(row);
+        lv_obj_set_size(btn_p, 14, 14);
+        lv_obj_align(btn_p, LV_ALIGN_LEFT_MID, L_VAL_X + 58, 0);
+        lv_obj_set_style_bg_opa(btn_p, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_bg_opa(btn_p, LV_OPA_20, LV_STATE_PRESSED);
+        lv_obj_set_style_bg_color(btn_p, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(btn_p, 1, 0);
+        lv_obj_set_style_border_color(btn_p, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_radius(btn_p, 1, 0);
+        lv_obj_set_style_shadow_width(btn_p, 0, 0);
+        lv_obj_set_style_pad_all(btn_p, 0, 0);
+        lv_obj_t *pl = lv_label_create(btn_p);
+        lv_label_set_text(pl, "+");
+        lv_obj_set_style_text_color(pl, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(pl, UI_FONT_SM, 0);
+        lv_obj_center(pl);
+        lv_obj_add_event_cb(btn_p, on_timer_plus, LV_EVENT_CLICKED, NULL);
+    }
+
     /* Initial refresh + timer */
     refresh_values();
     s_refresh_timer = lv_timer_create(refresh_timer_cb, 2000, NULL);
@@ -644,6 +731,7 @@ void settings_nullify_info_pointers(void)
     s_tz_val = NULL;
     s_lock_simple = NULL;
     s_lock_matrix = NULL;
+    s_lock_timer_val = NULL;
 }
 
 void settings_info_refresh(void) { refresh_values(); }
