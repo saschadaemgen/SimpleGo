@@ -125,9 +125,12 @@ static void start_anim(const char *title)
     if (hdr_title_lbl) lv_label_set_text(hdr_title_lbl, title);
     if (hdr_action_lbl) {
         lv_label_set_text(hdr_action_lbl, s_anim_frames[0]);
-        lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_WARNING, 0);
+        lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_PRIMARY, 0);
     }
-    if (hdr_action_btn) lv_obj_clear_flag(hdr_action_btn, LV_OBJ_FLAG_HIDDEN);
+    if (hdr_action_btn) {
+        lv_obj_clear_flag(hdr_action_btn, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_align(hdr_action_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+    }
 
     if (!s_anim_timer) {
         s_anim_timer = lv_timer_create(anim_dots_cb, 300, NULL);
@@ -291,25 +294,28 @@ void settings_on_wifi_hdr_action(void)
 
 void settings_update_wifi_header(void)
 {
+    /* Left side: selected network or "Networks" */
     wifi_status_t ws = wifi_manager_get_status();
     if (s_selected_ssid[0]) {
         lv_label_set_text(hdr_title_lbl, s_selected_ssid);
     } else if (ws.connected) {
         char buf[36];
-        snprintf(buf, sizeof(buf), "%.24s " LV_SYMBOL_OK, ws.ssid);
+        snprintf(buf, sizeof(buf), "%.28s " LV_SYMBOL_OK, ws.ssid);
         lv_label_set_text(hdr_title_lbl, buf);
     } else {
         lv_label_set_text(hdr_title_lbl, "Networks");
     }
+
+    /* Right side: action button */
     lv_obj_clear_flag(hdr_action_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_align(hdr_action_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+
     if (s_selected_ssid[0] && s_selected_is_connected) {
-        /* Selected the connected network -> DISCONNECT */
         lv_label_set_text(hdr_action_lbl, "DISCONNECT");
         lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_ERROR, 0);
     } else if (s_selected_ssid[0]) {
-        /* Selected a different network -> CONNECT */
         lv_label_set_text(hdr_action_lbl, "CONNECT");
-        lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_SECONDARY, 0);
+        lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_PRIMARY, 0);
     } else {
         lv_label_set_text(hdr_action_lbl, "SCAN");
         lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_PRIMARY, 0);

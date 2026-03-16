@@ -40,10 +40,9 @@ static lv_obj_t *s_list         = NULL;
 static lv_obj_t *s_heap_val     = NULL;
 static lv_obj_t *s_psram_val    = NULL;
 static lv_obj_t *s_lvgl_val     = NULL;
-static lv_obj_t *s_wifi_val     = NULL;
+static lv_obj_t *s_wifi_val     = NULL;   /* WiFi signal strength */
 static lv_obj_t *s_name_val     = NULL;
-static lv_obj_t *s_pq_switch    = NULL;
-static lv_obj_t *s_brand_pq     = NULL;   /* PQ status in branding row */
+static lv_obj_t *s_brand_pq     = NULL;   /* PQ status in branding row (clickable) */
 static lv_timer_t *s_refresh_timer = NULL;
 
 /* Name editor overlay */
@@ -71,37 +70,35 @@ static void refresh_values(void)
     }
     if (s_heap_val) {
         uint32_t fh = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-        lv_label_set_text_fmt(s_heap_val, "%lu B", (unsigned long)fh);
+        lv_label_set_text_fmt(s_heap_val, "%luB", (unsigned long)fh);
     }
     if (s_psram_val) {
         uint32_t fp = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-        lv_label_set_text_fmt(s_psram_val, "%lu KB", (unsigned long)(fp / 1024));
+        lv_label_set_text_fmt(s_psram_val, "%luKB", (unsigned long)(fp / 1024));
     }
     if (s_lvgl_val) {
         lv_mem_monitor_t mon;
         lv_mem_monitor(&mon);
-        lv_label_set_text_fmt(s_lvgl_val, "%lu/%dK %d%%",
-                              (unsigned long)mon.free_size / 1024, 64, mon.used_pct);
+        lv_label_set_text_fmt(s_lvgl_val, "%d%%", mon.used_pct);
     }
     if (s_wifi_val) {
         if (wifi_connected) {
             wifi_status_t ws = wifi_manager_get_status();
-            lv_label_set_text_fmt(s_wifi_val, "%s", ws.ssid);
-            lv_obj_set_style_text_color(s_wifi_val, UI_COLOR_SECONDARY, 0);
+            lv_label_set_text_fmt(s_wifi_val, "%ddBm", ws.rssi);
+            lv_obj_set_style_text_color(s_wifi_val,
+                ws.rssi > -60 ? UI_COLOR_PRIMARY : UI_COLOR_PRIMARY, 0);
         } else {
             lv_label_set_text(s_wifi_val, "Offline");
-            lv_obj_set_style_text_color(s_wifi_val, UI_COLOR_ERROR, 0);
+            lv_obj_set_style_text_color(s_wifi_val, UI_COLOR_PRIMARY, 0);
         }
     }
     /* Update PQ status in branding row */
     if (s_brand_pq) {
         uint8_t pq = smp_settings_get_pq_enabled();
         if (pq) {
-            lv_label_set_text(s_brand_pq, "E2EE PQ " LV_SYMBOL_OK);
-            lv_obj_set_style_text_color(s_brand_pq, lv_color_hex(0x4488FF), 0);
+            lv_label_set_text(s_brand_pq, "E2EE Quantum-Resistant");
         } else {
-            lv_label_set_text(s_brand_pq, "E2EE " LV_SYMBOL_OK);
-            lv_obj_set_style_text_color(s_brand_pq, UI_COLOR_SECONDARY, 0);
+            lv_label_set_text(s_brand_pq, "E2EE Standard");
         }
     }
 }
@@ -207,7 +204,7 @@ static void show_name_overlay(void)
 
     lv_obj_t *save_btn = lv_label_create(s_name_overlay);
     lv_label_set_text(save_btn, LV_SYMBOL_OK " Save");
-    lv_obj_set_style_text_color(save_btn, UI_COLOR_SECONDARY, 0);
+    lv_obj_set_style_text_color(save_btn, UI_COLOR_PRIMARY, 0);
     lv_obj_set_style_text_font(save_btn, UI_FONT, 0);
     lv_obj_set_pos(save_btn, 20, 124);
     lv_obj_add_flag(save_btn, LV_OBJ_FLAG_CLICKABLE);
@@ -245,10 +242,11 @@ static void on_name_row_click(lv_event_t *e)
 
 static void on_pq_toggle(lv_event_t *e)
 {
-    lv_obj_t *sw = lv_event_get_target(e);
-    bool on = lv_obj_has_state(sw, LV_STATE_CHECKED);
-    smp_settings_set_pq_enabled(on ? 1 : 0);
-    ESP_LOGI("UI_INFO", "Post-Quantum %s", on ? "ON" : "OFF");
+    (void)e;
+    uint8_t current = smp_settings_get_pq_enabled();
+    uint8_t next = current ? 0 : 1;
+    smp_settings_set_pq_enabled(next);
+    ESP_LOGI("UI_INFO", "Post-Quantum %s", next ? "ON" : "OFF");
     refresh_values();
 }
 
@@ -316,13 +314,13 @@ static void create_dual_row(lv_obj_t *parent,
     /* Left side */
     create_accent(row, 6, lclr);
     create_key(row, L_KEY_X, lkey);
-    lv_obj_t *lv = create_val(row, L_VAL_X, lval, UI_COLOR_TEXT_WHITE);
+    lv_obj_t *lv = create_val(row, L_VAL_X, lval, UI_COLOR_PRIMARY);
     if (lval_out) *lval_out = lv;
 
     /* Right side */
     create_accent(row, R_ACCENT_X, rclr);
     create_key(row, R_KEY_X, rkey);
-    lv_obj_t *rv = create_val(row, R_VAL_X, rval, UI_COLOR_TEXT_WHITE);
+    lv_obj_t *rv = create_val(row, R_VAL_X, rval, UI_COLOR_PRIMARY);
     if (rval_out) *rval_out = rv;
 }
 
@@ -345,61 +343,61 @@ void settings_create_info(lv_obj_t *parent)
     lv_obj_add_flag(s_list, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scrollbar_mode(s_list, LV_SCROLLBAR_MODE_OFF);
 
-    /* === Row 0: Branding - SimpleGo + E2EE/PQ status === */
+    /* === Row 0: Name (clickable) + PQ status === */
     {
         lv_obj_t *row = lv_obj_create(s_list);
         lv_obj_set_size(row, LV_PCT(100), BRAND_H);
         lv_obj_set_style_bg_color(row, ROW_BG, 0);
         lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+        lv_obj_set_style_bg_color(row, lv_color_hex(0x001420), LV_STATE_PRESSED);
         lv_obj_set_style_border_width(row, 0, 0);
         lv_obj_set_style_radius(row, 0, 0);
         lv_obj_set_style_pad_all(row, 0, 0);
-        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-
-        lv_obj_t *bl = lv_label_create(row);
-        lv_label_set_text(bl, "SimpleGo");
-        lv_obj_set_style_text_color(bl, UI_COLOR_PRIMARY, 0);
-        lv_obj_set_style_text_font(bl, UI_FONT, 0);
-        lv_obj_align(bl, LV_ALIGN_LEFT_MID, 14, 0);
-
-        s_brand_pq = lv_label_create(row);
-        lv_obj_set_style_text_font(s_brand_pq, UI_FONT_SM, 0);
-        lv_obj_align(s_brand_pq, LV_ALIGN_RIGHT_MID, -8, 0);
-        /* Color and text set in refresh_values() */
-    }
-
-    /* === Row 1: Name (clickable, left) | Version (right) === */
-    {
-        lv_obj_t *row = create_row_base(s_list);
-        lv_obj_set_style_bg_color(row, lv_color_hex(0x001420), LV_STATE_PRESSED);
+        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(row, on_name_row_click, LV_EVENT_CLICKED, NULL);
 
-        /* Left: Name */
-        create_accent(row, 6, UI_COLOR_ACCENT);
-        create_key(row, L_KEY_X, "Name");
         char name[32];
         storage_get_display_name(name, sizeof(name));
-        s_name_val = create_val(row, L_VAL_X, name, UI_COLOR_ACCENT);
+        s_name_val = lv_label_create(row);
+        lv_label_set_text(s_name_val, name);
+        lv_obj_set_style_text_color(s_name_val, UI_COLOR_PRIMARY, 0);
+        lv_obj_set_style_text_font(s_name_val, UI_FONT, 0);
+        lv_obj_align(s_name_val, LV_ALIGN_LEFT_MID, 14, 0);
+
         lv_obj_t *edit = lv_label_create(row);
         lv_label_set_text(edit, LV_SYMBOL_EDIT);
         lv_obj_set_style_text_color(edit, UI_COLOR_TEXT_DIM, 0);
         lv_obj_set_style_text_font(edit, UI_FONT_SM, 0);
-        lv_obj_set_pos(edit, 148, (ROW_H - 10) / 2);
+        lv_obj_set_pos(edit, 120, (BRAND_H - 10) / 2);
 
-        /* Right: Version */
-        create_accent(row, R_ACCENT_X, UI_COLOR_PRIMARY);
-        create_key(row, R_KEY_X, "Version");
-        create_val(row, R_VAL_X, UI_VERSION, UI_COLOR_TEXT_WHITE);
+        s_brand_pq = lv_label_create(row);
+        lv_obj_set_style_text_font(s_brand_pq, UI_FONT_SM, 0);
+        lv_obj_set_style_text_color(s_brand_pq, UI_COLOR_PRIMARY, 0);
+        lv_obj_align(s_brand_pq, LV_ALIGN_RIGHT_MID, -20, 0);
+        lv_obj_add_flag(s_brand_pq, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(s_brand_pq, 10);
+        lv_obj_add_event_cb(s_brand_pq, on_pq_toggle, LV_EVENT_CLICKED, NULL);
+
+        /* Edit icon - same style as Name edit (dim, small) */
+        lv_obj_t *pq_edit = lv_label_create(row);
+        lv_label_set_text(pq_edit, LV_SYMBOL_EDIT);
+        lv_obj_set_style_text_color(pq_edit, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(pq_edit, UI_FONT_SM, 0);
+        lv_obj_align(pq_edit, LV_ALIGN_RIGHT_MID, -8, 0);
+        lv_obj_add_flag(pq_edit, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(pq_edit, 10);
+        lv_obj_add_event_cb(pq_edit, on_pq_toggle, LV_EVENT_CLICKED, NULL);
+        /* Color and text set in refresh_values() */
     }
 
-    /* === Row 2: Hardware | Build === */
+    /* === Row 1: Version | Hardware === */
     create_dual_row(s_list,
+        "Version", "0.1.17-a", UI_COLOR_PRIMARY,
         "Hardware", "ESP32-S3", UI_COLOR_PRIMARY,
-        "Build", "ESP-IDF 5.5", UI_COLOR_PRIMARY,
         NULL, NULL);
 
-    /* === Row 3: NVS Mode | eFuse Status === */
+    /* === Row 2: Build | NVS Mode === */
     {
         bool vault =
 #if defined(CONFIG_NVS_ENCRYPTION)
@@ -407,68 +405,51 @@ void settings_create_info(lv_obj_t *parent)
 #else
             false;
 #endif
+
+        lv_obj_t *row = create_row_base(s_list);
+        create_accent(row, 6, UI_COLOR_PRIMARY);
+        create_key(row, L_KEY_X, "Build");
+        create_val(row, L_VAL_X, "IDF 5.5.2", UI_COLOR_PRIMARY);
+        create_accent(row, R_ACCENT_X, UI_COLOR_PRIMARY);
+        create_key(row, R_KEY_X, "NVS");
+        create_val(row, R_VAL_X, vault ? "VAULT" : "OPEN",
+                   vault ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM);
+    }
+
+    /* === Row 3: eFuse Status | License === */
+    {
         bool burned = is_efuse_burned();
 
         lv_obj_t *row = create_row_base(s_list);
 
-        /* Left: NVS Mode */
-        create_accent(row, 6, UI_COLOR_ENCRYPT);
-        create_key(row, L_KEY_X, "NVS");
-        create_val(row, L_VAL_X, vault ? "VAULT" : "OPEN",
-                   vault ? UI_COLOR_SECONDARY : UI_COLOR_TEXT_DIM);
+        create_accent(row, 6, UI_COLOR_PRIMARY);
+        create_key(row, L_KEY_X, "eFuse");
+        create_val(row, L_VAL_X, burned ? "BURNED" : "NONE",
+                   burned ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM);
 
-        /* Right: eFuse */
-        create_accent(row, R_ACCENT_X, UI_COLOR_ENCRYPT);
-        create_key(row, R_KEY_X, "eFuse");
-        create_val(row, R_VAL_X, burned ? "BURNED" : "NONE",
-                   burned ? UI_COLOR_SECONDARY : UI_COLOR_TEXT_DIM);
-    }
-
-    /* === Row 4: Post-Quantum Toggle | License === */
-    {
-        lv_obj_t *row = create_row_base(s_list);
-
-        /* Left: PQ toggle */
-        create_accent(row, 6, lv_color_hex(0x4488FF));
-        create_key(row, L_KEY_X, "PQ");
-
-        s_pq_switch = lv_switch_create(row);
-        lv_obj_set_size(s_pq_switch, 36, 18);
-        lv_obj_align(s_pq_switch, LV_ALIGN_LEFT_MID, L_VAL_X, 0);
-        lv_obj_set_style_bg_color(s_pq_switch, lv_color_hex(0x002030), LV_PART_MAIN);
-        lv_obj_set_style_bg_color(s_pq_switch, lv_color_hex(0x4488FF), LV_PART_INDICATOR | LV_STATE_CHECKED);
-        lv_obj_set_style_bg_color(s_pq_switch, lv_color_white(), LV_PART_KNOB);
-        lv_obj_set_style_pad_all(s_pq_switch, 2, LV_PART_KNOB);
-
-        if (smp_settings_get_pq_enabled()) {
-            lv_obj_add_state(s_pq_switch, LV_STATE_CHECKED);
-        }
-        lv_obj_add_event_cb(s_pq_switch, on_pq_toggle, LV_EVENT_VALUE_CHANGED, NULL);
-
-        /* Right: License */
-        create_accent(row, R_ACCENT_X, UI_COLOR_TEXT_DIM);
+        create_accent(row, R_ACCENT_X, UI_COLOR_PRIMARY);
         create_key(row, R_KEY_X, "License");
         create_val(row, R_VAL_X, "AGPL-3.0", UI_COLOR_TEXT_DIM);
     }
 
-    /* === Row 5: Heap | PSRAM === */
+    /* === Row 4: WiFi Signal | Heap === */
     create_dual_row(s_list,
-        "Heap", "...", UI_COLOR_SECONDARY,
-        "PSRAM", "...", UI_COLOR_SECONDARY,
-        &s_heap_val, &s_psram_val);
+        "WiFi", "...", UI_COLOR_PRIMARY,
+        "Heap", "...", UI_COLOR_PRIMARY,
+        &s_wifi_val, &s_heap_val);
 
-    /* === Row 6: LVGL | WiFi === */
+    /* === Row 5: PSRAM | LVGL === */
     create_dual_row(s_list,
-        "LVGL", "...", UI_COLOR_SECONDARY,
-        "WiFi", "...", UI_COLOR_SECONDARY,
-        &s_lvgl_val, &s_wifi_val);
+        "PSRAM", "...", UI_COLOR_PRIMARY,
+        "LVGL", "...", UI_COLOR_PRIMARY,
+        &s_psram_val, &s_lvgl_val);
 
-    /* === Row 7: Server === */
+    /* === Row 6: Server === */
     {
         lv_obj_t *row = create_row_base(s_list);
         create_accent(row, 6, UI_COLOR_PRIMARY);
         create_key(row, L_KEY_X, "Server");
-        create_val(row, L_VAL_X, "smp1.simplego", UI_COLOR_TEXT_WHITE);
+        create_val(row, L_VAL_X, "simplego", UI_COLOR_PRIMARY);
     }
 
     /* Initial refresh + timer */
@@ -486,7 +467,6 @@ void settings_nullify_info_pointers(void)
 {
     s_list = NULL;
     s_heap_val = s_psram_val = s_lvgl_val = s_wifi_val = s_name_val = NULL;
-    s_pq_switch = NULL;
     s_brand_pq = NULL;
 }
 

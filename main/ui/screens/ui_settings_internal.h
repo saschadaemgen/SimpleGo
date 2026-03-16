@@ -33,16 +33,15 @@ extern "C" {
 #endif
 
 /* ================================================================
- * Layout Constants (identical to ui_contacts.c)
+ * Layout Constants (Session 47: Combined Bar like ui_main.c)
  * ================================================================ */
 
-#define HDR_Y           (UI_STATUS_H + 1)         /* 17 */
-#define HDR_H           26
-#define DIM_Y           (HDR_Y + HDR_H)            /* 43 */
+#define MAIN_BAR_H      26                         /* Combined bar height */
+#define GLOW_Y          MAIN_BAR_H                 /* 26 */
+#define CONTENT_Y       (MAIN_BAR_H + 1)           /* 27 */
 #define BAR_H           36
 #define BAR_Y           (UI_SCREEN_H - BAR_H)      /* 204 */
-#define CONTENT_Y       (DIM_Y + 1)                /* 44 */
-#define CONTENT_H       (BAR_Y - CONTENT_Y)        /* 160 */
+#define CONTENT_H       (BAR_Y - CONTENT_Y)        /* 177 */
 
 /* Bottom bar: 4 equal buttons */
 #define BAR_BTN_W       (UI_SCREEN_W / 4)          /* 80 */

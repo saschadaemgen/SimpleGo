@@ -26,7 +26,7 @@ settings_tab_t active_tab   = TAB_BRIGHT;
 lv_obj_t *content_area      = NULL;
 lv_obj_t *s_settings_scr    = NULL;
 
-/* Header dynamic elements */
+/* Combined bar dynamic elements */
 lv_obj_t *hdr_title_lbl     = NULL;
 lv_obj_t *hdr_action_btn    = NULL;
 lv_obj_t *hdr_action_lbl    = NULL;
@@ -49,7 +49,7 @@ void settings_style_black(lv_obj_t *obj)
 }
 
 /* ================================================================
- * Header (contacts-style: back arrow + dynamic title + action btn)
+ * Pixel-Art Helpers (from ui_main.c, duplicated for independence)
  * ================================================================ */
 
 static void on_hdr_action(lv_event_t *e)
@@ -68,7 +68,6 @@ static void update_tab_button_styles(void)
     for (int i = 0; i < 3; i++) {
         if (!s_tab_btns[i]) continue;
         lv_obj_t *lbl = lv_obj_get_child(s_tab_btns[i], 0);
-        /* No background highlight -- text only */
         lv_obj_set_style_bg_opa(s_tab_btns[i], LV_OPA_TRANSP, 0);
         if (i == (int)active_tab) {
             if (lbl) {
@@ -82,6 +81,66 @@ static void update_tab_button_styles(void)
             }
         }
     }
+}
+
+/* ================================================================
+ * Simple Title Bar (Session 47: 26px, tab name + action button)
+ *
+ * No pixel-art (battery/WiFi/time stay on Main screen only).
+ * Tab name on left, action button where needed.
+ * ================================================================ */
+
+static void create_combined_bar(lv_obj_t *parent)
+{
+    lv_obj_t *bar = lv_obj_create(parent);
+    lv_obj_set_size(bar, UI_SCREEN_W, MAIN_BAR_H);
+    lv_obj_set_pos(bar, 0, 0);
+    lv_obj_set_style_bg_color(bar, UI_COLOR_BG, 0);
+    lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(bar, 0, 0);
+    lv_obj_set_style_radius(bar, 0, 0);
+    lv_obj_set_style_pad_all(bar, 0, 0);
+    lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* Tab title (dynamic, set per-tab) */
+    hdr_title_lbl = lv_label_create(bar);
+    lv_label_set_text(hdr_title_lbl, "Settings");
+    lv_obj_set_style_text_color(hdr_title_lbl, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(hdr_title_lbl, UI_FONT, 0);
+    lv_obj_align(hdr_title_lbl, LV_ALIGN_LEFT_MID, 6, 0);
+
+    /* Action button (WiFi tab: SCAN/CONNECT/DISCONNECT, hidden otherwise) */
+    hdr_action_btn = lv_btn_create(bar);
+    lv_obj_set_height(hdr_action_btn, MAIN_BAR_H);
+    lv_obj_set_style_bg_opa(hdr_action_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(hdr_action_btn, LV_OPA_20, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(hdr_action_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(hdr_action_btn, 0, 0);
+    lv_obj_set_style_radius(hdr_action_btn, 0, 0);
+    lv_obj_set_style_shadow_width(hdr_action_btn, 0, 0);
+    lv_obj_set_style_pad_left(hdr_action_btn, 8, 0);
+    lv_obj_set_style_pad_right(hdr_action_btn, 8, 0);
+    lv_obj_align(hdr_action_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+
+    hdr_action_lbl = lv_label_create(hdr_action_btn);
+    lv_label_set_text(hdr_action_lbl, "SCAN");
+    lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(hdr_action_lbl, UI_FONT, 0);
+    lv_obj_center(hdr_action_lbl);
+
+    lv_obj_add_event_cb(hdr_action_btn, on_hdr_action, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_flag(hdr_action_btn, LV_OBJ_FLAG_HIDDEN);
+
+    /* Glow line below bar */
+    lv_obj_t *glow = lv_obj_create(parent);
+    lv_obj_set_width(glow, LV_PCT(100));
+    lv_obj_set_height(glow, 1);
+    lv_obj_set_pos(glow, 0, GLOW_Y);
+    lv_obj_set_style_bg_color(glow, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_bg_opa(glow, (lv_opa_t)64, 0);
+    lv_obj_set_style_border_width(glow, 0, 0);
+    lv_obj_set_style_radius(glow, 0, 0);
+    lv_obj_clear_flag(glow, LV_OBJ_FLAG_CLICKABLE);
 }
 
 void settings_update_header_for_tab(void)
@@ -101,55 +160,6 @@ void settings_update_header_for_tab(void)
         lv_obj_add_flag(hdr_action_btn, LV_OBJ_FLAG_HIDDEN);
         break;
     }
-}
-
-static void create_header(lv_obj_t *parent)
-{
-    lv_obj_t *hdr = lv_obj_create(parent);
-    lv_obj_set_width(hdr, LV_PCT(100));
-    lv_obj_set_height(hdr, HDR_H);
-    lv_obj_set_pos(hdr, 0, HDR_Y);
-    settings_style_black(hdr);
-
-    /* Title (dynamic, set per-tab) */
-    hdr_title_lbl = lv_label_create(hdr);
-    lv_label_set_text(hdr_title_lbl, "Settings");
-    lv_obj_set_style_text_color(hdr_title_lbl, UI_COLOR_TEXT_WHITE, 0);
-    lv_obj_set_style_text_font(hdr_title_lbl, UI_FONT, 0);
-    lv_obj_align(hdr_title_lbl, LV_ALIGN_LEFT_MID, 4, 0);
-
-    /* Action button (SCAN / CONNECT / DISCONNECT for WiFi tab) */
-    hdr_action_btn = lv_btn_create(hdr);
-    lv_obj_set_height(hdr_action_btn, HDR_H);
-    lv_obj_set_style_bg_opa(hdr_action_btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_opa(hdr_action_btn, LV_OPA_20, LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(hdr_action_btn, UI_COLOR_PRIMARY, LV_STATE_PRESSED);
-    lv_obj_set_style_border_width(hdr_action_btn, 0, 0);
-    lv_obj_set_style_radius(hdr_action_btn, 0, 0);
-    lv_obj_set_style_shadow_width(hdr_action_btn, 0, 0);
-    lv_obj_set_style_pad_left(hdr_action_btn, 8, 0);
-    lv_obj_set_style_pad_right(hdr_action_btn, 4, 0);
-    lv_obj_align(hdr_action_btn, LV_ALIGN_RIGHT_MID, 0, 0);
-
-    hdr_action_lbl = lv_label_create(hdr_action_btn);
-    lv_label_set_text(hdr_action_lbl, "SCAN");
-    lv_obj_set_style_text_color(hdr_action_lbl, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_text_font(hdr_action_lbl, UI_FONT, 0);
-    lv_obj_center(hdr_action_lbl);
-
-    lv_obj_add_event_cb(hdr_action_btn, on_hdr_action, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_flag(hdr_action_btn, LV_OBJ_FLAG_HIDDEN); /* shown only on WIFI tab */
-
-    /* Dim line below header */
-    lv_obj_t *dim = lv_obj_create(parent);
-    lv_obj_set_width(dim, LV_PCT(100));
-    lv_obj_set_height(dim, 1);
-    lv_obj_set_pos(dim, 0, DIM_Y);
-    lv_obj_set_style_bg_color(dim, UI_COLOR_LINE_DIM, 0);
-    lv_obj_set_style_bg_opa(dim, LV_OPA_50, 0);
-    lv_obj_set_style_border_width(dim, 0, 0);
-    lv_obj_set_style_radius(dim, 0, 0);
-    lv_obj_clear_flag(dim, LV_OBJ_FLAG_CLICKABLE);
 }
 
 /* ================================================================
@@ -300,12 +310,8 @@ lv_obj_t *ui_settings_create(void)
     ui_theme_apply(scr);
     s_settings_scr = scr;
 
-    /* Status bar */
-    lv_obj_t *go_btn = ui_create_status_bar(scr);
-    lv_obj_add_event_cb(go_btn, on_back, LV_EVENT_CLICKED, NULL);
-
-    /* Header with dynamic title + action button */
-    create_header(scr);
+    /* Combined bar (26px, replaces status bar + header) */
+    create_combined_bar(scr);
 
     /* Content area (tab content goes here) */
     create_content_area(scr);
