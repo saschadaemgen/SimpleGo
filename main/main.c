@@ -547,7 +547,7 @@ void app_main(void) {
     // Storage Phase 1: NVS only (before display, no SPI conflict)
     smp_storage_init();
     smp_storage_print_info();
-    smp_storage_self_test();
+    // Bug #30: Boot test removed (saved ~50ms)
 
     // Session 33: Allocate multi-contact arrays in PSRAM
     if (!ratchet_multi_init()) {
@@ -653,43 +653,16 @@ void app_main(void) {
     }
     vTaskDelay(pdMS_TO_TICKS(1000));
 
-    // ========== Auftrag 35g: NTP Time Sync ==========
-    ESP_LOGI(TAG, "Starting NTP sync...");
+    // ========== Auftrag 35g: NTP Time Sync (non-blocking) ==========
+    // Bug #30: Init NTP but don't block boot waiting for sync.
+    // Sync completes in background, timestamps use uptime until then.
+    ESP_LOGI(TAG, "Starting NTP sync (non-blocking)...");
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
     esp_sntp_setservername(0, "pool.ntp.org");
     esp_sntp_init();
 
-    int ntp_retry = 0;
-    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ntp_retry < 20) {
-        vTaskDelay(pdMS_TO_TICKS(500));
-        ntp_retry++;
-    }
-    if (sntp_get_sync_status() != SNTP_SYNC_STATUS_RESET) {
-        time_t now = time(NULL);
-        struct tm timeinfo;
-        localtime_r(&now, &timeinfo);
-        ESP_LOGI(TAG, "NTP synced! %04d-%02d-%02d %02d:%02d:%02d UTC",
-                 timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
-                 timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-    } else {
-        ESP_LOGW(TAG, "NTP sync timeout - timestamps will be 0");
-    }
-
-    // ========== Session 46: sntrup761 Post-Quantum KEM Test ==========
-    // Runs once at boot to verify PQClean component on PSRAM stack.
-    // WiFi is active here -> esp_fill_random() has true hardware entropy.
-    // Remove this block after successful verification.
-    {
-        ESP_LOGI(TAG, "");
-        ESP_LOGI(TAG, "=== sntrup761 Post-Quantum KEM Test ===");
-        int pq_result = sntrup761_run_test();
-        if (pq_result == 0) {
-            ESP_LOGI(TAG, "=== PQ Test: PASS ===");
-        } else {
-            ESP_LOGE(TAG, "=== PQ Test: FAIL (code %d) ===", pq_result);
-        }
-        ESP_LOGI(TAG, "");
-    }
+    // Bug #30: sntrup761 standalone test removed (saved ~2200ms)
+    // PQ KEM verified in Session 46, crypto task validates on every use.
 
     // Session 46 Teil E: Start PQ crypto task (80 KB PSRAM, for keygen/encap/decap)
     if (pq_crypto_task_init() != ESP_OK) {
@@ -702,11 +675,8 @@ void app_main(void) {
     uint8_t pq_on = smp_settings_get_pq_enabled();
     ESP_LOGI(TAG, "SEC-06: Post-Quantum Encryption = %s", pq_on ? "ON" : "OFF");
 
-    // Session 46 Teil C: PQ header wire format round-trip test
-    pq_header_test();
-
-    // Session 46 Teil D: HKDF root key derivation KAT
-    pq_hkdf_kat_test();
+    // Bug #30: PQ header + HKDF KAT tests removed (saved ~170ms)
+    // Verified in Session 46, crypto correctness proven by successful PQ messages.
 
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========
     if (smp_storage_exists("rat_00") && smp_storage_exists("queue_our")) {
