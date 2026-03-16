@@ -483,8 +483,33 @@ static void smp_connect(void) {
     ESP_LOGI(TAG, "|   App logic on main task (64KB)      |");
     ESP_LOGI(TAG, "+--------------------------------------+");
 
-    /* Session 48: Final splash progress(100) moved to app_init_run()
-     * in smp_tasks.c - fires AFTER re-subscribe is truly complete. */
+    /* Session 48: Splash done - subscribe finished in smp_connect(),
+     * tasks started, ready for messages. */
+    {
+#if defined(CONFIG_NVS_ENCRYPTION)
+        bool vault = true;
+#else
+        bool vault = false;
+#endif
+        uint8_t pq = smp_settings_get_pq_enabled();
+        int layers = pq ? 5 : 4;
+        if (vault && pq) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "eFuse sealed. %d layers. Quantum-ready.", layers);
+            ui_splash_set_status(msg);
+        } else if (vault) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "eFuse sealed. %d layers active.", layers);
+            ui_splash_set_status(msg);
+        } else if (pq) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "%d layers active. Quantum-ready.", layers);
+            ui_splash_set_status(msg);
+        } else {
+            ui_splash_set_status("All systems go.");
+        }
+        ui_splash_set_progress(100);
+    }
 
     // This blocks forever (ring buffer read loop)
     smp_app_run(kbd_msg_queue);
@@ -655,7 +680,9 @@ void app_main(void) {
     // Storage Phase 2: SD card (after display owns SPI bus)
     ui_splash_set_status("Mounting secure storage...");
     ui_splash_set_progress(10);
+    tdeck_lvgl_lock(1000);   /* Session 48: SPI2 bus shared with display */
     smp_storage_init_sd();
+    tdeck_lvgl_unlock();
 
     ui_splash_set_status("Connecting to WiFi...");
     ui_splash_set_progress(20);
