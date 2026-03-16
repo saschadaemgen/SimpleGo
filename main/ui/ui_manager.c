@@ -85,17 +85,21 @@ static ui_screen_t nav_stack_pop(void)
     return UI_SCREEN_MAIN;
 }
 
-/* Session 47 2d: Remove all occurrences of a screen from nav stack */
+/* Auftrag 2d: Remove a specific screen from nav stack (e.g. QR screen after connect).
+ * Shifts remaining entries down to fill the gap. */
 void ui_manager_remove_from_nav_stack(ui_screen_t screen)
 {
-    int write = 0;
-    for (int read = 0; read <= nav_stack_top; read++) {
-        if (nav_stack[read] != screen) {
-            nav_stack[write++] = nav_stack[read];
+    for (int i = nav_stack_top; i >= 0; i--) {
+        if (nav_stack[i] == screen) {
+            for (int j = i; j < nav_stack_top; j++) {
+                nav_stack[j] = nav_stack[j + 1];
+            }
+            nav_stack_top--;
+            ESP_LOGI(TAG, "Removed screen %d from nav stack (depth now %d)",
+                     screen, nav_stack_top + 1);
+            return;
         }
     }
-    nav_stack_top = write - 1;
-    ESP_LOGI(TAG, "Removed screen %d from nav stack (depth now: %d)", screen, nav_stack_top + 1);
 }
 
 /* SEC-04: Inactivity timer callback.
@@ -335,6 +339,16 @@ void ui_manager_unlock(void)
         smp_request_load_history(s_locked_contact_idx);
         ui_manager_show_screen(UI_SCREEN_CHAT, LV_SCR_LOAD_ANIM_NONE);
         ui_chat_show_loading();
+
+        /* show_screen pushed LOCK onto nav stack. The entry below it
+         * is the stale CHAT pushed by lock(). Remove both so Back from
+         * the restored chat goes to CONTACTS, not back to lock. */
+        if (nav_stack_top >= 0 && nav_stack[nav_stack_top] == UI_SCREEN_LOCK) {
+            nav_stack_top--;
+        }
+        if (nav_stack_top >= 0 && nav_stack[nav_stack_top] == UI_SCREEN_CHAT) {
+            nav_stack_top--;
+        }
     } else if (s_locked_screen == UI_SCREEN_SETTINGS) {
         /* Auftrag 2c: Restore settings with correct tab */
         ESP_LOGI(TAG, "SEC-04: Unlocking -> restoring settings (tab %d)",
