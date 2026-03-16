@@ -98,6 +98,9 @@ static int s_active_contact_idx = 0;
 static volatile bool s_contacts_dirty = false;
 static volatile int  s_rq_save_pending = -1;   // slot to save, -1 = none
 
+// Bug #30: De-duplication guard - prevents subscribe_all from being queued multiple times
+static volatile bool s_subscribe_all_pending = false;
+
 // History load request flag (UI -> App Task)
 static volatile int s_history_load_pending = -1;  // slot to load, -1 = none
 
@@ -331,6 +334,7 @@ static void network_task(void *arg)
                     case NET_CMD_SUBSCRIBE_ALL:
                         ESP_LOGI(TAG, "NET: Executing SUBSCRIBE_ALL command");
                         subscribe_all_contacts(s_ssl, block, s_session_id);
+                        s_subscribe_all_pending = false;  // Bug #30: reset dedup guard
                         break;
 
                     case NET_CMD_ADD_CONTACT: {
@@ -346,15 +350,16 @@ static void network_task(void *arg)
                             s_scanned_notified[slot / 8] &= ~(1 << (slot % 8));
                             ESP_LOGI(TAG, "NET: Contact '%s' created in slot [%d]",
                                      cmd->contact_name, slot);
-                            subscribe_all_contacts(s_ssl, block, s_session_id);
+                            // Bug #30: removed subscribe_all - queue already subscribed via subMode='S'
+                            ESP_LOGI(TAG, "NET: skip subscribe_all - contact queue subscribed via subMode=S");
 
                             // Create per-contact reply queue
                             int rq_ret = reply_queue_create(s_ssl, block, s_session_id, slot);
                             if (rq_ret == 0) {
                                 ESP_LOGI(TAG, "NET: Reply queue created for slot [%d]", slot);
                                 s_rq_save_pending = slot;  // deferred NVS save from app task
-                                // Re-subscribe to include new reply queue
-                                subscribe_all_contacts(s_ssl, block, s_session_id);
+                                // Bug #30: removed subscribe_all - RQ already subscribed via subMode='S'
+                                ESP_LOGI(TAG, "NET: skip subscribe_all - RQ[%d] subscribed via subMode=S", slot);
                             } else {
                                 ESP_LOGE(TAG, "NET: Reply queue creation FAILED for [%d]! ret=%d", slot, rq_ret);
                             }
@@ -586,11 +591,19 @@ static void app_send_ack(const uint8_t *recipient_id, int recipient_id_len,
 // Helper: Request re-subscribe via Ring Buffer
 static void app_request_subscribe_all(void)
 {
+    // Bug #30: De-duplication guard
+    if (s_subscribe_all_pending) {
+        ESP_LOGW(TAG_APP, "APP: [DEDUP] subscribe_all already pending, skipping");
+        return;
+    }
+    s_subscribe_all_pending = true;
+
     net_cmd_t cmd = {0};
     cmd.cmd = NET_CMD_SUBSCRIBE_ALL;
 
     if (xRingbufferSend(app_to_net_buf, &cmd, sizeof(cmd), pdMS_TO_TICKS(1000)) != pdTRUE) {
         ESP_LOGE(TAG_APP, "APP: Failed to send SUBSCRIBE command!");
+        s_subscribe_all_pending = false;  // Reset on failure
     } else {
         ESP_LOGI(TAG_APP, "APP: SUBSCRIBE_ALL command queued");
     }
@@ -853,6 +866,22 @@ static void app_init_run(QueueHandle_t kbd_queue, uint8_t **local_block_out)
     }
 
     ESP_LOGI(TAG_APP, "App logic: parse loop starting...");
+
+    // Bug #30: Mark all existing contacts as 42d-done on boot.
+    // Without this, s_42d_bitmap is all zeros after reboot and every
+    // Reply Queue MSG (including delivery receipts) triggers CONNECT_SCANNED.
+    {
+        int marked = 0;
+        for (int i = 0; i < MAX_CONTACTS; i++) {
+            if (contacts_db.contacts[i].active) {
+                mark_42d_done(i);
+                marked++;
+            }
+        }
+        if (marked > 0)
+            ESP_LOGI(TAG_APP, "APP: Marked %d existing contacts as 42d-done (boot)", marked);
+    }
+
     ESP_LOGI(TAG_APP, "APP: Sending initial re-subscribe...");
     app_request_subscribe_all();
 
@@ -1101,7 +1130,8 @@ static void app_handle_reply_queue_msg(
         }
     }
 
-    app_request_subscribe_all();
+    // Bug #30: removed subscribe_all after RQ MSG - subscriptions remain active
+    ESP_LOGI(TAG_APP, "APP: skip subscribe_all after RQ MSG - subscriptions active");
     ESP_LOGI(TAG_APP, "APP: Reply Queue processing complete.");
 }
 
