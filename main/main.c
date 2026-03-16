@@ -569,6 +569,7 @@ void app_main(void) {
     // Storage Phase 1: NVS only (before display, no SPI conflict)
     smp_storage_init();
     smp_storage_print_info();
+    storage_load_tz_offset();  /* Session 48: Before first clock display */
     // Bug #30: Boot test removed (saved ~50ms)
 
     // Session 33: Allocate multi-contact arrays in PSRAM
