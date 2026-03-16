@@ -100,6 +100,12 @@ void ui_chat_clear_contact(int contact_idx);
 void ui_chat_update_settings_icon(void);
 
 /**
+ * @brief Session 47: Update PQ status in chat header (read-only).
+ * Reads ratchet state, shows blue/yellow/green. Writes nothing.
+ */
+void ui_chat_update_pq_status(void);
+
+/**
  * @brief SEC-01/SEC-04: Securely wipe all decrypted message content.
  * Zeros PSRAM cache with sodium_memzero and clears LVGL bubble labels.
  * Called automatically by ui_chat_cleanup(), also callable externally

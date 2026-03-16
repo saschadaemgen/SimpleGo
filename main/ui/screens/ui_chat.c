@@ -31,6 +31,7 @@ extern void chat_bubble_cleanup(void);
 #include "ui_manager.h"
 #include "tdeck_keyboard.h"
 #include "smp_history.h"       /* history_message_t for PSRAM cache */
+#include "smp_ratchet.h"      /* Session 47: PQ status display (read-only) */
 #include "esp_heap_caps.h"     /* PSRAM allocation */
 #include "esp_log.h"
 #include <sodium.h>            /* SEC-01: sodium_memzero for secure cache wipe */
@@ -63,6 +64,7 @@ static lv_obj_t *input_area    = NULL;
 static lv_group_t *input_group = NULL;
 static lv_obj_t *s_loading_box = NULL;   /* "Loading..." indicator */
 static lv_obj_t *s_settings_icon = NULL; /* Settings button in header */
+static lv_obj_t *s_pq_label = NULL;      /* Session 47: PQ status (read-only) */
 
 static ui_chat_send_cb_t send_cb    = NULL;
 static lv_indev_t *pending_kb_indev = NULL;
@@ -158,6 +160,7 @@ void ui_chat_cleanup(void)
     input_area      = NULL;
     s_loading_box   = NULL;
     s_settings_icon = NULL;
+    s_pq_label      = NULL;
 
     /* input_group is NOT a child of the screen, must be freed separately */
     if (input_group) {
@@ -219,6 +222,35 @@ static lv_obj_t *create_action_btn(lv_obj_t *parent, const char *symbol,
 /* ============== Chat Header ============== */
 
 /* Settings button handlers */
+/* ============== Session 47: PQ Status Display (read-only) ============== */
+
+#define PQ_COLOR_QUANTUM  lv_color_hex(0x4488FF)
+#define PQ_COLOR_NEGO     UI_COLOR_WARNING
+#define PQ_COLOR_STANDARD UI_COLOR_ENCRYPT
+
+void ui_chat_update_pq_status(void)
+{
+    if (!s_pq_label) return;
+
+    ratchet_state_t *rs = ratchet_get_state();
+    if (!rs || !rs->initialized) {
+        lv_label_set_text(s_pq_label, "E2EE Standard");
+        lv_obj_set_style_text_color(s_pq_label, PQ_COLOR_STANDARD, 0);
+        return;
+    }
+
+    if (rs->pq.pq_active && rs->pq.pq_kem_state >= 2) {
+        lv_label_set_text(s_pq_label, "E2EE Quantum-Resistant");
+        lv_obj_set_style_text_color(s_pq_label, PQ_COLOR_QUANTUM, 0);
+    } else if (rs->pq.pq_active && rs->pq.pq_kem_state == 1) {
+        lv_label_set_text(s_pq_label, "PQ Negotiation...");
+        lv_obj_set_style_text_color(s_pq_label, PQ_COLOR_NEGO, 0);
+    } else {
+        lv_label_set_text(s_pq_label, "E2EE Standard");
+        lv_obj_set_style_text_color(s_pq_label, PQ_COLOR_STANDARD, 0);
+    }
+}
+
 static void on_settings_short(lv_event_t *e)
 {
     (void)e;
@@ -261,41 +293,21 @@ static lv_obj_t *create_chat_header(lv_obj_t *parent)
     lv_obj_center(arrow);
     lv_obj_add_event_cb(back_btn, on_back, LV_EVENT_CLICKED, NULL);
 
-    /* Contact name */
+    /* Contact name (wider: gear moved to input bar) */
     lv_obj_t *name = lv_label_create(hdr);
     lv_label_set_text(name, "");
     lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(name, 148);  /* narrower for settings button */
+    lv_obj_set_width(name, 150);
     lv_obj_set_style_text_color(name, UI_COLOR_TEXT_WHITE, 0);
     lv_obj_set_style_text_font(name, UI_FONT, 0);
     lv_obj_align(name, LV_ALIGN_LEFT_MID, 28, 0);
 
-    /* Settings gear button (short=toggle kbd, long=settings) */
-    lv_obj_t *set_btn = lv_btn_create(hdr);
-    lv_obj_set_size(set_btn, 28, HDR_H);
-    lv_obj_set_style_bg_opa(set_btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_opa(set_btn, LV_OPA_20, LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(set_btn, UI_COLOR_ACCENT, LV_STATE_PRESSED);
-    lv_obj_set_style_border_width(set_btn, 0, 0);
-    lv_obj_set_style_radius(set_btn, 0, 0);
-    lv_obj_set_style_shadow_width(set_btn, 0, 0);
-    lv_obj_set_style_pad_all(set_btn, 0, 0);
-    lv_obj_align(set_btn, LV_ALIGN_RIGHT_MID, -104, 0);
-
-    s_settings_icon = lv_label_create(set_btn);
-    lv_label_set_text(s_settings_icon, LV_SYMBOL_SETTINGS);
-    lv_obj_set_style_text_color(s_settings_icon,
-        tdeck_kbd_backlight_is_on() ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
-    lv_obj_set_style_text_font(s_settings_icon, UI_FONT, 0);
-    lv_obj_center(s_settings_icon);
-    lv_obj_add_event_cb(set_btn, on_settings_short, LV_EVENT_SHORT_CLICKED, NULL);
-    lv_obj_add_event_cb(set_btn, on_settings_long, LV_EVENT_LONG_PRESSED, NULL);
-
-    lv_obj_t *enc = lv_label_create(hdr);
-    lv_label_set_text(enc, "Post-Quantum E2E");
-    lv_obj_set_style_text_color(enc, UI_COLOR_ENCRYPT, 0);
-    lv_obj_set_style_text_font(enc, UI_FONT_SM, 0);
-    lv_obj_align(enc, LV_ALIGN_RIGHT_MID, -4, 0);
+    /* Session 47: PQ status label (read-only, NOT clickable) */
+    s_pq_label = lv_label_create(hdr);
+    lv_label_set_text(s_pq_label, "E2EE Standard");
+    lv_obj_set_style_text_color(s_pq_label, PQ_COLOR_STANDARD, 0);
+    lv_obj_set_style_text_font(s_pq_label, UI_FONT_SM, 0);
+    lv_obj_align(s_pq_label, LV_ALIGN_RIGHT_MID, -4, 0);
 
     lv_obj_t *dim = lv_obj_create(parent);
     lv_obj_set_width(dim, LV_PCT(100));
@@ -394,12 +406,22 @@ lv_obj_t *ui_chat_create(void)
 
     lv_obj_add_event_cb(input_area, on_input_ready, LV_EVENT_READY, NULL);
 
-    /* Buttons: [SEND] [VOICE] [FILE] */
+    /* Buttons: [SEND] [VOICE] [GEAR] */
     lv_obj_t *send_btn = create_action_btn(input_bar, LV_SYMBOL_RIGHT,
                                             UI_COLOR_SECONDARY);
     lv_obj_add_event_cb(send_btn, on_send_click, LV_EVENT_CLICKED, NULL);
     create_action_btn(input_bar, LV_SYMBOL_VOLUME_MID, UI_COLOR_TEXT_DIM);
-    create_action_btn(input_bar, LV_SYMBOL_FILE,       UI_COLOR_TEXT_DIM);
+
+    /* Gear: short=toggle kbd backlight, long=open settings */
+    lv_obj_t *gear_btn = create_action_btn(input_bar, LV_SYMBOL_SETTINGS,
+                                            UI_COLOR_TEXT_DIM);
+    s_settings_icon = lv_obj_get_child(gear_btn, 0);
+    if (s_settings_icon) {
+        lv_obj_set_style_text_color(s_settings_icon,
+            tdeck_kbd_backlight_is_on() ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
+    }
+    lv_obj_add_event_cb(gear_btn, on_settings_short, LV_EVENT_SHORT_CLICKED, NULL);
+    lv_obj_add_event_cb(gear_btn, on_settings_long, LV_EVENT_LONG_PRESSED, NULL);
 
     /* Keyboard group */
     input_group = lv_group_create();
@@ -411,6 +433,7 @@ lv_obj_t *ui_chat_create(void)
     }
 
     ESP_LOGI(TAG, "Chat screen created (v5 layout)");
+    ui_chat_update_pq_status();  /* Session 47: Set PQ color after s_pq_label is created */
     return screen;
 }
 
@@ -480,6 +503,7 @@ void ui_chat_set_contact(const char *name)
         truncate_chat_name(trunc, name, sizeof(trunc));
         lv_label_set_text(header_label, trunc);
     }
+    ui_chat_update_pq_status();
 }
 
 void ui_chat_add_message(const char *text, bool is_outgoing, int contact_idx)
@@ -592,6 +616,7 @@ void ui_chat_switch_contact(int contact_idx, const char *name)
         truncate_chat_name(trunc, name, sizeof(trunc));
         lv_label_set_text(header_label, trunc);
     }
+    ui_chat_update_pq_status();
 
     /* Delete ALL existing bubbles (not just hide/show).
      * Old code only toggled visibility, leaving stale bubbles consuming

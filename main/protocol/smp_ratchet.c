@@ -80,6 +80,8 @@ bool ratchet_set_active(uint8_t idx) {
     if (!ratchet_state.initialized) {
         ESP_LOGW(TAG, "Slot [%d] PSRAM empty, trying NVS fallback...", idx);
         if (ratchet_load_state(idx)) {
+            // Session 47: Also load PQ state (stored in separate NVS keys)
+            pq_nvs_load(idx);
             // Also update PSRAM array so next swap works without NVS
             memcpy(&ratchet_states[idx], &ratchet_state, sizeof(ratchet_state_t));
             ESP_LOGI(TAG, "Slot [%d] restored from NVS! send=%" PRIu32 " recv=%" PRIu32 "",
@@ -693,7 +695,8 @@ static int pq_recv_process(pq_kem_state_t *pq,
             }
             pq->own_kem_valid = 1;
             pq->pq_kem_state = 1;  /* proposed */
-            pq->pq_active = 1;
+            if (!pq->pq_user_disabled)
+                pq->pq_active = 1;
             ESP_LOGI(TAG, "PQ-SM: State -> proposed (pk[0]=%02x)", pq->own_kem_pk[0]);
             pq_nvs_save(ratchet_get_active());  /* Write-Before-Send */
             pq_crypto_precompute_keypair();
@@ -734,7 +737,8 @@ static int pq_recv_process(pq_kem_state_t *pq,
         *kem_ss_valid = false;  /* NOT in current recv kdf_root */
 
         pq->pq_kem_state = 2;  /* accepted */
-        pq->pq_active = 1;
+        if (!pq->pq_user_disabled)
+            pq->pq_active = 1;
 
         pq_crypto_precompute_keypair();
         ESP_LOGI(TAG, "PQ-SM: State -> accepted (pending_ss[0]=%02x, ct[0]=%02x, kem_ss=DEFERRED)",
@@ -792,7 +796,8 @@ static int pq_recv_process(pq_kem_state_t *pq,
         pq->pending_ss_valid = 1;
 
         pq->pq_kem_state = 2;  /* accepted */
-        pq->pq_active = 1;
+        if (!pq->pq_user_disabled)
+            pq->pq_active = 1;
 
         pq_crypto_precompute_keypair();
         ESP_LOGI(TAG, "PQ-SM: State -> accepted (decap ss[0]=%02x, new pending_ss[0]=%02x, ct[0]=%02x)",
@@ -1603,6 +1608,10 @@ bool pq_nvs_save(uint8_t contact_idx) {
     ret = smp_storage_save_blob_sync(key, &pq->pq_active, 1);
     if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
 
+    snprintf(key, sizeof(key), "pq_%02x_ud", contact_idx);
+    ret = smp_storage_save_blob_sync(key, &pq->pq_user_disabled, 1);
+    if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
+
     snprintf(key, sizeof(key), "pq_%02x_st", contact_idx);
     ret = smp_storage_save_blob_sync(key, &pq->pq_kem_state, 1);
     if (ret != ESP_OK) { ESP_LOGE(TAG, "pq_nvs_save %s FAIL", key); ok = false; }
@@ -1661,6 +1670,12 @@ bool pq_nvs_load(uint8_t contact_idx) {
 
     len = 0;
     smp_storage_load_blob(key, &pq->pq_active, 1, &len);
+
+    snprintf(key, sizeof(key), "pq_%02x_ud", contact_idx);
+    if (smp_storage_exists(key)) {
+        len = 0;
+        smp_storage_load_blob(key, &pq->pq_user_disabled, 1, &len);
+    }
 
     snprintf(key, sizeof(key), "pq_%02x_st", contact_idx);
     len = 0;

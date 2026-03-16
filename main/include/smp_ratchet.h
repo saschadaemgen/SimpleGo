@@ -35,6 +35,7 @@
 
 typedef struct {
     uint8_t pq_active;                                      // 0 = no PQ, 1 = PQ active
+    uint8_t pq_user_disabled;                               // 1 = User explicitly disabled PQ
     uint8_t pq_kem_state;                                   // 0 = none, 1 = proposed, 2 = accepted
 
     // Own KEM keypair (for receiving ciphertexts from peer)
