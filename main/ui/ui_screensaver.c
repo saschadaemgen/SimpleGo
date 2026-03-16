@@ -143,26 +143,26 @@ static lv_color_t s_palettes[NUM_PALETTES][NUM_SHADES];
 
 static void screensaver_init_colors(void)
 {
-    /* Green palette (dominant) */
-    s_palettes[0][0] = lv_color_make(220, 255, 220);   /* head glow */
-    s_palettes[0][1] = lv_color_make(0,   255, 65);    /* bright neon */
-    s_palettes[0][2] = lv_color_make(0,   180, 45);    /* medium */
-    s_palettes[0][3] = lv_color_make(0,   100, 25);    /* dim */
-    s_palettes[0][4] = lv_color_make(0,   40,  10);    /* very dim */
+    /* Cyan palette (dominant, ~50%) - SimpleGo Primary */
+    s_palettes[0][0] = lv_color_make(220, 255, 255);   /* head glow */
+    s_palettes[0][1] = lv_color_make(0,   220, 255);   /* bright neon */
+    s_palettes[0][2] = lv_color_make(0,   150, 200);   /* medium */
+    s_palettes[0][3] = lv_color_make(0,   80,  120);   /* dim */
+    s_palettes[0][4] = lv_color_make(0,   30,  50);    /* very dim */
 
-    /* Cyan palette */
-    s_palettes[1][0] = lv_color_make(200, 255, 255);   /* head glow */
-    s_palettes[1][1] = lv_color_make(0,   200, 255);   /* bright neon */
-    s_palettes[1][2] = lv_color_make(0,   140, 180);   /* medium */
-    s_palettes[1][3] = lv_color_make(0,   70,  100);   /* dim */
-    s_palettes[1][4] = lv_color_make(0,   25,  40);    /* very dim */
+    /* Blue palette (~30%) - deep, royal */
+    s_palettes[1][0] = lv_color_make(200, 210, 255);   /* head glow */
+    s_palettes[1][1] = lv_color_make(60,  120, 255);   /* bright neon */
+    s_palettes[1][2] = lv_color_make(40,  80,  200);   /* medium */
+    s_palettes[1][3] = lv_color_make(20,  40,  120);   /* dim */
+    s_palettes[1][4] = lv_color_make(8,   15,  50);    /* very dim */
 
-    /* Yellow/Amber palette */
-    s_palettes[2][0] = lv_color_make(255, 255, 200);   /* head glow */
-    s_palettes[2][1] = lv_color_make(255, 220, 0);     /* bright neon */
-    s_palettes[2][2] = lv_color_make(180, 155, 0);     /* medium */
-    s_palettes[2][3] = lv_color_make(100, 85,  0);     /* dim */
-    s_palettes[2][4] = lv_color_make(40,  35,  0);     /* very dim */
+    /* Electric Purple (~20%) - accent */
+    s_palettes[2][0] = lv_color_make(230, 210, 255);   /* head glow */
+    s_palettes[2][1] = lv_color_make(140, 80,  255);   /* bright neon */
+    s_palettes[2][2] = lv_color_make(100, 50,  200);   /* medium */
+    s_palettes[2][3] = lv_color_make(55,  25,  120);   /* dim */
+    s_palettes[2][4] = lv_color_make(20,  10,  50);    /* very dim */
 }
 
 /* ================================================================
@@ -174,7 +174,7 @@ typedef struct {
     uint8_t  tail_len;        /* trail length in cells */
     uint8_t  speed;           /* 1=fast, 2=medium, 3=slow */
     uint8_t  tick;            /* frame counter for speed control */
-    uint8_t  palette_idx;     /* 0=green, 1=cyan, 2=yellow */
+    uint8_t  palette_idx;     /* 0=cyan, 1=blue, 2=purple */
     int16_t  wait;            /* frames to wait before (re)starting */
     uint8_t  chars[NUM_ROWS]; /* character index per row position */
 } matrix_drop_t;
@@ -207,9 +207,9 @@ static int rand_range(int min, int max)
 static uint8_t rand_palette(void)
 {
     int r = rand_range(0, 99);
-    if (r < 60) return 0;      /* green */
-    if (r < 85) return 1;      /* cyan */
-    return 2;                   /* yellow */
+    if (r < 50) return 0;      /* cyan */
+    if (r < 80) return 1;      /* blue */
+    return 2;                   /* purple */
 }
 
 /* Random character index into RAIN_CHARS / FONT_DATA */
@@ -264,17 +264,19 @@ static void draw_char_at(int col, int row, uint8_t char_idx, lv_color_t color)
     const uint8_t *glyph = FONT_DATA[char_idx];
     int x0 = col * CELL_W;
     int y0 = row * CELL_H;
+    uint16_t c16 = lv_color_to_u16(color);
+    uint16_t *buf = (uint16_t *)s_canvas_buf;
 
     for (int gy = 0; gy < 8; gy++) {
         int py = y0 + gy;
         if (py >= SCREEN_H) break;
 
         uint8_t bits = glyph[gy];
+        uint16_t *row_ptr = &buf[py * SCREEN_W + x0];
         for (int gx = 0; gx < 8; gx++) {
-            if (bits & (1 << gx)) {     /* font8x8: LSB = leftmost */
-                int px = x0 + gx;
-                if (px < SCREEN_W) {
-                    lv_canvas_set_px(s_canvas, px, py, color, LV_OPA_COVER);
+            if (bits & (1 << gx)) {
+                if (x0 + gx < SCREEN_W) {
+                    row_ptr[gx] = c16;
                 }
             }
         }
