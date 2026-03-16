@@ -298,7 +298,12 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                 url_decode_inplace(full_uri);
                             }
                             
+                            // Bug #30: Cap output to avoid #### padding spam (~1690ms serial)
                             int show_len = strlen(full_uri);
+                            if (show_len > 3000) {
+                                ESP_LOGI(TAG, "      [INFO] URI truncated: %d -> 3000 chars (padding omitted)", show_len);
+                                show_len = 3000;
+                            }
                             for (int i = 0; i < show_len; i += 120) {
                                 ESP_LOGI(TAG, "         %.120s", full_uri + i);
                             }
