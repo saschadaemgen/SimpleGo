@@ -83,6 +83,57 @@ static void on_tz_plus(lv_event_t *e)
 }
 
 /* ================================================================
+ * Display Lock Mode Toggle (Session 48)
+ * ================================================================ */
+
+#define NVS_KEY_DISPLAY_LOCK  "disp_lock"
+
+static lv_obj_t *s_lock_simple = NULL;
+static lv_obj_t *s_lock_matrix = NULL;
+
+static uint8_t get_lock_mode(void)
+{
+    uint8_t mode = 0;
+    size_t out_len = 0;
+    if (smp_storage_load_blob(NVS_KEY_DISPLAY_LOCK, &mode,
+                               sizeof(mode), &out_len) == ESP_OK
+        && out_len == 1 && mode == 1) {
+        return 1;
+    }
+    return 0;
+}
+
+static void update_lock_labels(uint8_t mode)
+{
+    if (s_lock_simple) {
+        lv_obj_set_style_text_color(s_lock_simple,
+            mode == 0 ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
+    }
+    if (s_lock_matrix) {
+        lv_obj_set_style_text_color(s_lock_matrix,
+            mode == 1 ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
+    }
+}
+
+static void on_lock_simple(lv_event_t *e)
+{
+    (void)e;
+    uint8_t mode = 0;
+    smp_storage_save_blob(NVS_KEY_DISPLAY_LOCK, &mode, sizeof(mode));
+    update_lock_labels(0);
+    ESP_LOGI("UI_INFO", "Display lock mode: Simple");
+}
+
+static void on_lock_matrix(lv_event_t *e)
+{
+    (void)e;
+    uint8_t mode = 1;
+    smp_storage_save_blob(NVS_KEY_DISPLAY_LOCK, &mode, sizeof(mode));
+    update_lock_labels(1);
+    ESP_LOGI("UI_INFO", "Display lock mode: Matrix");
+}
+
+/* ================================================================
  * Helpers
  * ================================================================ */
 
@@ -536,6 +587,44 @@ void settings_create_info(lv_obj_t *parent)
         lv_obj_add_event_cb(btn_p, on_tz_plus, LV_EVENT_CLICKED, NULL);
     }
 
+    /* === Row 7: Display Lock [Simple] [Matrix] === */
+    {
+        uint8_t cur_mode = get_lock_mode();
+
+        lv_obj_t *row = create_row_base(s_list);
+        create_accent(row, 6, UI_COLOR_PRIMARY);
+        create_key(row, L_KEY_X, "Lock");
+
+        /* "Simple" option */
+        s_lock_simple = lv_label_create(row);
+        lv_label_set_text(s_lock_simple, "Simple");
+        lv_obj_set_style_text_color(s_lock_simple,
+            cur_mode == 0 ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(s_lock_simple, UI_FONT_SM, 0);
+        lv_obj_align(s_lock_simple, LV_ALIGN_LEFT_MID, L_VAL_X, 0);
+        lv_obj_add_flag(s_lock_simple, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(s_lock_simple, 8);
+        lv_obj_add_event_cb(s_lock_simple, on_lock_simple, LV_EVENT_CLICKED, NULL);
+
+        /* Separator */
+        lv_obj_t *sep = lv_label_create(row);
+        lv_label_set_text(sep, "|");
+        lv_obj_set_style_text_color(sep, UI_COLOR_LINE_DIM, 0);
+        lv_obj_set_style_text_font(sep, UI_FONT_SM, 0);
+        lv_obj_align(sep, LV_ALIGN_LEFT_MID, L_VAL_X + 40, 0);
+
+        /* "Matrix" option */
+        s_lock_matrix = lv_label_create(row);
+        lv_label_set_text(s_lock_matrix, "Matrix");
+        lv_obj_set_style_text_color(s_lock_matrix,
+            cur_mode == 1 ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(s_lock_matrix, UI_FONT_SM, 0);
+        lv_obj_align(s_lock_matrix, LV_ALIGN_LEFT_MID, L_VAL_X + 50, 0);
+        lv_obj_add_flag(s_lock_matrix, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(s_lock_matrix, 8);
+        lv_obj_add_event_cb(s_lock_matrix, on_lock_matrix, LV_EVENT_CLICKED, NULL);
+    }
+
     /* Initial refresh + timer */
     refresh_values();
     s_refresh_timer = lv_timer_create(refresh_timer_cb, 2000, NULL);
@@ -553,6 +642,8 @@ void settings_nullify_info_pointers(void)
     s_heap_val = s_psram_val = s_lvgl_val = s_wifi_val = s_name_val = NULL;
     s_brand_pq = NULL;
     s_tz_val = NULL;
+    s_lock_simple = NULL;
+    s_lock_matrix = NULL;
 }
 
 void settings_info_refresh(void) { refresh_values(); }
