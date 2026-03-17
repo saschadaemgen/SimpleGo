@@ -400,16 +400,16 @@ static void network_task(void *arg)
                             s_scanned_notified[slot / 8] &= ~(1 << (slot % 8));
                             ESP_LOGI(TAG, "NET: Contact '%s' created in slot [%d]",
                                      cmd->contact_name, slot);
-                            // Bug #30: removed subscribe_all - queue already subscribed via subMode='S'
-                            ESP_LOGI(TAG, "NET: skip subscribe_all - contact queue subscribed via subMode=S");
+                            // Session 49 Bug #32: Restored subscribe_all after contact creation
+                            subscribe_all_contacts(s_ssl, block, s_session_id);
 
                             // Create per-contact reply queue
                             int rq_ret = reply_queue_create(s_ssl, block, s_session_id, slot);
                             if (rq_ret == 0) {
                                 ESP_LOGI(TAG, "NET: Reply queue created for slot [%d]", slot);
                                 s_rq_save_pending = slot;  // deferred NVS save from app task
-                                // Bug #30: removed subscribe_all - RQ already subscribed via subMode='S'
-                                ESP_LOGI(TAG, "NET: skip subscribe_all - RQ[%d] subscribed via subMode=S", slot);
+                                // Session 49 Bug #32: Restored subscribe_all after RQ creation
+                                subscribe_all_contacts(s_ssl, block, s_session_id);
                             } else {
                                 ESP_LOGE(TAG, "NET: Reply queue creation FAILED for [%d]! ret=%d", slot, rq_ret);
                             }
@@ -638,8 +638,21 @@ static void app_send_ack(const uint8_t *recipient_id, int recipient_id_len,
     }
 }
 
-/* Session 48: app_request_subscribe_all() removed. First subscribe in
- * smp_connect() is sufficient. SUB on already-subscribed queue is noop. */
+/* Session 49 Bug #32: Restored app_request_subscribe_all().
+ * Removing this in Session 48 broke multi-contact handshakes.
+ * Boot-subscribe stays removed (smp_connect handles it).
+ * SUB on already-subscribed queue is noop (Evgeny confirmed). */
+static void app_request_subscribe_all(void)
+{
+    net_cmd_t cmd = {0};
+    cmd.cmd = NET_CMD_SUBSCRIBE_ALL;
+
+    if (xRingbufferSend(app_to_net_buf, &cmd, sizeof(cmd), pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG_APP, "APP: Failed to send SUBSCRIBE command!");
+    } else {
+        ESP_LOGI(TAG_APP, "APP: SUBSCRIBE_ALL command queued");
+    }
+}
 
 // Request new contact creation via Network Task
 int smp_request_add_contact(const char *name)
@@ -1411,6 +1424,9 @@ static void app_handle_reply_queue_msg(
 
         // Session 47 2d: Notify UI that handshake is fully complete
         smp_notify_ui_connect_done(hs_contact);
+
+        // Session 49 Bug #32: Re-subscribe after handshake completion
+        app_request_subscribe_all();
 
         s_has_peer_sender_auth = false;
 
