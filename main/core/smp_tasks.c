@@ -31,10 +31,16 @@
 #include <stdio.h>             // Session 48: snprintf for splash status
 #include <time.h>          // time(NULL) for history timestamps
 #include <sys/socket.h>
+#include <unistd.h>            // Session 48: close() for reconnect
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"      // Session 47: Timing analysis (us precision)
 #include <inttypes.h>       // PRId64
+#include "wifi_manager.h"      // Session 48: wifi_connected for reconnect guard
+extern volatile bool wifi_connected;  // Session 48: from wifi_manager.c
+#include "mbedtls/entropy.h"   // Session 48: reconnect TLS context
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/sha256.h"
 
 
 static const char *TAG = "SMP_TASKS";
@@ -52,6 +58,19 @@ RingbufHandle_t app_to_net_buf = NULL;
 static mbedtls_ssl_context *s_ssl = NULL;
 static int s_sock_fd = -1;  // Socket FD for timeout control
 static uint8_t s_session_id[32];  // session ID for ACK signing
+
+/* Session 48: Auto-reconnect state */
+typedef struct {
+    mbedtls_ssl_context ssl;
+    mbedtls_ssl_config conf;
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    int sock;
+} reconnect_ctx_t;
+
+static reconnect_ctx_t *s_rctx = NULL;
+static volatile bool s_reconnect_needed = false;
+static volatile bool s_reconnect_done   = false;
 
 // Post-confirmation state (set by Reply Queue decrypt, read by 42d handler later)
 static uint8_t s_peer_sender_auth_key[44];
@@ -312,8 +331,34 @@ static void network_task(void *arg)
                 ESP_LOGD(TAG, "NET: timeout (loop %d)", loop_count);
             }
         } else {
-            ESP_LOGE(TAG, "Network task: SSL read error %d", content_len);
-            break;
+            /* Session 48: Connection lost - request reconnect from App Task */
+            ESP_LOGW(TAG, "NET: Connection lost (error %d), requesting reconnect...", content_len);
+            s_reconnect_needed = true;
+            s_reconnect_done   = false;
+
+            /* Poll until App Task completes reconnect */
+            while (!s_reconnect_done) {
+                vTaskDelay(pdMS_TO_TICKS(500));
+            }
+            s_reconnect_needed = false;
+            s_reconnect_done   = false;
+
+            /* Reset PING state for fresh connection */
+            last_ping_tick     = 0;
+            last_pong_tick     = 0;
+            first_pong_logged  = false;
+            first_ping_sent    = false;
+            pong_timeout_warned = false;
+            loop_count         = 0;
+
+            /* Set socket timeout on new connection */
+            struct timeval tv_new;
+            tv_new.tv_sec  = 1;
+            tv_new.tv_usec = 0;
+            setsockopt(s_sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv_new, sizeof(tv_new));
+
+            ESP_LOGI(TAG, "NET: Reconnected, resuming SSL read loop on sock %d", s_sock_fd);
+            continue;
         }
 
         // === 2. COMMAND CHANNEL: Process App Task commands (T4c) ===
@@ -916,8 +961,209 @@ static void app_init_run(QueueHandle_t kbd_queue, uint8_t **local_block_out)
     ESP_LOGI(TAG_APP, "APP: Boot complete, entering main loop");
 }
 
+/* ================================================================
+ * Session 48: Auto-Reconnect (runs on App Task, Internal SRAM stack)
+ *
+ * Called from app_process_deferred_work() when Network Task signals
+ * s_reconnect_needed. Does full TCP + TLS + SMP handshake + subscribe.
+ * Updates s_ssl, s_session_id, s_sock_fd for Network Task to resume.
+ * ================================================================ */
+
+static bool app_do_reconnect(void)
+{
+    ESP_LOGW(TAG_APP, "=== RECONNECT: Starting ===");
+
+    /* Close old socket (server already reset it) */
+    if (s_sock_fd >= 0) {
+        close(s_sock_fd);
+        s_sock_fd = -1;
+    }
+
+    /* Free previous reconnect context (2nd+ reconnect) */
+    if (s_rctx) {
+        mbedtls_ssl_free(&s_rctx->ssl);
+        mbedtls_ssl_config_free(&s_rctx->conf);
+        mbedtls_ctr_drbg_free(&s_rctx->ctr_drbg);
+        mbedtls_entropy_free(&s_rctx->entropy);
+        heap_caps_free(s_rctx);
+        s_rctx = NULL;
+        s_ssl = NULL;
+    }
+
+    /* Allocate new context in Internal SRAM (mbedTLS needs DMA-capable memory) */
+    s_rctx = heap_caps_calloc(1, sizeof(reconnect_ctx_t), MALLOC_CAP_INTERNAL);
+    if (!s_rctx) {
+        ESP_LOGE(TAG_APP, "RECONNECT: Failed to allocate TLS context!");
+        return false;
+    }
+
+    mbedtls_ssl_init(&s_rctx->ssl);
+    mbedtls_ssl_config_init(&s_rctx->conf);
+    mbedtls_entropy_init(&s_rctx->entropy);
+    mbedtls_ctr_drbg_init(&s_rctx->ctr_drbg);
+    s_rctx->sock = -1;
+
+    int ret;
+
+    ret = mbedtls_ctr_drbg_seed(&s_rctx->ctr_drbg, mbedtls_entropy_func,
+                                 &s_rctx->entropy, NULL, 0);
+    if (ret != 0) {
+        ESP_LOGE(TAG_APP, "RECONNECT: DRBG seed failed: -0x%04x", -ret);
+        goto fail;
+    }
+
+    /* Step 1: TCP Connect */
+    ESP_LOGI(TAG_APP, "RECONNECT: TCP to %s:%d...",
+             our_queue.server_host, our_queue.server_port);
+    s_rctx->sock = smp_tcp_connect(our_queue.server_host, our_queue.server_port);
+    if (s_rctx->sock < 0) {
+        ESP_LOGE(TAG_APP, "RECONNECT: TCP connect failed");
+        goto fail;
+    }
+
+    /* Step 2: TLS 1.3 Handshake */
+    ret = mbedtls_ssl_config_defaults(&s_rctx->conf, MBEDTLS_SSL_IS_CLIENT,
+                                       MBEDTLS_SSL_TRANSPORT_STREAM,
+                                       MBEDTLS_SSL_PRESET_DEFAULT);
+    if (ret != 0) goto fail;
+
+    mbedtls_ssl_conf_min_tls_version(&s_rctx->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_max_tls_version(&s_rctx->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_ciphersuites(&s_rctx->conf, ciphersuites);
+    mbedtls_ssl_conf_authmode(&s_rctx->conf, MBEDTLS_SSL_VERIFY_NONE);
+    mbedtls_ssl_conf_rng(&s_rctx->conf, mbedtls_ctr_drbg_random, &s_rctx->ctr_drbg);
+
+    static const char *alpn_list[] = {"smp/1", NULL};
+    mbedtls_ssl_conf_alpn_protocols(&s_rctx->conf, alpn_list);
+
+    ret = mbedtls_ssl_setup(&s_rctx->ssl, &s_rctx->conf);
+    if (ret != 0) goto fail;
+
+    mbedtls_ssl_set_hostname(&s_rctx->ssl, our_queue.server_host);
+    mbedtls_ssl_set_bio(&s_rctx->ssl, &s_rctx->sock, my_send_cb, my_recv_cb, NULL);
+
+    while ((ret = mbedtls_ssl_handshake(&s_rctx->ssl)) != 0) {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            ESP_LOGE(TAG_APP, "RECONNECT: TLS handshake failed: -0x%04x", -ret);
+            goto fail;
+        }
+    }
+    ESP_LOGI(TAG_APP, "RECONNECT: TLS OK");
+
+    /* Step 3: SMP ServerHello -> extract session_id */
+    {
+        uint8_t *hblock = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
+        if (!hblock) { ESP_LOGE(TAG_APP, "RECONNECT: block alloc failed"); goto fail; }
+
+        int content_len = smp_read_block(&s_rctx->ssl, hblock, 15000);
+        if (content_len < 37) {
+            ESP_LOGE(TAG_APP, "RECONNECT: No ServerHello (len=%d)", content_len);
+            heap_caps_free(hblock);
+            goto fail;
+        }
+
+        uint8_t *hello = hblock + 2;
+        uint8_t sessIdLen = hello[4];
+        if (sessIdLen != 32) {
+            ESP_LOGE(TAG_APP, "RECONNECT: Bad sessIdLen %d", sessIdLen);
+            heap_caps_free(hblock);
+            goto fail;
+        }
+        memcpy(s_session_id, &hello[5], 32);
+
+        /* Step 4: SMP ClientHello (keyHash) */
+        int cert1_off, cert1_len, cert2_off, cert2_len;
+        parse_cert_chain(hello, content_len, &cert1_off, &cert1_len,
+                         &cert2_off, &cert2_len);
+
+        uint8_t ca_hash[32];
+        if (cert2_off >= 0) {
+            mbedtls_sha256(hello + cert2_off, cert2_len, ca_hash, 0);
+        } else {
+            mbedtls_sha256(hello + cert1_off, cert1_len, ca_hash, 0);
+        }
+
+        uint8_t client_hello[35];
+        int pos = 0;
+        client_hello[pos++] = 0x00;
+        client_hello[pos++] = 0x07;
+        client_hello[pos++] = 32;
+        memcpy(&client_hello[pos], ca_hash, 32);
+        pos += 32;
+
+        ret = smp_write_handshake_block(&s_rctx->ssl, hblock, client_hello, pos);
+        heap_caps_free(hblock);
+        if (ret != 0) {
+            ESP_LOGE(TAG_APP, "RECONNECT: ClientHello send failed");
+            goto fail;
+        }
+    }
+    ESP_LOGI(TAG_APP, "RECONNECT: SMP handshake OK, sessionId=%02x%02x%02x%02x...",
+             s_session_id[0], s_session_id[1], s_session_id[2], s_session_id[3]);
+
+    /* Step 5: Update globals for Network Task */
+    s_ssl = &s_rctx->ssl;
+    s_sock_fd = s_rctx->sock;
+
+    /* Step 6: Re-subscribe all contacts */
+    {
+        uint8_t *sblock = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
+        if (sblock) {
+            subscribe_all_contacts(&s_rctx->ssl, sblock, s_session_id);
+            heap_caps_free(sblock);
+        } else {
+            ESP_LOGE(TAG_APP, "RECONNECT: subscribe block alloc failed");
+        }
+    }
+
+    ESP_LOGI(TAG_APP, "=== RECONNECT: Success (sock %d) ===", s_sock_fd);
+    return true;
+
+fail:
+    if (s_rctx) {
+        if (s_rctx->sock >= 0) close(s_rctx->sock);
+        mbedtls_ssl_free(&s_rctx->ssl);
+        mbedtls_ssl_config_free(&s_rctx->conf);
+        mbedtls_ctr_drbg_free(&s_rctx->ctr_drbg);
+        mbedtls_entropy_free(&s_rctx->entropy);
+        heap_caps_free(s_rctx);
+        s_rctx = NULL;
+    }
+    s_ssl = NULL;
+    s_sock_fd = -1;
+    return false;
+}
+
 static void app_process_deferred_work(void)
 {
+    /* Session 48: Auto-reconnect with exponential backoff */
+    if (s_reconnect_needed && !s_reconnect_done) {
+        static uint32_t backoff_ms = 0;
+
+        /* Wait for WiFi before attempting TCP */
+        if (!wifi_connected) {
+            ESP_LOGW(TAG_APP, "RECONNECT: No WiFi, waiting...");
+            return;  /* Will retry next loop iteration */
+        }
+
+        if (backoff_ms > 0) {
+            ESP_LOGI(TAG_APP, "RECONNECT: Backoff %lu ms...", (unsigned long)backoff_ms);
+            vTaskDelay(pdMS_TO_TICKS(backoff_ms));
+        }
+
+        if (app_do_reconnect()) {
+            backoff_ms = 0;
+            s_reconnect_done = true;
+            ESP_LOGI(TAG_APP, "RECONNECT: Signalling Network Task to resume");
+        } else {
+            if (backoff_ms == 0) backoff_ms = 2000;
+            else if (backoff_ms < 60000) backoff_ms *= 2;
+            ESP_LOGW(TAG_APP, "RECONNECT: Failed, next attempt in %lu ms",
+                     (unsigned long)backoff_ms);
+        }
+        return;  /* Don't process other work during reconnect */
+    }
+
     if (s_contacts_dirty) {
         s_contacts_dirty = false;
         save_contacts_to_nvs();
