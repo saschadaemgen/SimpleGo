@@ -8,7 +8,21 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: UX Overhaul, NVS 1 MB, QR 16-Stage Flow, PQ UI (2026-03-16 Session 47)
+## LATEST: Performance + Statusbar + Splash + Matrix + Reconnect (2026-03-17 Session 48)
+
+```
+16-hour mega session. 23 files, 4 new modules, 2 deleted.
+Bug #30 CLOSED: subscribe O(NxM) to O(1), QR 8.6x faster, boot 7.5s saved.
+Bug #31 CLOSED: network auto-reconnect (exponential backoff 2s-60s).
+Shared statusbar module (FULL+CHAT, 4 screens migrated).
+Splash screen: animated boot progress with 9 real stages.
+Matrix Rain screensaver: canvas PSRAM, 20 FPS, 3 neon palettes.
+NTP non-blocking, configurable timezone + lock timer.
+Pending contact abort. 3 crashes resolved. Developer screen deleted.
+7 lessons (#258-#264).
+```
+
+## Session 47: UX Overhaul, NVS 1 MB, QR 16-Stage, PQ UI (2026-03-16)
 
 ```
 Most extensive UX session. 7 bugs closed. 25 files changed.
@@ -569,6 +583,39 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **45** | **Mar 10** | **Security Implementation: 5/6 Findings CLOSED** | **5 lessons, SEC-01/02/04/05** |
 | **46** | **Mar 11-12** | **MEGABLAST: Post-Quantum Double Ratchet - WORLD FIRST** | **8 lessons, 6/6 SEC CLOSED** |
 | **47** | **Mar 15-16** | **UX Overhaul: NVS 1 MB, QR 16-Stage, PQ UI, 7 Bugs** | **7 lessons, Per-Contact PQ abandoned** |
+| **48** | **Mar 16-17** | **16h Mega: Performance + Statusbar + Splash + Matrix + Reconnect** | **7 lessons, Bug #30+#31 closed** |
+
+---
+
+## Session 48 Key Achievements -- Performance + Statusbar + Matrix + Reconnect
+
+```
+Bug #30 CLOSED: subscribe_all 7x per handshake -> boot+reconnect only
+  QR creation: 5590ms -> 650ms (8.6x faster)
+  Boot: ~16s -> ~9s (7.5s saved)
+  128 contacts: 11 minutes -> < 2 seconds (O(NxM) to O(1))
+
+Bug #31 CLOSED: network auto-reconnect
+  errno=104 after ~4 hours (NAT timeout, NOT server disconnect)
+  Two-stage: Network Task signals, App Task reconnects (SRAM stack)
+  Exponential backoff 2s-60s, WiFi check before attempt
+
+Shared statusbar: FULL + CHAT variants, 4 screens migrated
+  Main 26px, Contacts 43->27px, Chat 42->26px (+16/17px gained)
+  10-second global timer, crash guard via parent tracking
+
+Splash screen: real boot progress (9 stages), fade animation
+  Dynamic final: "Quantum Shield Active" / "Vault Mode" / "Ready"
+
+Matrix Rain screensaver: PSRAM canvas 153 KB, 20 FPS
+  40 columns, 30 rows, 3 neon palettes, embedded 8x8 font
+
+NTP non-blocking + timezone UTC-12 to +14
+Lock timer: 7 levels (5s to 15min)
+Pending contact abort (two-stage: UI immediate + App deferred)
+3 crashes resolved (SPI2, NVS PSRAM-stack, MMU WiFi-splash)
+Developer screen deleted. 23 files changed, 4 new, 2 deleted.
+```
 
 ---
 
@@ -1735,4 +1782,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 16, 2026 - Session 47 (UX Overhaul: NVS 1 MB, QR 16-Stage Flow, PQ UI)*
+*Last updated: March 17, 2026 - Session 48 (16h Mega Session: Performance + Statusbar + Splash + Matrix + Reconnect)*

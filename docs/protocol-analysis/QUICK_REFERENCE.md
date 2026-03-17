@@ -3737,3 +3737,176 @@ ui_manager_unlock():
 *Status: UX Overhaul -- NVS 1 MB, QR 16-Stage Flow, PQ UI*
 *22 Milestones Achieved*
 *Next: Session 48 -- Events re-commit, boot test removal, alpha release*
+
+---
+
+## Section 47: Session 48 -- Performance Fix + Statusbar + Matrix Screensaver
+
+### 47.1 Bug #30: subscribe_all Performance
+
+```
+ROOT CAUSE (Aschenputtel):
+  subscribe_all_contacts() called 7x per handshake:
+    Line 349: after NEW command
+    Line 357: after KEY command
+    Line 1104: after 42d completion
+    + 4 more trigger points
+
+  Each call: re-subscribe ALL N contacts.
+  2 contacts: 7 x (2+1 reply) = 40 SUB commands
+  128 contacts: 7 x 129 = 903 commands = ~11 minutes
+
+FIX:
+  Remove lines 349, 357, 1104 (redundant).
+  Keep: boot subscribe + reconnect subscribe only.
+  De-duplication guard: static bool s_subscribed_once.
+
+RESULTS:
+  QR creation:        5590 ms -> 650 ms
+  SUB per handshake:  40 -> 2-3
+  Boot:               ~16 sec -> ~9 sec
+```
+
+### 47.2 Shared Statusbar API
+
+```
+ui_statusbar.h:
+
+  typedef struct {
+      lv_obj_t *bar;
+      lv_obj_t *title;
+      lv_obj_t *clock;
+      lv_obj_t *wifi;
+      lv_obj_t *battery;
+  } statusbar_widgets_t;
+
+  statusbar_create_full(parent, title) -> statusbar_widgets_t
+  statusbar_create_chat(parent, name, pq_status) -> statusbar_widgets_t
+  statusbar_update()           -- called by 10s global timer
+  statusbar_is_active() -> bool -- crash guard
+
+Variants:
+  FULL: [Title] [Clock HH:MM] [WiFi RSSI] [Battery]  (26px)
+  CHAT: [< Back] [Contact Name] [PQ Badge]            (26px)
+
+Height: 26px for both (was 42-43px in old per-screen bars).
+```
+
+### 47.3 Splash Screen Boot Stages
+
+```
+9 status calls in main.c:
+  10%  "Initializing hardware..."
+  20%  "Starting WiFi..."
+  30%  "Connecting to network..."
+  40%  "Starting NTP..."
+  50%  "Mounting SD card..."
+  60%  "Loading contacts..."
+  70%  "Starting SMP..."
+  80%  "Subscribing..."
+  90%  "Almost ready..."
+  100% Dynamic final message (app_init_run):
+       "Quantum Shield Active" (eFuse + PQ)
+       "Vault Mode Active" (eFuse, no PQ)
+       "Ready" (Open mode)
+
+4px progress bar: real width = (progress% * screen_width) / 100
+Thread-safe: volatile progress + flag variables.
+At 100%: bar turns green, 500ms delay, fade to Main.
+```
+
+### 47.4 Matrix Rain Screensaver
+
+```
+PSRAM canvas: 320 x 240 x 2 bytes = 153,600 bytes
+Update rate: 20 FPS (50ms timer)
+Grid: 40 columns x 30 rows (8px cell)
+Font: embedded 8x8 bitmap (no LVGL labels)
+
+Palette (3 neon colors):
+  Cyan:   #00E5FF (50% probability)
+  Blue:   #4488FF (30% probability)
+  Purple: #CC44FF (20% probability)
+
+Each column: independent drop with random speed + length.
+Head character: bright white. Trail: fading to dark.
+Keyboard press: unlock (same as simple lock).
+
+NVS key: "disp_lock"
+  0 = Simple lock (icon + text)
+  1 = Matrix Rain
+```
+
+### 47.5 NVS Keys Added (Session 48)
+
+```
+"tz_offset"  int8_t  (-12 to +14)   Timezone UTC offset
+"lock_timer" uint16_t               Lock timeout in seconds
+"disp_lock"  uint8_t  (0/1)         Lock screen mode
+```
+
+### 47.6 Pending Contact Abort Pattern
+
+```
+Problem: New Contact -> Back -> dead contact in list
+
+Fix in ui_connect.c on_back():
+  smp_abort_pending_contact()
+
+Stage 1 (immediate): contact.active = false
+Stage 2 (deferred):  NVS cleanup on App Task
+  (NOT on Network Task -- PSRAM stack cannot write NVS)
+
+Server DEL: not needed, orphaned queue auto-cleaned.
+```
+
+### 47.7 Bug #31: Network Auto-Reconnect Pattern
+
+```
+Trigger: errno=104 ECONNRESET after ~4 hours idle.
+Server does NOT disconnect subscribed clients. This is network/NAT.
+
+Two-stage reconnect with volatile flags:
+  1. Network Task detects disconnect, sets s_reconnect_needed = true
+  2. App Task (Internal SRAM stack) performs:
+     - TCP connect
+     - TLS handshake (mbedTLS, needs SRAM stack)
+     - SMP handshake (version negotiation)
+     - subscribe_all_contacts()
+  3. Network Task resumes SSL read loop
+
+Exponential backoff: 2s, 4s, 8s, 16s, 32s, 60s (cap)
+WiFi check before each attempt.
+
+CRITICAL: mbedTLS handshake must NOT run on PSRAM stack.
+Same ESP32-S3 SPI cache conflict as NVS writes.
+```
+
+### 47.8 PSRAM-Stack Deferred Work Pattern (3x proven in S48)
+
+```
+Problem: PSRAM-stack tasks cannot do NVS writes or mbedTLS handshakes.
+
+Pattern:
+  1. Set volatile flag from any task
+  2. App Task (Internal SRAM stack) checks flag in main loop
+  3. App Task performs the actual operation
+  4. Clear flag
+
+Used for:
+  - Pending contact abort (NVS delete)
+  - Network reconnect (mbedTLS handshake)
+  - Contact delete from Network Task (NVS cleanup)
+
+NEVER use NET_CMD for operations that need NVS/TLS.
+Always delegate to App Task via volatile flag.
+```
+
+---
+
+*Quick Reference v44.0*
+*Last updated: March 17, 2026 - Session 48*
+*Status: Performance + Reconnect -- QR 650ms, Boot 9s, Auto-Reconnect*
+*22 Milestones Achieved*
+*264 Lessons Learned*
+*Next: Session 49 -- Events re-commit, row-update, multi-server*

@@ -3411,3 +3411,279 @@ Alice default: hardcoded "Alice" replaced with empty string
 *Total bugs documented: 78 (7 closed in S47, 3 open from community) + Bug E*
 *257 lessons learned*
 *Session 47: UX Overhaul -- NVS 1 MB, QR 16-Stage Flow, PQ UI, Per-Contact PQ Abandoned*
+
+---
+
+## Session 48 -- 2026-03-16 to 2026-03-17 (Monster Performance + UX Session)
+
+### Bug #30 CLOSED: Multi-Contact Performance Degradation (CRITICAL)
+
+```
+Root Cause (Aschenputtel Analysis):
+  subscribe_all_contacts() called 7x per handshake instead of 1x.
+  Each call re-subscribes ALL contacts.
+  2 contacts: 40 SUB commands instead of 3.
+  128 contacts extrapolated: 11 minutes just for subscriptions.
+
+  Redundant calls at lines 349, 357, 1104 in smp_tasks.c.
+
+Fix:
+  Three redundant subscribe_all calls removed.
+  Only boot and reconnect retained.
+  De-duplication guard as safety net.
+
+Results:
+  QR creation (2 contacts): 5590 ms -> 650 ms
+  subscribe_all per handshake: 7 -> 0
+  SUB commands per handshake: 40 -> 2-3
+  Boot duration: ~16 sec -> ~9 sec
+```
+
+### Bug #25 CLOSED (Confirmed by mein Prinz)
+
+Timer crash in ui_settings_info.c. Previously reported by Szenni. Confirmed fixed during Session 48 testing.
+
+### Bug #31 NEW: Network Auto-Reconnect
+
+```
+Problem:
+  After WiFi disconnect/reconnect or server timeout, SMP connection
+  does not automatically re-establish. User must restart device.
+
+Planned fix (Hasi in progress):
+  Network Task signals via volatile flag.
+  App Task (Internal SRAM) performs TLS + SMP handshake + subscribe_all.
+  Exponential backoff (2s to 60s).
+  WiFi check before each attempt.
+```
+
+### 3 Crashes Resolved
+
+```
+Crash 1: SPI2 assert
+  Root cause: SD init + animated splash simultaneously on SPI2 bus.
+  Fix: LVGL mutex lock around SD init.
+  Same pattern as Session 37 Bug #58 but different caller.
+
+Crash 2: NVS cache error
+  Root cause: remove_contact() called on Network Task (PSRAM stack).
+  PSRAM tasks cannot write NVS (Session 29 discovery).
+  Fix: Deferred delete on App Task.
+
+Crash 3: MMU entry fault
+  Root cause: WiFi setup replaces splash screen, splash timer still runs.
+  Fix: Guard: check if current screen is still splash before acting.
+  Same pattern as Session 39 Bug #69.
+```
+
+### Pending Contact Abort
+
+```
+Problem: New Contact -> Back without scan = dead contact in list.
+
+Fix: smp_abort_pending_contact() called in on_back().
+  Stage 1: Immediately set active=false
+  Stage 2: Deferred NVS cleanup on App Task
+  Server DEL not needed (orphaned queue auto-cleaned).
+```
+
+### Shared Statusbar Module
+
+```
+New: ui_statusbar.c/h
+
+Two variants:
+  FULL: Screen name + live clock + WiFi RSSI + battery placeholder
+  CHAT: Back arrow + contact name + PQ status (no clock)
+
+10-second global update timer.
+Crash guard: s_bar_parent tracking + statusbar_is_active().
+
+Migrated: Main (26px), Contacts (43->27px), Connect, Chat (42->26px).
+Space gained: +16px contacts list, +17px chat messages.
+```
+
+### Matrix Rain Screensaver
+
+```
+Canvas-based Matrix Rain as lock screen alternative.
+PSRAM canvas buffer: ~153 KB.
+20 FPS, 40 columns, 30 rows.
+Embedded 8x8 bitmap font (no LVGL label overhead).
+Three neon palettes: Cyan (50%), Blue (30%), Purple (20%).
+Keyboard unlock.
+NVS key "disp_lock": 0=Simple Lock, 1=Matrix Rain.
+```
+
+### New Lessons Learned (Session 48)
+
+258. **subscribe_all_contacts() is O(N) and was called M times per handshake** - With N contacts and M handshake stages: O(N x M) SUB commands. 128 contacts: 11 minutes. Call only at boot and reconnect, never during handshake flow (Session 48)
+259. **Aschenputtel log analysis found what code review missed** - Factual log line counting ("how many times does this appear?") beats theoretical analysis when performance degrades non-linearly. Count the SUBs, don't guess (Session 48)
+260. **Shared statusbar eliminates per-screen duplicates** - One module, one timer, two variants. Crash guard via parent tracking prevents updates to destroyed screens. Migrating 4 screens freed local pointers and gained 16-17px vertical space (Session 48)
+261. **Canvas screensaver needs PSRAM (~153 KB for 320x240)** - Embedded bitmap font avoids LVGL label overhead. 20 FPS sufficient for visual effect. NVS-selectable between simple lock and matrix rain (Session 48)
+262. **Pending contact abort is mandatory** - Back without scan creates dead entry. Two-stage: immediate flag + deferred NVS on App Task (not Network Task due to PSRAM/NVS constraint) (Session 48)
+263. **SPI2 contention recurs in new contexts** - Animated splash + SD init = same SPI2 bus = same crash pattern as Session 37. LVGL mutex lock is the universal fix for any SPI2 bus sharing scenario (Session 48)
+
+---
+
+*Bug Tracker v44.0*
+*Last updated: March 17, 2026 - Session 48*
+*Total bugs documented: 80 (Bug #30 closed, #25 closed, #31 new) + Bug E*
+*263 lessons learned*
+*Session 48: From O(N x M) to Matrix Screensaver in one day*
+
+---
+
+## Session 48 -- 2026-03-16 to 2026-03-17 (16-Hour Mega Session)
+
+### Most Extensive Session -- 23 Files, 4 New Modules, 3 Crashes, 3 Bugs Closed
+
+### Bug #30 CLOSED (CRITICAL): Multi-Contact Performance Degradation
+
+```
+Root Cause (Aschenputtel Analysis):
+  subscribe_all_contacts() triggered on EVERY state change during handshake.
+  7 calls per handshake with 2 contacts. Each re-subscribed ALL contacts +
+  reply queues + legacy queue. Re-delivery from redundant SUBs triggered
+  further processing that queued more SUBSCRIBE_ALL.
+  Scaling: O(N x M) where N = contacts, M = calls per handshake.
+  128 contacts would take ~11 MINUTES.
+
+Fix (4 Phases):
+  Phase 2: 3 redundant subscribe_all calls removed
+    (after add_contact, after reply_queue_create, after Reply Queue MSG)
+    NEW with subMode='S' subscribes immediately. Evgeny: "SUB is noop."
+  Phase 3: Dedup guard (s_subscribe_all_pending flag)
+  Phase 4: Boot tests removed (~6910ms saved)
+    NTP non-blocking, sntrup761 test, PQ header test, HKDF KAT, storage test
+  Phase 5: Padding log spam capped (~1.7s serial eliminated)
+
+Bonus: 42d bitmap boot reset (CONNECT_SCANNED spam after reboot)
+
+Results:
+  QR creation (2 contacts): 5590ms -> 650ms (8.6x)
+  subscribe_all per handshake: 7 -> 0 (eliminated)
+  SUB commands per handshake: 40 -> 2-3 (93% fewer)
+  Boot: 16.2s -> 8.7s (7.5s saved)
+  128 contacts: ~11 min -> < 2 sec (O(NxM) to O(1))
+```
+
+### Bug #31 CLOSED (HIGH): Network Auto-Reconnect
+
+```
+Symptom:
+  After ~4 hours: errno=104 ECONNRESET. Network Task gives up.
+  Receiving completely dead. PING/PONG was running fine before disconnect.
+
+Analysis:
+  SimpleX server docs confirm: subscribed clients NOT disconnected for
+  inactivity. errno=104 is network/NAT timeout.
+  mbedTLS handshake must NOT run on PSRAM stack (SPI cache conflict).
+
+Fix: Two-stage with volatile flags
+  1. Network Task signals s_reconnect_needed
+  2. App Task (Internal SRAM) does TCP + TLS + SMP handshake + subscribe_all
+  3. Network Task resumes SSL read loop
+  Exponential backoff: 2s to 60s. WiFi check before each attempt.
+```
+
+### Bug #25 CLOSED (confirmed working in S48)
+
+Timer crash in ui_settings_info.c (Szenni report). Confirmed fixed by timer cleanup pattern from Session 47.
+
+### 3 Crashes Resolved
+
+```
+Crash 1: SPI2 assert
+  Cause: Animated splash screen + SD card init simultaneously on SPI2 bus
+  Fix: LVGL mutex lock around SD init
+
+Crash 2: NVS cache error
+  Cause: remove_contact() called on PSRAM-stack Network Task
+  Fix: Deferred delete on App Task (Internal SRAM)
+
+Crash 3: MMU entry fault
+  Cause: WiFi setup replaces splash, splash timer continues writing
+  Fix: Guard - active screen check in poll_cb
+```
+
+### Shared Statusbar Module
+
+```
+ui_statusbar.c/h: Replaces all per-screen status bar duplicates.
+
+FULL variant: Screen name (cyan) + Clock + WiFi bars + Battery placeholder
+CHAT variant: Back arrow + Contact name + PQ status (no clock/WiFi)
+
+Pixel art: 4 WiFi bars with real RSSI (-50/-65/-75 dBm thresholds)
+Battery: 20x11 body + 2x5 tip (static placeholder)
+Clock: Live UTC with "--:--" until NTP sync
+
+Global 10-second timer (one for all screens, Bug #22 lesson).
+Crash guard: s_bar_parent tracking, statusbar_is_active() check.
+
+Pointer architecture: Permanent screens (Main) get local pointers via
+statusbar_widgets_t. Timer writes to local, not global pointers.
+Prevents Guru Meditation when ephemeral screens overwrite globals.
+```
+
+### Splash Screen Redesign
+
+```
+"Simple" (white) + "Go" (cyan) Montserrat 28
+"private by design" tagline fade-in (300ms delay)
+4px cyan progress bar with real boot steps (9 stages, 10%-90%)
+progress(100) in app_init_run() when boot truly complete
+Dynamic final: "eFuse sealed. 5 layers. Quantum-ready." (Vault+PQ)
+
+Thread safety: volatile flags cross-core (main.c Core 0, LVGL Core 1)
+100ms LVGL poll timer checks flags and updates widgets
+Guard against early screen switch (WiFi setup replaces splash)
+Old static 2-second timer completely removed.
+```
+
+### Matrix Screensaver
+
+```
+LVGL Canvas RGB565 (~153 KB PSRAM)
+40 columns x 30 rows, 8x8 bitmap font (48 chars, 384 bytes)
+20 FPS timer animation, hardware RNG (esp_random)
+Staggered start positions, shimmer effect
+
+Colors: Cyan (50%), Blue (30%), Purple accent (20%)
+NVS key "disp_lock" (0=Simple, 1=Matrix)
+SEC-04 wipe ALWAYS before both lock types
+Canvas allocated/freed per lock/unlock cycle
+```
+
+### Pending Contact Abort
+
+```
+Problem: New Contact -> Back without scan = dead contact eating slot.
+
+Fix (two-stage):
+  1. UI (immediate): active=false, num_contacts--
+  2. App Task (deferred): NVS delete + save_contacts_to_nvs()
+
+First approach (NET_CMD on Network Task) crashed: PSRAM-stack NVS conflict.
+Changed to volatile flag + App Task deferred work.
+Server DEL not needed: orphaned queues auto-cleaned.
+```
+
+### New Lessons Learned (Session 48)
+
+258. **subscribe_all_contacts() must ONLY run at boot and after reconnect** - NEW with subMode='S' subscribes immediately. Redundant calls create O(NxM) feedback loops. 128 contacts: 11 minutes without fix, < 2 seconds with. Evgeny confirmed: "subsequent SUB is noop" (Session 48)
+259. **PSRAM-stack tasks must NOT do NVS ops AND must NOT do mbedTLS handshakes** - ESP32-S3 SPI cache conflict. Pattern: volatile flag + App Task deferred work. Proven 3x in this session: pending delete, reconnect handshake, contact abort (Session 48)
+260. **Permanent screens need local widget pointers** - Ephemeral screens overwrite globals. Timer in permanent screen must write to local pointers only (via statusbar_widgets_t). Prevents Guru Meditation on screen transitions (Session 48)
+261. **LVGL animations collide with SD card init on SPI2** - Same bus sharing from S37/38, different manifestation. LVGL mutex lock around SD init resolves (Session 48)
+262. **Server does NOT disconnect subscribed clients for inactivity** - errno=104 is network/NAT. Auto-reconnect with exponential backoff 2s-60s. Handshake on SRAM-stack task. WiFi check before attempt (Session 48)
+263. **Orphaned server queues are automatically cleaned** - No server DEL needed for aborted contacts. Simplifies pending abort to local-only cleanup (Session 48)
+264. **Canvas buffer (~153 KB PSRAM) acceptable after SEC-04 wipe** - Matrix screensaver allocated/freed per lock/unlock. No persistent memory impact. SEC-04 wipe runs before BOTH lock screen types (Session 48)
+
+---
+
+*Bug Tracker v44.0*
+*Last updated: March 17, 2026 - Session 48*
+*Total bugs documented: 80 (#25, #30, #31 closed in S48) + Bug E*
+*264 lessons learned*
+*Session 48: 16 hours, 23 files, from 11-minute subscription loop to Matrix neon rain*

@@ -4,18 +4,18 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation
 **Version:** v0.1.18-alpha
-**Last Updated:** 2026-03-16 (Session 47 -- UX Overhaul, NVS Resize, PQ UI)
+**Last Updated:** 2026-03-17 (Session 48 -- Performance, Statusbar, Splash, Matrix, Reconnect)
 
 ---
 
-## LATEST: UX Overhaul, NVS Resize, PQ UI (Session 47)
+## LATEST: Performance + Statusbar + Splash + Matrix + Reconnect (Session 48)
 
-Most extensive UX session. 7 bugs closed (#22 standby freeze root cause found, #23 LVGL stack overflow, #24 chat restore after lock, #26 PQ NVS ghost cleanup, #29 Unicode). NVS partition 128 KB to 1 MB for 128 PQ contacts. QR connection flow redesigned with 16 live status stages and auto-navigation. PQ display in chat header (blue/yellow/green). Global PQ toggle. Per-contact PQ toggle abandoned after 3 failed attempts -- state machine cannot be unilaterally disabled. Future: Queue Rotation. 25 files changed.
+Most extensive session (16 hours, 23 files, 4 new modules). Bug #30 CLOSED: subscribe feedback loop O(NxM) to O(1), QR 8.6x faster, boot 7.5s saved. Bug #31 CLOSED: network auto-reconnect with exponential backoff 2s-60s. Shared statusbar (FULL+CHAT). Splash with live boot progress. Matrix screensaver (20 FPS, cyan/blue/purple). Lock timer 5s-15min. Timezone offset. Pending contact abort. 3 crashes resolved. Developer screen deleted.
 
-Bugs: 78 total (7 closed, 3 open from community: #25, #27, #28)
-Lessons: 257 total (7 new in S47: #251-#257)
+Bugs: 80 total (#25, #30, #31 closed; #27 open, #28 partial)
+Lessons: 264 total (7 new in S48: #258-#264)
 
-## PREVIOUS: Codename MEGABLAST - Post-Quantum Double Ratchet (Session 46)
+## PREVIOUS: UX Overhaul, NVS Resize, PQ UI (Session 47)
 
 ## PREVIOUS: Consolidation and Quality Pass (Session 42)
 
@@ -96,7 +96,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 44 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 45 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -144,6 +144,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 44 
 | **42** | [**44_PART42_SESSION_45.md**](44_PART42_SESSION_45.md) | **~155** | ** Security Implementation: 4 Findings Closed (SEC-01/02/04/05)** |
 | **43** | [**45_PART43_SESSION_46.md**](45_PART43_SESSION_46.md) | **~230** | ** MEGABLAST: Post-Quantum Double Ratchet - World First** |
 | **44** | [**46_PART44_SESSION_47.md**](46_PART44_SESSION_47.md) | **~200** | ** UX Overhaul: NVS 1 MB, QR 16-Stage Flow, PQ UI** |
+| **45** | [**47_PART45_SESSION_48.md**](47_PART45_SESSION_48.md) | **~190** | ** Performance + Statusbar + Splash + Matrix + Reconnect (16h)** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -206,6 +207,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 44 
 | **45** | **Mar 10, 2026** | **SECURITY** | ** 4 Findings Closed (SEC-01/02/04/05), HMAC NVS Vault Live** |
 | **46** | **Mar 11-12, 2026** | **MEGABLAST** | ** Post-Quantum Double Ratchet - World First! 6/6 SEC CLOSED** |
 | **47** | **Mar 15-16, 2026** | **UX** | ** 7 Bugs, NVS 1 MB, QR 16-Stage Flow, PQ UI, Per-Contact PQ Abandoned** |
+| **48** | **Mar 16-17, 2026** | **MEGA SESSION** | ** Bug #30+#31, Statusbar, Splash, Matrix, Reconnect (16h, 23 files)** |
 
 ---
 
@@ -355,6 +357,17 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 44 
 - **Bug #26: PQ NVS ghost cleanup (7 keys, 5.2 KB per contact)** 🎨
 - **Per-Contact PQ Toggle: Impossible (State Machine Analysis)** 🎨
 - **BACKLOG.md (7 categories, 36 entries)** 🎨
+- **Bug #30 CLOSED: subscribe_all 7x->1x (QR 5590->650ms, boot 16->9s)** ⚡
+- **Shared Statusbar Module (FULL+CHAT, 4 screens migrated)** ⚡
+- **Splash Screen Redesign (animated boot progress, 9 stages)** ⚡
+- **Matrix Rain Screensaver (canvas PSRAM, 20 FPS, 3 palettes)** ⚡
+- **NTP Non-Blocking + Configurable Timezone (UTC-12 to +14)** ⚡
+- **Lock Timer Configurable (5s to 15min, 7 levels)** ⚡
+- **Pending Contact Abort on Back-Navigation** ⚡
+- **3 Crashes Resolved (SPI2 splash, NVS PSRAM, MMU WiFi)** ⚡
+- **Bug #31 CLOSED: Network Auto-Reconnect (exponential backoff 2s-60s)** ⚡
+- **Developer Screen Deleted** ⚡
+- **42d Bitmap Boot Reset (CONNECT_SCANNED spam eliminated)** ⚡
 
 ### Session 23: The 7-Step Handshake
 ```
@@ -561,26 +574,28 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 48)
+## Next Steps (Session 49)
 
-### Phase 1: Fixes
+### Phase 1: Stability + Polish
 ```
-P0: Aufgabe 2d events re-commit (lost in git checkout)
-P1: Auto-open check after rollback
-P2: Bug #25 timer crash (Szenni report)
-```
-
-### Phase 2: Cleanup
-```
-P3: Boot test removal (sntrup761 self-test)
-P4: Stability and memory optimization
-P5: Row-update optimization (no full contact list rebuild)
+P0: Events re-commit from S47 git checkout
+P1: Row-update optimization (no full contact list rebuild)
+P2: Connect screen redesign
+P3: Settings statusbar migration
 ```
 
-### Phase 3: Alpha Release
+### Phase 2: Hardware
 ```
-P6: Alpha firmware binary for simplego.dev/installer
-P7: Per-contact PQ via Queue Rotation (future architecture)
+P4: Battery ADC real reading
+P5: Screensaver smoothness optimization
+P6: Multi-server management (hardcoded server removal)
+```
+
+### Phase 3: Future Architecture
+```
+P7: Custom SMP server UI (host, port, fingerprint)
+P8: Private Message Routing (PFWD/RFWD)
+P9: GoRelay integration
 ```
 
 ---
@@ -617,39 +632,32 @@ P7: Per-contact PQ via Queue Rotation (future architecture)
 
 ## Current Project Status
 
-**Version:** v0.1.18-alpha | **Last updated:** 2026-03-16 Session 47
+**Version:** v0.1.18-alpha | **Last updated:** 2026-03-17 Session 48
 
 ### Firmware
 
 - Post-quantum Double Ratchet (sntrup761, five encryption layers)
-- NVS partition 1 MB (128 PQ contacts at 5.7 KB each)
-- QR connection flow with 16 live status stages
-- PQ chat header display (quantum-resistant/negotiating/standard)
-- Global PQ toggle in Settings (new connections only)
-- AES-256-GCM encrypted SD history, WiFi Manager
-- Display name, auto-lock with memory wipe, HMAC NVS vault
+- NVS 1 MB (128 PQ contacts), HMAC vault, device-bound HKDF
+- QR 16-stage connection flow (650ms creation, was 5590ms)
+- Shared statusbar (FULL+CHAT), animated splash with boot progress
+- Matrix Rain screensaver, configurable lock timer (5s-15min)
+- NTP non-blocking, configurable timezone (UTC-12 to +14)
+- Boot: ~9 seconds (was ~16 seconds before Bug #30 fix)
 - 6/6 Security Findings CLOSED
 
 ### Bugs
 
-- #20: SEND after idle (KNOWN)
-- #21: SD phantom counter (LOW)
-- #22: CLOSED (timer cleanup)
-- #23: CLOSED (heap alloc)
-- #24: CLOSED (lock restore)
-- #25: Timer crash (OPEN, Szenni)
-- #26: CLOSED (PQ NVS cleanup)
 - #27: QR after panic (OPEN, Szenni)
-- #28: NTP sync (OPEN, Szenni)
-- #29: CLOSED (Unicode)
+- #28: NTP timing (PARTIAL)
+- #31: Auto-reconnect (NEW, Hasi in progress)
 
 ### Open Items
 
-- Events re-commit after git checkout
-- Per-contact PQ via Queue Rotation (future)
-- Boot test removal, alpha binary
-- Evgeny relationship paused, technical docs still referenced
+- Auto-reconnect with exponential backoff
+- Multi-server management (remove hardcoded server)
+- Connect screen design, battery ADC
+- Evgeny relationship paused
 
 ---
 
-*Index updated: 2026-03-16 Session 47 -- UX Overhaul, NVS 1 MB, QR 16-Stage Flow, PQ UI*
+*Index updated: 2026-03-17 Session 48 -- Performance Fix + Statusbar + Matrix Screensaver*

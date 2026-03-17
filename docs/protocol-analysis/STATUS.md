@@ -1,37 +1,42 @@
 
-## Status after Session 47 - 2026-03-16
+## Status after Session 48 - 2026-03-17
 
-### UX Overhaul (Session 47)
-- QR connection flow: 16 live status stages with auto-navigation and opacity pulsing
-- Auto-open removed: incoming messages no longer hijack current screen
-- Lock screen restore: chat and settings tab preserved across lock/unlock
-- NVS partition: 128 KB to 1 MB (128 PQ contacts at 5.7 KB each)
-- PQ chat header: Blue (quantum-resistant) / Yellow (negotiating) / Green (standard)
-- Global PQ toggle in Settings (new connections only)
-- Per-contact PQ toggle: impossible without Queue Rotation (abandoned after 3 attempts)
-- BACKLOG.md introduced (7 categories, 36 entries)
-- 25 files changed, 7 bugs closed
+### Performance (Session 48)
+- Bug #30 CLOSED: subscribe feedback loop eliminated, O(NxM) to O(1)
+- QR creation: 5590ms to 650ms (8.6x faster)
+- Boot: 16.2s to 8.7s (7.5s saved, all boot tests removed)
+- 128 contacts scaling: 11 minutes to < 2 seconds
+
+### New Modules (Session 48)
+- Shared statusbar (FULL + CHAT variants, pixel-art WiFi/battery, global timer)
+- Splash screen (live progress 9 stages, dynamic final message, cross-core safe)
+- Matrix screensaver (canvas RGB565 ~153 KB, 20 FPS, cyan/blue/purple)
+- Lock timer configurable (5s/10s/20s/30s/60s/5min/15min)
+- Timezone UTC offset (-12 to +14, privacy-first, no cities)
+- Pending contact abort (two-stage: UI immediate + App Task deferred)
+
+### Infrastructure (Session 48)
+- Bug #31 CLOSED: Network auto-reconnect (exponential backoff 2s-60s)
+- NTP non-blocking callback
+- Developer screen deleted, theme cleanup (~120 lines removed)
+- 3 crashes resolved (SPI2 splash, NVS PSRAM-stack, MMU WiFi-splash)
+- 23 files changed, 4 new modules, 2 deleted
 
 ### Firmware
 - Post-quantum Double Ratchet (sntrup761, five encryption layers)
-- 128 contacts with full PQ state (NVS 1 MB)
-- AES-256-GCM encrypted SD history, WiFi Manager
-- Display name, auto-lock with memory wipe, HMAC NVS vault
-- 16-stage connection flow with live status
+- NVS 1 MB, 128 PQ contacts, HMAC vault, device-bound HKDF
+- 16-stage QR connection flow, PQ chat header
+- Shared statusbar, Matrix screensaver, animated splash
+- Auto-lock with memory wipe, configurable timer
 - 6/6 Security Findings CLOSED
 
 ### Bugs
-- #22 CLOSED: Standby freeze (settings timer cleanup)
-- #23 CLOSED: LVGL stack overflow (heap allocation)
-- #24 CLOSED: Empty chat after lock (screen restore)
-- #25 OPEN: Timer crash ui_settings_info.c (Szenni)
-- #26 CLOSED: PQ NVS ghost cleanup on delete
-- #27 OPEN: QR after kernel panic (Szenni)
-- #28 OPEN: NTP sync (Szenni)
-- #29 CLOSED: Unicode emoji crash
+- #25 CLOSED (S48), #30 CLOSED (S48), #31 CLOSED (S48)
+- #27 OPEN (Szenni: QR after panic reboot)
+- #28 PARTIAL (NTP works, TZ settable)
 
 ### Open Items
-- Aufgabe 2d events re-commit (lost in git checkout)
-- Per-contact PQ via Queue Rotation (future)
-- Boot test removal, stability optimization
+- Events re-commit from S47 git checkout
+- Row-update optimization (no full contact list rebuild)
 - Alpha firmware binary for simplego.dev/installer
+- Multi-server management (hardcoded server removal)
