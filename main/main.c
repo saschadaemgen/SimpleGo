@@ -58,6 +58,7 @@
 #include "smp_queue.h"
 #include "smp_handshake.h"  // Auftrag 50d: handshake_load_state
 #include "simplex_crypto.h"
+#include "smp_servers.h"    // Session 49: Multi-server management
 
 // T-Deck Display Driver
 #include "tdeck_display.h"
@@ -307,8 +308,9 @@ static void ui_poll_timer_cb(lv_timer_t *t)
 }
 
 // ============== CONFIG ==============
-#define SMP_HOST      "smp1.simplexonflux.com"
-#define SMP_PORT      5223
+// Session 49: SMP_HOST/SMP_PORT removed. Server chosen dynamically
+// via smp_servers_pick_storage() from the multi-server list.
+static smp_server_t *s_active_server = NULL;
 
 // ============== Main SMP Connection ==============
 
@@ -346,8 +348,8 @@ static void smp_connect(void) {
     // ========== Step 1: TCP + TLS ==========
     ui_splash_set_status("Connecting to server...");
     ui_splash_set_progress(75);
-    ESP_LOGI(TAG, "[1/5] Connecting to %s:%d...", SMP_HOST, SMP_PORT);
-    sock = smp_tcp_connect(SMP_HOST, SMP_PORT);
+    ESP_LOGI(TAG, "[1/5] Connecting to %s:%d...", s_active_server->host, s_active_server->port);
+    sock = smp_tcp_connect(s_active_server->host, s_active_server->port);
     if (sock < 0) goto cleanup;
 
     ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT,
@@ -367,7 +369,7 @@ static void smp_connect(void) {
     ret = mbedtls_ssl_setup(&ssl, &conf);
     if (ret != 0) goto cleanup;
 
-    mbedtls_ssl_set_hostname(&ssl, SMP_HOST);
+    mbedtls_ssl_set_hostname(&ssl, s_active_server->host);
     mbedtls_ssl_set_bio(&ssl, &sock, my_send_cb, my_recv_cb, NULL);
 
     while ((ret = mbedtls_ssl_handshake(&ssl)) != 0) {
@@ -460,7 +462,7 @@ static void smp_connect(void) {
 
     // Invite links printed to console for debug (not auto-displayed on screen)
     if (contacts_db.num_contacts > 0) {
-        print_invitation_links(ca_hash, SMP_HOST, SMP_PORT);
+        print_invitation_links(ca_hash, s_active_server->host, s_active_server->port);
     }
 
     // ========== Phase 2: Start FreeRTOS Tasks (all PSRAM) ==========
@@ -737,6 +739,17 @@ void app_main(void) {
     // Bug #30: PQ header + HKDF KAT tests removed (saved ~170ms)
     // Verified in Session 46, crypto correctness proven by successful PQ messages.
 
+    // Session 49: Initialize multi-server list (NVS or presets on first boot)
+    ui_splash_set_status("Loading servers...");
+    ui_splash_set_progress(55);
+    smp_servers_init();
+    s_active_server = smp_servers_pick_storage();
+    if (!s_active_server) {
+        ESP_LOGE(TAG, "No storage server available! Cannot continue.");
+        while (1) vTaskDelay(pdMS_TO_TICKS(10000));
+    }
+    ESP_LOGI(TAG, "Active server: %s:%d", s_active_server->host, s_active_server->port);
+
     // ========== Auftrag 50b: Session Restoration or Fresh Start ==========
     ui_splash_set_status("Restoring encrypted session...");
     ui_splash_set_progress(60);
@@ -778,9 +791,10 @@ void app_main(void) {
 
     if (!session_restored) {
         // Create Reply Queue (fresh start only)
-        ESP_LOGI(TAG, "Creating reply queue on %s:%d...", SMP_HOST, SMP_PORT);
+        ESP_LOGI(TAG, "Creating reply queue on %s:%d...",
+                 s_active_server->host, s_active_server->port);
 
-        if (!queue_create(SMP_HOST, SMP_PORT)) {
+        if (!queue_create(s_active_server->host, s_active_server->port)) {
             ESP_LOGE(TAG, "Failed to create reply queue!");
             ESP_LOGW(TAG, "  Continuing without reply queue...");
         } else {
