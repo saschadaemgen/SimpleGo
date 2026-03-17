@@ -13,6 +13,7 @@
 #include "smp_types.h"     // SMP_BLOCK_SIZE
 #include "smp_contacts.h"  // find_contact_by_recipient_id, contacts_db
 #include "smp_storage.h"   // Session 48: smp_storage_delete for pending contact cleanup
+#include "smp_servers.h"   // Session 49: SEC-07 fingerprint verification
 #include "smp_queue.h"     // our_queue; T4e: queue_reconnect/subscribe/send_key/read_raw/send_ack
 #include "reply_queue.h"   // per-contact reply queues
 #include "smp_e2e.h"       // smp_e2e_decrypt_reply_message()
@@ -1094,6 +1095,18 @@ static bool app_do_reconnect(void)
             mbedtls_sha256(hello + cert2_off, cert2_len, ca_hash, 0);
         } else {
             mbedtls_sha256(hello + cert1_off, cert1_len, ca_hash, 0);
+        }
+
+        // SEC-07: Verify TLS certificate fingerprint against known server list
+        smp_server_t *expected_srv = smp_servers_find_by_host(our_queue.server_host);
+        if (expected_srv) {
+            if (memcmp(ca_hash, expected_srv->key_hash, 32) != 0) {
+                ESP_LOGE(TAG_APP, "SEC-07: RECONNECT FINGERPRINT MISMATCH for %s!",
+                         our_queue.server_host);
+                heap_caps_free(hblock);
+                goto fail;
+            }
+            ESP_LOGI(TAG_APP, "SEC-07: Reconnect fingerprint verified");
         }
 
         uint8_t client_hello[35];

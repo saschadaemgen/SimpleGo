@@ -415,6 +415,18 @@ static void smp_connect(void) {
         mbedtls_sha256(hello + cert1_off, cert1_len, ca_hash, 0);
     }
 
+    // SEC-07: Verify TLS certificate fingerprint against selected server
+    if (memcmp(ca_hash, s_active_server->key_hash, 32) != 0) {
+        ESP_LOGE(TAG, "SEC-07: FINGERPRINT MISMATCH for %s!", s_active_server->host);
+        ESP_LOGE(TAG, "   Expected: %02x%02x%02x%02x...",
+                 s_active_server->key_hash[0], s_active_server->key_hash[1],
+                 s_active_server->key_hash[2], s_active_server->key_hash[3]);
+        ESP_LOGE(TAG, "   Got:      %02x%02x%02x%02x...",
+                 ca_hash[0], ca_hash[1], ca_hash[2], ca_hash[3]);
+        goto cleanup;
+    }
+    ESP_LOGI(TAG, "      SEC-07: Fingerprint verified for %s", s_active_server->host);
+
     uint8_t client_hello[35];
     int pos = 0;
     client_hello[pos++] = 0x00;

@@ -25,6 +25,7 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/sha256.h"
 #include "sodium.h"
+#include "smp_servers.h"    // Session 49: SEC-07 fingerprint verification
 
 static const char *TAG = "SMP_QUEUE";
 
@@ -170,6 +171,25 @@ static bool queue_connect(const char *host, int port) {
              our_queue.server_key_hash[0], our_queue.server_key_hash[1],
              our_queue.server_key_hash[2], our_queue.server_key_hash[3]);
     
+    // SEC-07: Verify TLS certificate fingerprint against known server list
+    smp_server_t *expected_srv = smp_servers_find_by_host(host);
+    if (expected_srv) {
+        if (memcmp(our_queue.server_key_hash, expected_srv->key_hash, 32) != 0) {
+            ESP_LOGE(TAG, "SEC-07: FINGERPRINT MISMATCH for %s!", host);
+            ESP_LOGE(TAG, "   Expected: %02x%02x%02x%02x...",
+                     expected_srv->key_hash[0], expected_srv->key_hash[1],
+                     expected_srv->key_hash[2], expected_srv->key_hash[3]);
+            ESP_LOGE(TAG, "   Got:      %02x%02x%02x%02x...",
+                     our_queue.server_key_hash[0], our_queue.server_key_hash[1],
+                     our_queue.server_key_hash[2], our_queue.server_key_hash[3]);
+            free(block);
+            return false;
+        }
+        ESP_LOGI(TAG, "   SEC-07: Fingerprint verified for %s", host);
+    } else {
+        ESP_LOGW(TAG, "   SEC-07: Server %s not in known list - skipping verify", host);
+    }
+
     // Send ClientHello
     uint8_t client_hello[35];
     int pos = 0;
