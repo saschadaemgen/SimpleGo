@@ -170,6 +170,29 @@ bool peer_connect(const char *host, int port) {
         mbedtls_sha256(hello + cert1_off, cert1_len, peer_state.server_key_hash, 0);
     }
 
+    // SEC-07: Verify peer server TLS fingerprint against invitation URI
+    {
+        // Check if key_hash was extracted from invitation (non-zero)
+        uint8_t zero_hash[32] = {0};
+        if (memcmp(pending_peer.key_hash, zero_hash, 32) != 0) {
+            if (memcmp(peer_state.server_key_hash, pending_peer.key_hash, 32) != 0) {
+                ESP_LOGE(TAG, "SEC-07: PEER SERVER FINGERPRINT MISMATCH for %s!", host);
+                ESP_LOGE(TAG, "   Expected: %02x%02x%02x%02x...",
+                         pending_peer.key_hash[0], pending_peer.key_hash[1],
+                         pending_peer.key_hash[2], pending_peer.key_hash[3]);
+                ESP_LOGE(TAG, "   Got:      %02x%02x%02x%02x...",
+                         peer_state.server_key_hash[0], peer_state.server_key_hash[1],
+                         peer_state.server_key_hash[2], peer_state.server_key_hash[3]);
+                free(block);
+                close(peer_state.sock);
+                return false;
+            }
+            ESP_LOGI(TAG, "   SEC-07: Peer server fingerprint verified for %s", host);
+        } else {
+            ESP_LOGW(TAG, "   SEC-07: No peer fingerprint available - skipping verify");
+        }
+    }
+
     // Send ClientHello
     uint8_t client_hello[35];
     int pos = 0;

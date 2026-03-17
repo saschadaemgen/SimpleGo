@@ -378,6 +378,26 @@ void parse_agent_message(contact_t *contact, const uint8_t *plain, int plain_len
                                 char *slash = at ? strchr(at, '/') : NULL;
                                 char *hash = slash ? strchr(slash, '#') : NULL;
                                 
+                                // SEC-07: Extract server fingerprint from smp://FINGERPRINT@host
+                                if (at) {
+                                    const char *fp_start = smp_start + 6;  // skip "smp://"
+                                    int fp_b64_len = (int)(at - fp_start);
+                                    if (fp_b64_len > 0 && fp_b64_len < 48) {
+                                        char fp_b64[48] = {0};
+                                        memcpy(fp_b64, fp_start, fp_b64_len);
+                                        int fp_dec = base64url_decode(fp_b64,
+                                            pending_peer.key_hash, 32);
+                                        if (fp_dec == 32) {
+                                            ESP_LOGI(TAG, "      [SEC] SEC-07: Peer fingerprint: %02x%02x%02x%02x...",
+                                                     pending_peer.key_hash[0], pending_peer.key_hash[1],
+                                                     pending_peer.key_hash[2], pending_peer.key_hash[3]);
+                                        } else {
+                                            ESP_LOGW(TAG, "      [WARN] SEC-07: Peer fingerprint decode failed (%d bytes)",
+                                                     fp_dec);
+                                        }
+                                    }
+                                }
+
                                 if (at && slash) {
                                     int hostlen = slash - at - 1;
                                     if (hostlen > 0 && hostlen < 63) {
