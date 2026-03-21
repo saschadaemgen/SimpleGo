@@ -14,7 +14,14 @@
 #include "smp_types.h"
 #include "smp_storage.h"
 #include "smp_ratchet.h"     // Session 47: PQ toggle (get/set pq_enabled)
+#include "smp_servers.h"     // Session 49: Server management overlay
+#include "smp_rotation.h"   // Session 49: Queue Rotation for server switch
+#include "smp_contacts.h"   // Session 49: count_active for rotation decision
+#include "ui_manager.h"    // Session 49: Navigate to contacts after rotation start
 #include "esp_efuse.h"        // Session 47: Runtime eFuse status
+#include "esp_system.h"       // Session 49: esp_restart() for server switch
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"    // Session 49: vTaskDelay before restart
 #include "lvgl.h"
 
 /* Row dimensions */
@@ -51,6 +58,14 @@ static lv_obj_t *s_name_overlay    = NULL;
 static lv_obj_t *s_name_ta         = NULL;
 static lv_group_t *s_name_group    = NULL;
 static lv_group_t *s_name_prev_group = NULL;
+
+/* Server settings overlay (Session 49) */
+static lv_obj_t *s_srv_overlay     = NULL;
+static lv_obj_t *s_srv_content     = NULL;
+
+/* Server switch popup (Session 49 rewrite) */
+static lv_obj_t *s_srv_popup       = NULL;
+static int       s_pending_srv_idx = -1;
 
 /* ================================================================
  * Timezone Offset (Session 48)
@@ -365,6 +380,365 @@ static void on_pq_toggle(lv_event_t *e)
 }
 
 /* ================================================================
+ * Server Selection Overlay (Session 49 rewrite)
+ *
+ * Single active server model (radio-button).
+ * Flat scrollable list grouped by operator.
+ * Server switch stored in NVS, effective on next reboot.
+ * Private Message Routing: info-only popup (future feature).
+ * ================================================================ */
+
+static void close_srv_popup(void)
+{
+    if (s_srv_popup) {
+        lv_obj_delete(s_srv_popup);
+        s_srv_popup = NULL;
+    }
+    s_pending_srv_idx = -1;
+}
+
+static void close_srv_overlay(void)
+{
+    close_srv_popup();
+    if (s_srv_overlay) {
+        lv_obj_delete(s_srv_overlay);
+        s_srv_overlay = NULL;
+    }
+    s_srv_content = NULL;
+}
+
+static void srv_rebuild_list(void);
+
+/* --- Event handlers --- */
+
+static void on_srv_back(lv_event_t *e)
+{
+    (void)e;
+    close_srv_overlay();
+}
+
+static void on_srv_confirm(lv_event_t *e)
+{
+    (void)e;
+    if (s_pending_srv_idx >= 0) {
+        /* Count active contacts to decide: rotation or direct switch */
+        int active = 0;
+        for (int i = 0; i < MAX_CONTACTS; i++) {
+            if (contacts_db.contacts[i].active) active++;
+        }
+
+        if (active > 0) {
+            /* Contacts exist - start queue rotation (no reboot) */
+            ESP_LOGI("UI_INFO", "Starting queue rotation to server [%d] (%d contacts)",
+                     s_pending_srv_idx, active);
+            if (rotation_start(s_pending_srv_idx)) {
+                close_srv_overlay();
+                /* Navigate to contacts - user sees live rotation status per contact */
+                ui_manager_show_screen(UI_SCREEN_CONTACTS, LV_SCR_LOAD_ANIM_MOVE_LEFT);
+                return;
+            }
+            /* rotation_start failed - fall through to direct switch */
+            ESP_LOGW("UI_INFO", "rotation_start failed, falling back to direct switch");
+        }
+
+        /* No contacts or rotation failed - direct switch + reboot */
+        smp_servers_set_active(s_pending_srv_idx);
+        ESP_LOGI("UI_INFO", "Server switched to [%d] - rebooting...", s_pending_srv_idx);
+        vTaskDelay(pdMS_TO_TICKS(200));
+        esp_restart();
+    }
+    close_srv_popup();
+}
+
+static void on_srv_cancel(lv_event_t *e)
+{
+    (void)e;
+    close_srv_popup();
+}
+
+static void show_srv_switch_popup(int new_idx)
+{
+    close_srv_popup();
+
+    smp_server_t *srv = smp_servers_get(new_idx);
+    if (!srv) return;
+
+    s_pending_srv_idx = new_idx;
+
+    /* Full-screen semi-transparent backdrop */
+    s_srv_popup = lv_obj_create(s_srv_overlay);
+    lv_obj_set_size(s_srv_popup, UI_SCREEN_W, UI_SCREEN_H);
+    lv_obj_set_pos(s_srv_popup, 0, 0);
+    lv_obj_set_style_bg_color(s_srv_popup, lv_color_hex(0x000408), 0);
+    lv_obj_set_style_bg_opa(s_srv_popup, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(s_srv_popup, 0, 0);
+    lv_obj_set_style_radius(s_srv_popup, 0, 0);
+    lv_obj_set_style_pad_all(s_srv_popup, 0, 0);
+    lv_obj_clear_flag(s_srv_popup, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* Title */
+    lv_obj_t *title = lv_label_create(s_srv_popup);
+    lv_label_set_text(title, "Switch Server?");
+    lv_obj_set_style_text_color(title, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(title, UI_FONT, 0);
+    lv_obj_set_pos(title, 20, 24);
+
+    /* Explanation text */
+    lv_obj_t *info1 = lv_label_create(s_srv_popup);
+    lv_label_set_text(info1, "Contacts will be migrated to\nthe new server automatically.");
+    lv_obj_set_style_text_color(info1, UI_COLOR_TEXT_WHITE, 0);
+    lv_obj_set_style_text_font(info1, UI_FONT_SM, 0);
+    lv_obj_set_pos(info1, 20, 50);
+
+    lv_obj_t *info2 = lv_label_create(s_srv_popup);
+    lv_label_set_text(info2, "Chat stays available during\nmigration. No messages lost.");
+    lv_obj_set_style_text_color(info2, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(info2, UI_FONT_SM, 0);
+    lv_obj_set_pos(info2, 20, 82);
+
+    /* New server hostname */
+    lv_obj_t *srv_label = lv_label_create(s_srv_popup);
+    lv_label_set_text(srv_label, "New server:");
+    lv_obj_set_style_text_color(srv_label, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(srv_label, UI_FONT_SM, 0);
+    lv_obj_set_pos(srv_label, 20, 116);
+
+    lv_obj_t *srv_name = lv_label_create(s_srv_popup);
+    lv_label_set_text(srv_name, srv->host);
+    lv_obj_set_style_text_color(srv_name, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(srv_name, UI_FONT, 0);
+    lv_obj_set_pos(srv_name, 20, 132);
+
+    /* Separator */
+    lv_obj_t *sep = lv_obj_create(s_srv_popup);
+    lv_obj_set_size(sep, 280, 1);
+    lv_obj_set_pos(sep, 20, 158);
+    lv_obj_set_style_bg_color(sep, UI_COLOR_LINE_DIM, 0);
+    lv_obj_set_style_bg_opa(sep, LV_OPA_50, 0);
+    lv_obj_set_style_border_width(sep, 0, 0);
+    lv_obj_clear_flag(sep, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+
+    /* Cancel button */
+    lv_obj_t *cancel = lv_label_create(s_srv_popup);
+    lv_label_set_text(cancel, "Cancel");
+    lv_obj_set_style_text_color(cancel, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(cancel, UI_FONT, 0);
+    lv_obj_set_pos(cancel, 40, 172);
+    lv_obj_add_flag(cancel, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(cancel, 10);
+    lv_obj_add_event_cb(cancel, on_srv_cancel, LV_EVENT_CLICKED, NULL);
+
+    /* Switch button */
+    lv_obj_t *confirm = lv_label_create(s_srv_popup);
+    lv_label_set_text(confirm, "Migrate");
+    lv_obj_set_style_text_color(confirm, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(confirm, UI_FONT, 0);
+    lv_obj_set_pos(confirm, 220, 172);
+    lv_obj_add_flag(confirm, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(confirm, 10);
+    lv_obj_add_event_cb(confirm, on_srv_confirm, LV_EVENT_CLICKED, NULL);
+}
+
+static void on_srv_select(lv_event_t *e)
+{
+    int srv_idx = (int)(intptr_t)lv_event_get_user_data(e);
+    int current = smp_servers_get_active_index();
+
+    /* Already active - no action */
+    if (srv_idx == current) return;
+
+    show_srv_switch_popup(srv_idx);
+}
+
+/* --- Private Message Routing info popup --- */
+
+static void on_pmr_ok(lv_event_t *e)
+{
+    (void)e;
+    close_srv_popup();
+}
+
+static void on_pmr_info(lv_event_t *e)
+{
+    (void)e;
+    close_srv_popup();
+
+    s_srv_popup = lv_obj_create(s_srv_overlay);
+    lv_obj_set_size(s_srv_popup, UI_SCREEN_W, UI_SCREEN_H);
+    lv_obj_set_pos(s_srv_popup, 0, 0);
+    lv_obj_set_style_bg_color(s_srv_popup, lv_color_hex(0x000408), 0);
+    lv_obj_set_style_bg_opa(s_srv_popup, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(s_srv_popup, 0, 0);
+    lv_obj_set_style_radius(s_srv_popup, 0, 0);
+    lv_obj_set_style_pad_all(s_srv_popup, 0, 0);
+    lv_obj_clear_flag(s_srv_popup, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *title = lv_label_create(s_srv_popup);
+    lv_label_set_text(title, "Private Message Routing");
+    lv_obj_set_style_text_color(title, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(title, UI_FONT, 0);
+    lv_obj_set_pos(title, 20, 60);
+
+    lv_obj_t *info = lv_label_create(s_srv_popup);
+    lv_label_set_text(info, "Private message routing will be\navailable in a future version.");
+    lv_obj_set_style_text_color(info, UI_COLOR_TEXT_WHITE, 0);
+    lv_obj_set_style_text_font(info, UI_FONT_SM, 0);
+    lv_obj_set_pos(info, 20, 90);
+
+    lv_obj_t *ok = lv_label_create(s_srv_popup);
+    lv_label_set_text(ok, LV_SYMBOL_OK " OK");
+    lv_obj_set_style_text_color(ok, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(ok, UI_FONT, 0);
+    lv_obj_set_pos(ok, 130, 140);
+    lv_obj_add_flag(ok, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(ok, 10);
+    lv_obj_add_event_cb(ok, on_pmr_ok, LV_EVENT_CLICKED, NULL);
+}
+
+/* --- Build the flat list --- */
+
+static void srv_rebuild_list(void)
+{
+    if (!s_srv_content) return;
+    lv_obj_clean(s_srv_content);
+
+    int active_idx = smp_servers_get_active_index();
+
+    /* Order: SimpleGo first, then SimpleX, then Flux */
+    int op_order[3] = {SMP_OP_SIMPLEGO, SMP_OP_SIMPLEX, SMP_OP_FLUX};
+
+    for (int oi = 0; oi < 3; oi++) {
+        int op_id = op_order[oi];
+        const char *op_name = smp_operators_get_name((uint8_t)op_id);
+
+        /* === Operator header (bare label, no container) === */
+        lv_obj_t *hdr = lv_label_create(s_srv_content);
+        lv_label_set_text_fmt(hdr, "  %s", op_name);
+        lv_obj_set_style_text_color(hdr, UI_COLOR_PRIMARY, 0);
+        lv_obj_set_style_text_font(hdr, UI_FONT, 0);
+        lv_obj_set_style_pad_top(hdr, 6, 0);
+        lv_obj_set_style_pad_bottom(hdr, 2, 0);
+
+        /* === Server rows === */
+        int total = smp_servers_count();
+        for (int i = 0; i < total; i++) {
+            smp_server_t *srv = smp_servers_get(i);
+            if (!srv || srv->op != (uint8_t)op_id) continue;
+
+            bool is_active = (i == active_idx);
+
+            /* Row container (clickable = select server) */
+            lv_obj_t *row = lv_obj_create(s_srv_content);
+            lv_obj_set_size(row, LV_PCT(100), 20);
+            lv_obj_set_style_bg_color(row, ROW_BG, 0);
+            lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_width(row, 0, 0);
+            lv_obj_set_style_radius(row, 0, 0);
+            lv_obj_set_style_pad_all(row, 0, 0);
+            lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_event_cb(row, on_srv_select, LV_EVENT_CLICKED,
+                                 (void *)(intptr_t)i);
+
+            /* Hostname with active marker */
+            lv_obj_t *host_lbl = lv_label_create(row);
+            lv_label_set_text_fmt(host_lbl, " %s %s",
+                is_active ? "*" : " ", srv->host);
+            lv_obj_set_style_text_color(host_lbl,
+                is_active ? UI_COLOR_PRIMARY : UI_COLOR_TEXT_WHITE, 0);
+            lv_obj_set_style_text_font(host_lbl, UI_FONT_SM, 0);
+            lv_obj_align(host_lbl, LV_ALIGN_LEFT_MID, 4, 0);
+
+            /* Route label (clickable, shows PMR info popup) */
+            lv_obj_t *route_lbl = lv_label_create(row);
+            lv_label_set_text(route_lbl, "Route");
+            lv_obj_set_style_text_color(route_lbl, UI_COLOR_TEXT_DIM, 0);
+            lv_obj_set_style_text_font(route_lbl, UI_FONT_SM, 0);
+            lv_obj_align(route_lbl, LV_ALIGN_RIGHT_MID, -8, 0);
+            lv_obj_add_flag(route_lbl, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_set_ext_click_area(route_lbl, 6);
+            lv_obj_add_event_cb(route_lbl, on_pmr_info, LV_EVENT_CLICKED, NULL);
+        }
+    }
+}
+
+/* --- Show overlay --- */
+
+static void show_srv_overlay(void)
+{
+    if (s_srv_overlay) close_srv_overlay();
+
+    s_srv_overlay = lv_obj_create(s_settings_scr);
+    lv_obj_set_size(s_srv_overlay, UI_SCREEN_W, UI_SCREEN_H);
+    lv_obj_set_pos(s_srv_overlay, 0, 0);
+    lv_obj_set_style_bg_color(s_srv_overlay, lv_color_hex(0x000408), 0);
+    lv_obj_set_style_bg_opa(s_srv_overlay, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(s_srv_overlay, 0, 0);
+    lv_obj_set_style_radius(s_srv_overlay, 0, 0);
+    lv_obj_set_style_pad_all(s_srv_overlay, 0, 0);
+    lv_obj_clear_flag(s_srv_overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* Title */
+    lv_obj_t *title = lv_label_create(s_srv_overlay);
+    lv_label_set_text(title, "Server");
+    lv_obj_set_style_text_color(title, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_font(title, UI_FONT, 0);
+    lv_obj_set_pos(title, 10, 6);
+
+    /* Active server name in title bar */
+    smp_server_t *active = smp_servers_get_active();
+    if (active) {
+        lv_obj_t *active_lbl = lv_label_create(s_srv_overlay);
+        lv_label_set_text(active_lbl, active->host);
+        lv_obj_set_style_text_color(active_lbl, UI_COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(active_lbl, UI_FONT_SM, 0);
+        lv_obj_align(active_lbl, LV_ALIGN_TOP_RIGHT, -10, 9);
+    }
+
+    /* Glow line */
+    lv_obj_t *glow = lv_obj_create(s_srv_overlay);
+    lv_obj_set_size(glow, UI_SCREEN_W, 1);
+    lv_obj_set_pos(glow, 0, 25);
+    lv_obj_set_style_bg_color(glow, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_bg_opa(glow, (lv_opa_t)64, 0);
+    lv_obj_set_style_border_width(glow, 0, 0);
+    lv_obj_set_style_radius(glow, 0, 0);
+    lv_obj_clear_flag(glow, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+
+    /* Scrollable content */
+    s_srv_content = lv_obj_create(s_srv_overlay);
+    lv_obj_set_size(s_srv_content, UI_SCREEN_W, UI_SCREEN_H - 52);
+    lv_obj_set_pos(s_srv_content, 0, 26);
+    lv_obj_set_style_bg_opa(s_srv_content, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(s_srv_content, 0, 0);
+    lv_obj_set_style_pad_all(s_srv_content, 0, 0);
+    lv_obj_set_style_pad_top(s_srv_content, 2, 0);
+    lv_obj_set_style_pad_row(s_srv_content, 1, 0);
+    lv_obj_set_style_radius(s_srv_content, 0, 0);
+    lv_obj_set_flex_flow(s_srv_content, LV_FLEX_FLOW_COLUMN);
+    lv_obj_add_flag(s_srv_content, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scrollbar_mode(s_srv_content, LV_SCROLLBAR_MODE_OFF);
+
+    /* Back button */
+    lv_obj_t *back = lv_label_create(s_srv_overlay);
+    lv_label_set_text(back, LV_SYMBOL_LEFT " Back");
+    lv_obj_set_style_text_color(back, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(back, UI_FONT, 0);
+    lv_obj_set_pos(back, 10, UI_SCREEN_H - 22);
+    lv_obj_add_flag(back, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(back, 10);
+    lv_obj_add_event_cb(back, on_srv_back, LV_EVENT_CLICKED, NULL);
+
+    srv_rebuild_list();
+    ESP_LOGI("UI_INFO", "Server selection overlay opened");
+}
+
+static void on_server_row_click(lv_event_t *e)
+{
+    (void)e;
+    show_srv_overlay();
+}
+/* ================================================================
  * Row Builders
  * ================================================================ */
 
@@ -558,14 +932,17 @@ void settings_create_info(lv_obj_t *parent)
         "LVGL", "...", UI_COLOR_PRIMARY,
         &s_psram_val, &s_lvgl_val);
 
-    /* === Row 6: Server | Time [-] UTC+1 [+] === */
+    /* === Row 6: Server (clickable) | Time [-] UTC+1 [+] === */
     {
         lv_obj_t *row = create_row_base(s_list);
 
-        /* Left: Server */
+        /* Left: Server (clickable to open server settings overlay) */
         create_accent(row, 6, UI_COLOR_PRIMARY);
         create_key(row, L_KEY_X, "Server");
-        create_val(row, L_VAL_X, "simplego", UI_COLOR_PRIMARY);
+        lv_obj_t *srv_val = create_val(row, L_VAL_X, "Manage", UI_COLOR_PRIMARY);
+        lv_obj_add_flag(srv_val, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(srv_val, 10);
+        lv_obj_add_event_cb(srv_val, on_server_row_click, LV_EVENT_CLICKED, NULL);
 
         /* Right: Time with [-] value [+] */
         create_accent(row, R_ACCENT_X, UI_COLOR_PRIMARY);
@@ -713,7 +1090,9 @@ void settings_cleanup_info_timers(void)
 {
     if (s_refresh_timer) { lv_timer_del(s_refresh_timer); s_refresh_timer = NULL; }
     close_name_overlay();
+    close_srv_overlay();
 }
+
 
 void settings_nullify_info_pointers(void)
 {
@@ -724,6 +1103,10 @@ void settings_nullify_info_pointers(void)
     s_lock_simple = NULL;
     s_lock_matrix = NULL;
     s_lock_timer_val = NULL;
+    s_srv_overlay = NULL;
+    s_srv_content = NULL;
+    s_srv_popup = NULL;
+    s_pending_srv_idx = -1;
 }
 
 void settings_info_refresh(void) { refresh_values(); }

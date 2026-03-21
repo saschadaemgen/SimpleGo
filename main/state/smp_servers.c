@@ -1,18 +1,18 @@
 /**
  * SimpleGo - smp_servers.c
- * Multi-server management with operator-level role control
+ * Multi-server management with single active server selection
  *
  * 21 preset servers from SimpleX Chat Presets.hs:
- *   - 14 SimpleX Chat (Storage + Proxy, 4 randomly enabled on first boot)
- *   - 6 Flux (Storage + Proxy, 3 randomly enabled on first boot)
- *   - 1 SimpleGo (Storage + Proxy, always enabled, default)
+ *   - 14 SimpleX Chat (Storage + Proxy)
+ *   - 6 Flux (Storage + Proxy)
+ *   - 1 SimpleGo (Storage + Proxy, default active)
  *
- * Roles controlled at operator level (matching SimpleX App behavior):
- *   - Operator "enabled" = master toggle
- *   - Operator "use_for_recv" = allow Storage ("To receive")
- *   - Operator "use_for_proxy" = allow Proxy ("For private routing")
+ * Single active server model (radio-button):
+ *   - Exactly one server active at a time
+ *   - Server switch stored in NVS, takes effect on next reboot
+ *   - Queue Rotation (live migration) planned for future
  *
- * Copyright (c) 2025-2026 Sascha Dämgen, IT and More Systems
+ * Copyright (c) 2025-2026 Sascha Daemgen, IT and More Systems
  * SPDX-License-Identifier: AGPL-3.0
  */
 
@@ -20,8 +20,8 @@
 #include "smp_utils.h"      // base64url_decode()
 #include "smp_storage.h"    // NVS read/write
 #include <string.h>
+#include <stdlib.h>         // malloc, free
 #include "esp_log.h"
-#include "esp_random.h"
 
 static const char *TAG = "SMP_SRV";
 
@@ -55,7 +55,6 @@ static const server_preset_t PRESETS[] = {
     {"smp6.simplex.im",  "PQUV2eL0t7OStZOoAsPEV2QYWt4-xilbakvGUGOItUo=", SMP_OP_SIMPLEX, SMP_SERVER_ROLE_ALL},
 
     // ---- Flux (Operator 1) - Storage + Proxy ----
-    // Verified in SimpleX App: Flux has "To receive" AND "For private routing"
     {"smp1.simplexonflux.com", "xQW_ufMkGE20UrTlBl8QqceG1tbuylXhr9VOLPyRJmw=", SMP_OP_FLUX, SMP_SERVER_ROLE_ALL},
     {"smp2.simplexonflux.com", "LDnWZVlAUInmjmdpQQoIo6FUinRXGe0q3zi5okXDE4s=", SMP_OP_FLUX, SMP_SERVER_ROLE_ALL},
     {"smp3.simplexonflux.com", "1jne379u7IDJSxAvXbWb_JgoE7iabcslX0LBF22Rej0=", SMP_OP_FLUX, SMP_SERVER_ROLE_ALL},
@@ -69,26 +68,30 @@ static const server_preset_t PRESETS[] = {
 
 #define PRESET_COUNT  (sizeof(PRESETS) / sizeof(PRESETS[0]))
 
+// SimpleGo is the last preset, index 20
+#define DEFAULT_ACTIVE_INDEX  ((int)PRESET_COUNT - 1)
+
 // ============== Runtime State ==============
 
 static smp_server_t s_servers[MAX_SMP_SERVERS];
 static int s_server_count = 0;
+static int s_active_index = DEFAULT_ACTIVE_INDEX;
 
 static smp_operator_t s_operators[MAX_SMP_OPERATORS] = {
-    {SMP_OP_SIMPLEX,  "SimpleX",  1, 1, 1},
-    {SMP_OP_FLUX,     "Flux",     1, 1, 1},
-    {SMP_OP_SIMPLEGO, "SimpleGo", 1, 1, 1},
-    {SMP_OP_CUSTOM,   "Custom",   1, 1, 1},
+    {SMP_OP_SIMPLEX,  "SimpleX",  1},
+    {SMP_OP_FLUX,     "Flux",     1},
+    {SMP_OP_SIMPLEGO, "SimpleGo", 1},
+    {SMP_OP_CUSTOM,   "Custom",   1},
 };
 
 static bool s_initialized = false;
-static uint8_t s_last_pick_op = 0xFF;
 
 // ============== NVS Keys ==============
 
 #define SRV_NVS_KEY      "srv_list"
 #define OPS_NVS_KEY      "srv_ops"
-#define SRV_NVS_VERSION  2   // Bumped: Flux fix (PROXY -> ALL)
+#define ACTIVE_NVS_KEY   "active_srv"
+#define SRV_NVS_VERSION  3   // V3: server struct unchanged
 
 // ============== Internal: Decode presets ==============
 
@@ -99,7 +102,7 @@ static bool decode_preset(const server_preset_t *preset, smp_server_t *out) {
     out->op = preset->op;
     out->roles = preset->roles;
     out->preset = 1;
-    out->enabled = 0;
+    out->enabled = 1;   // All servers visible in list
 
     int dec_len = base64url_decode(preset->fingerprint_b64,
                                    out->key_hash, sizeof(out->key_hash));
@@ -111,58 +114,41 @@ static bool decode_preset(const server_preset_t *preset, smp_server_t *out) {
     return true;
 }
 
-// ============== Internal: Random subset selection ==============
-
-static void random_enable_subset(int start, int total, int want) {
-    if (want >= total) {
-        for (int i = start; i < start + total; i++) {
-            s_servers[i].enabled = 1;
-        }
-        return;
-    }
-
-    int indices[MAX_SMP_SERVERS];
-    for (int i = 0; i < total; i++) {
-        indices[i] = start + i;
-    }
-
-    for (int i = 0; i < want; i++) {
-        int remaining = total - i;
-        int pick = (int)(esp_random() % (uint32_t)remaining);
-        int idx = indices[i + pick];
-        indices[i + pick] = indices[i];
-        indices[i] = idx;
-        s_servers[idx].enabled = 1;
-    }
-}
-
 // ============== Internal: NVS Load/Save ==============
 
 static bool load_servers_from_nvs(void) {
     if (!smp_storage_exists(SRV_NVS_KEY)) return false;
 
-    // Read header to check version
-    uint8_t header[4];
-    size_t hdr_len = 0;
-    esp_err_t ret = smp_storage_load_blob(SRV_NVS_KEY, header, 4, &hdr_len);
-    if (ret != ESP_OK || hdr_len < 4) return false;
-
-    if (header[0] != SRV_NVS_VERSION) {
-        ESP_LOGW(TAG, "NVS version mismatch: got %d, expected %d - re-init",
-                 header[0], SRV_NVS_VERSION);
-        return false;
-    }
-
-    uint8_t count = header[1];
-    if (count > MAX_SMP_SERVERS) return false;
-
-    size_t total_size = 4 + sizeof(smp_server_t) * (size_t)count;
-    uint8_t *buf = malloc(total_size);
+    /* Allocate max possible size and read entire blob at once.
+     * smp_storage_load_blob rejects partial reads (buffer < blob). */
+    size_t max_size = 4 + sizeof(smp_server_t) * MAX_SMP_SERVERS;
+    uint8_t *buf = malloc(max_size);
     if (!buf) return false;
 
     size_t loaded_len = 0;
-    ret = smp_storage_load_blob(SRV_NVS_KEY, buf, total_size, &loaded_len);
-    if (ret != ESP_OK) {
+    esp_err_t ret = smp_storage_load_blob(SRV_NVS_KEY, buf, max_size, &loaded_len);
+    if (ret != ESP_OK || loaded_len < 4) {
+        free(buf);
+        return false;
+    }
+
+    /* Check version */
+    if (buf[0] != SRV_NVS_VERSION) {
+        ESP_LOGW(TAG, "NVS version mismatch: got %d, expected %d - re-init",
+                 buf[0], SRV_NVS_VERSION);
+        free(buf);
+        return false;
+    }
+
+    uint8_t count = buf[1];
+    if (count > MAX_SMP_SERVERS) {
+        free(buf);
+        return false;
+    }
+
+    size_t expected = 4 + sizeof(smp_server_t) * (size_t)count;
+    if (loaded_len < expected) {
+        ESP_LOGW(TAG, "NVS data too short: %zu < %zu", loaded_len, expected);
         free(buf);
         return false;
     }
@@ -205,7 +191,7 @@ static bool load_operators_from_nvs(void) {
     esp_err_t ret = smp_storage_load_blob(OPS_NVS_KEY, s_operators,
                                            sizeof(s_operators), &loaded_len);
     if (ret != ESP_OK || loaded_len != sizeof(s_operators)) {
-        ESP_LOGW(TAG, "Operator NVS load failed - using defaults");
+        ESP_LOGW(TAG, "Operator NVS load failed (size mismatch) - using defaults");
         return false;
     }
 
@@ -221,6 +207,29 @@ static void save_operators_to_nvs(void) {
     }
 }
 
+static void load_active_index(void) {
+    uint8_t idx = (uint8_t)DEFAULT_ACTIVE_INDEX;
+    size_t out_len = 0;
+    if (smp_storage_load_blob(ACTIVE_NVS_KEY, &idx, sizeof(idx), &out_len) == ESP_OK
+        && out_len == 1
+        && idx < (uint8_t)s_server_count) {
+        s_active_index = (int)idx;
+    } else {
+        s_active_index = DEFAULT_ACTIVE_INDEX;
+    }
+    ESP_LOGI(TAG, "Active server index: %d (%s)",
+             s_active_index,
+             s_active_index < s_server_count ? s_servers[s_active_index].host : "???");
+}
+
+static void save_active_index(void) {
+    uint8_t idx = (uint8_t)s_active_index;
+    esp_err_t ret = smp_storage_save_blob_sync(ACTIVE_NVS_KEY, &idx, sizeof(idx));
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Active server NVS save failed: %s", esp_err_to_name(ret));
+    }
+}
+
 // ============== Public API: Init ==============
 
 void smp_servers_init(void) {
@@ -231,52 +240,33 @@ void smp_servers_init(void) {
 
     // Try loading servers from NVS
     if (load_servers_from_nvs()) {
+        load_active_index();
         s_initialized = true;
 
-        int en_storage = smp_servers_count_enabled(SMP_SERVER_ROLE_STORAGE);
-        int en_proxy = smp_servers_count_enabled(SMP_SERVER_ROLE_PROXY);
-        ESP_LOGI(TAG, "Server list: %d total, %d storage, %d proxy",
-                 s_server_count, en_storage, en_proxy);
+        ESP_LOGI(TAG, "Server list: %d total, active: %s",
+                 s_server_count, s_servers[s_active_index].host);
         return;
     }
 
-    // First boot: decode presets and randomly enable subsets
+    // First boot: decode all presets
     ESP_LOGI(TAG, "First boot: initializing %d preset servers", (int)PRESET_COUNT);
 
     s_server_count = 0;
-    int sx_start = -1, sx_count = 0;
-    int fx_start = -1, fx_count = 0;
 
     for (int i = 0; i < (int)PRESET_COUNT && s_server_count < MAX_SMP_SERVERS; i++) {
         if (!decode_preset(&PRESETS[i], &s_servers[s_server_count])) {
             ESP_LOGW(TAG, "Skipping preset %d (%s)", i, PRESETS[i].host);
             continue;
         }
-
-        if (PRESETS[i].op == SMP_OP_SIMPLEX) {
-            if (sx_start < 0) sx_start = s_server_count;
-            sx_count++;
-        } else if (PRESETS[i].op == SMP_OP_FLUX) {
-            if (fx_start < 0) fx_start = s_server_count;
-            fx_count++;
-        } else if (PRESETS[i].op == SMP_OP_SIMPLEGO) {
-            s_servers[s_server_count].enabled = 1;
-        }
-
         s_server_count++;
     }
 
-    if (sx_start >= 0 && sx_count > 0) {
-        random_enable_subset(sx_start, sx_count, 4);
-        ESP_LOGI(TAG, "SimpleX: enabled 4 of %d servers", sx_count);
-    }
-    if (fx_start >= 0 && fx_count > 0) {
-        random_enable_subset(fx_start, fx_count, 3);
-        ESP_LOGI(TAG, "Flux: enabled 3 of %d servers", fx_count);
-    }
+    // Default active: SimpleGo (last preset)
+    s_active_index = s_server_count - 1;
 
     save_servers_to_nvs();
     save_operators_to_nvs();
+    save_active_index();
 
     s_initialized = true;
 
@@ -284,38 +274,15 @@ void smp_servers_init(void) {
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "=== SMP Server List (%d servers) ===", s_server_count);
     for (int i = 0; i < s_server_count; i++) {
-        const char *op_name = "???";
-        switch (s_servers[i].op) {
-            case SMP_OP_SIMPLEX:  op_name = "SimpleX"; break;
-            case SMP_OP_FLUX:     op_name = "Flux"; break;
-            case SMP_OP_SIMPLEGO: op_name = "SimpleGo"; break;
-            case SMP_OP_CUSTOM:   op_name = "Custom"; break;
-        }
-        const char *role_str = "???";
-        switch (s_servers[i].roles) {
-            case SMP_SERVER_ROLE_STORAGE: role_str = "Storage"; break;
-            case SMP_SERVER_ROLE_PROXY:   role_str = "Proxy"; break;
-            case SMP_SERVER_ROLE_ALL:     role_str = "Storage+Proxy"; break;
-        }
-        ESP_LOGI(TAG, "  [%d] %s%-24s %s  %s  fp=%02x%02x...",
+        const char *op_name = smp_operators_get_name(s_servers[i].op);
+        ESP_LOGI(TAG, "  [%d] %s%-24s %s  fp=%02x%02x...",
                  i,
-                 s_servers[i].enabled ? "*" : " ",
+                 i == s_active_index ? "*" : " ",
                  s_servers[i].host,
-                 op_name, role_str,
+                 op_name,
                  s_servers[i].key_hash[0], s_servers[i].key_hash[1]);
     }
-    ESP_LOGI(TAG, "  (* = enabled)");
-
-    // Log operator state
-    ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "=== Operators ===");
-    for (int i = 0; i < MAX_SMP_OPERATORS; i++) {
-        ESP_LOGI(TAG, "  %s: %s  recv=%d  proxy=%d",
-                 s_operators[i].name,
-                 s_operators[i].enabled ? "ON" : "OFF",
-                 s_operators[i].use_for_recv,
-                 s_operators[i].use_for_proxy);
-    }
+    ESP_LOGI(TAG, "  (* = active)");
     ESP_LOGI(TAG, "");
 }
 
@@ -323,21 +290,6 @@ void smp_servers_init(void) {
 
 int smp_servers_count(void) {
     return s_server_count;
-}
-
-int smp_servers_count_enabled(uint8_t role_mask) {
-    int count = 0;
-    for (int i = 0; i < s_server_count; i++) {
-        if (s_servers[i].enabled && (s_servers[i].roles & role_mask)) {
-            smp_operator_t *op = smp_operators_get(s_servers[i].op);
-            if (op && op->enabled) {
-                if ((role_mask & SMP_SERVER_ROLE_STORAGE) && !op->use_for_recv) continue;
-                if ((role_mask & SMP_SERVER_ROLE_PROXY) && !op->use_for_proxy) continue;
-                count++;
-            }
-        }
-    }
-    return count;
 }
 
 smp_server_t *smp_servers_get(int index) {
@@ -353,59 +305,33 @@ int smp_servers_count_for_operator(uint8_t op_id) {
     return count;
 }
 
-int smp_servers_count_enabled_for_operator(uint8_t op_id) {
-    int count = 0;
-    for (int i = 0; i < s_server_count; i++) {
-        if (s_servers[i].op == op_id && s_servers[i].enabled) count++;
-    }
-    return count;
-}
+// ============== Public API: Active Server ==============
 
-// ============== Public API: Server Selection ==============
-
-smp_server_t *smp_servers_pick_storage(void) {
-    // Filter: server enabled + capable of storage +
-    //         operator enabled + operator allows recv
-    int candidates[MAX_SMP_SERVERS];
-    int n_candidates = 0;
-
-    for (int i = 0; i < s_server_count; i++) {
-        if (!s_servers[i].enabled) continue;
-        if (!(s_servers[i].roles & SMP_SERVER_ROLE_STORAGE)) continue;
-
-        smp_operator_t *op = smp_operators_get(s_servers[i].op);
-        if (!op || !op->enabled || !op->use_for_recv) continue;
-
-        candidates[n_candidates++] = i;
-    }
-
-    if (n_candidates == 0) {
-        ESP_LOGE(TAG, "No enabled Storage servers available!");
+smp_server_t *smp_servers_get_active(void) {
+    if (s_active_index < 0 || s_active_index >= s_server_count) {
+        ESP_LOGE(TAG, "Active index %d out of range (count=%d)!",
+                 s_active_index, s_server_count);
         return NULL;
     }
-
-    // Prefer operators we haven't used recently
-    int preferred[MAX_SMP_SERVERS];
-    int n_preferred = 0;
-
-    for (int i = 0; i < n_candidates; i++) {
-        if (s_servers[candidates[i]].op != s_last_pick_op) {
-            preferred[n_preferred++] = candidates[i];
-        }
-    }
-
-    int *pool = n_preferred > 0 ? preferred : candidates;
-    int pool_size = n_preferred > 0 ? n_preferred : n_candidates;
-
-    int pick = pool[(int)(esp_random() % (uint32_t)pool_size)];
-    s_last_pick_op = s_servers[pick].op;
-
-    ESP_LOGI(TAG, "Picked storage server: %s (op=%d, pool=%d/%d)",
-             s_servers[pick].host, s_servers[pick].op,
-             pool_size, n_candidates);
-
-    return &s_servers[pick];
+    return &s_servers[s_active_index];
 }
+
+int smp_servers_get_active_index(void) {
+    return s_active_index;
+}
+
+void smp_servers_set_active(int index) {
+    if (index < 0 || index >= s_server_count) {
+        ESP_LOGE(TAG, "Cannot set active: index %d out of range", index);
+        return;
+    }
+    s_active_index = index;
+    save_active_index();
+    ESP_LOGI(TAG, "Active server changed to [%d] %s (effective on next reboot)",
+             index, s_servers[index].host);
+}
+
+// ============== Public API: Server Modification ==============
 
 smp_server_t *smp_servers_find_by_host(const char *host) {
     if (!host || !host[0]) return NULL;
@@ -416,8 +342,6 @@ smp_server_t *smp_servers_find_by_host(const char *host) {
     }
     return NULL;
 }
-
-// ============== Public API: Server Modification ==============
 
 int smp_servers_add_custom(const char *host, uint16_t port,
                            const uint8_t *key_hash) {
@@ -444,23 +368,6 @@ int smp_servers_add_custom(const char *host, uint16_t port,
     return idx;
 }
 
-void smp_servers_set_enabled(int index, bool enabled) {
-    if (index < 0 || index >= s_server_count) return;
-    s_servers[index].enabled = enabled ? 1 : 0;
-    save_servers_to_nvs();
-    ESP_LOGI(TAG, "Server [%d] %s: %s",
-             index, s_servers[index].host,
-             enabled ? "enabled" : "disabled");
-}
-
-void smp_servers_set_roles(int index, uint8_t roles) {
-    if (index < 0 || index >= s_server_count) return;
-    s_servers[index].roles = roles;
-    save_servers_to_nvs();
-    ESP_LOGI(TAG, "Server [%d] %s: roles=0x%02x",
-             index, s_servers[index].host, roles);
-}
-
 void smp_servers_save(void) {
     save_servers_to_nvs();
 }
@@ -476,27 +383,7 @@ smp_operator_t *smp_operators_get(uint8_t op_id) {
     return &s_operators[op_id];
 }
 
-void smp_operators_set_enabled(uint8_t op_id, bool enabled) {
-    if (op_id >= MAX_SMP_OPERATORS) return;
-    s_operators[op_id].enabled = enabled ? 1 : 0;
-    save_operators_to_nvs();
-    ESP_LOGI(TAG, "Operator %s: %s",
-             s_operators[op_id].name,
-             enabled ? "enabled" : "disabled");
-}
-
-void smp_operators_set_recv(uint8_t op_id, bool recv) {
-    if (op_id >= MAX_SMP_OPERATORS) return;
-    s_operators[op_id].use_for_recv = recv ? 1 : 0;
-    save_operators_to_nvs();
-    ESP_LOGI(TAG, "Operator %s: recv=%d",
-             s_operators[op_id].name, s_operators[op_id].use_for_recv);
-}
-
-void smp_operators_set_proxy(uint8_t op_id, bool proxy) {
-    if (op_id >= MAX_SMP_OPERATORS) return;
-    s_operators[op_id].use_for_proxy = proxy ? 1 : 0;
-    save_operators_to_nvs();
-    ESP_LOGI(TAG, "Operator %s: proxy=%d",
-             s_operators[op_id].name, s_operators[op_id].use_for_proxy);
+const char *smp_operators_get_name(uint8_t op_id) {
+    if (op_id >= MAX_SMP_OPERATORS) return "???";
+    return s_operators[op_id].name;
 }
