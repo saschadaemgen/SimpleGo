@@ -846,18 +846,24 @@ bool peer_send_hello(contact_t *contact) {
 
     uint8_t our_dh_private[32];
     uint8_t our_dh_public[32];
-    memcpy(our_dh_private, contact->rcv_dh_secret, 32);
-    memcpy(our_dh_public,  contact->rcv_dh_public,  32);
 
-    // Resolve per-contact auth key
+    // Resolve per-contact auth key and DH keys
     int hello_cidx = (contact >= &contacts_db.contacts[0] &&
                       contact < &contacts_db.contacts[MAX_CONTACTS])
                      ? (int)(contact - &contacts_db.contacts[0]) : -1;
     uint8_t *hello_auth_private = our_queue.rcv_auth_private;
+
+    memcpy(our_dh_private, contact->rcv_dh_secret, 32);
+    memcpy(our_dh_public,  contact->rcv_dh_public,  32);
+
     if (hello_cidx >= 0) {
         reply_queue_t *rq = reply_queue_get(hello_cidx);
         if (rq && rq->valid) {
             hello_auth_private = rq->rcv_auth_private;
+            if (rq->has_peer_dh) {
+                memcpy(our_dh_private, rq->peer_dh_secret, 32);
+                memcpy(our_dh_public,  rq->peer_dh_public,  32);
+            }
         }
     }
 
@@ -916,18 +922,27 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
 
     uint8_t our_dh_private[32];
     uint8_t our_dh_public[32];
-    memcpy(our_dh_private, contact->rcv_dh_secret, 32);
-    memcpy(our_dh_public,  contact->rcv_dh_public,  32);
 
-    // Resolve per-contact auth key
+    // Resolve per-contact auth key and DH keys
     int msg_cidx = (contact >= &contacts_db.contacts[0] &&
                     contact < &contacts_db.contacts[MAX_CONTACTS])
                    ? (int)(contact - &contacts_db.contacts[0]) : -1;
     uint8_t *msg_auth_private = our_queue.rcv_auth_private;
+
+    // Default: use contact DH
+    memcpy(our_dh_private, contact->rcv_dh_secret, 32);
+    memcpy(our_dh_public,  contact->rcv_dh_public,  32);
+
     if (msg_cidx >= 0) {
         reply_queue_t *rq = reply_queue_get(msg_cidx);
         if (rq && rq->valid) {
             msg_auth_private = rq->rcv_auth_private;
+            /* Session 49: After rotation, contact->rcv_dh has NEW values
+             * for decrypt on new server. Peer-send needs OLD values. */
+            if (rq->has_peer_dh) {
+                memcpy(our_dh_private, rq->peer_dh_secret, 32);
+                memcpy(our_dh_public,  rq->peer_dh_public,  32);
+            }
         }
     }
 
@@ -1009,18 +1024,24 @@ bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8
 
     uint8_t our_dh_private[32];
     uint8_t our_dh_public[32];
-    memcpy(our_dh_private, contact->rcv_dh_secret, 32);
-    memcpy(our_dh_public,  contact->rcv_dh_public,  32);
 
-    // Use per-contact reply queue auth key, not global our_queue!
+    // Use per-contact reply queue auth key and DH keys
     int rcpt_cidx = (contact >= &contacts_db.contacts[0] &&
                      contact < &contacts_db.contacts[MAX_CONTACTS])
                     ? (int)(contact - &contacts_db.contacts[0]) : -1;
     const uint8_t *rcpt_auth_private = our_queue.rcv_auth_private;  // fallback
+
+    memcpy(our_dh_private, contact->rcv_dh_secret, 32);
+    memcpy(our_dh_public,  contact->rcv_dh_public,  32);
+
     if (rcpt_cidx >= 0) {
         reply_queue_t *rq = reply_queue_get(rcpt_cidx);
         if (rq && rq->valid) {
             rcpt_auth_private = rq->rcv_auth_private;
+            if (rq->has_peer_dh) {
+                memcpy(our_dh_private, rq->peer_dh_secret, 32);
+                memcpy(our_dh_public,  rq->peer_dh_public,  32);
+            }
         }
     }
 
@@ -1057,6 +1078,107 @@ bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8
             }
         } else {
             ESP_LOGE(TAG, "Reconnect failed - receipt retry buffer preserved");
+        }
+    }
+
+    free(block);
+    return ok;
+}
+
+// ============== Send Raw Agent Message (Queue Rotation) ==============
+
+bool peer_send_raw_agent_msg(contact_t *contact,
+                              const uint8_t *a_message, int a_message_len,
+                              const char *label) {
+    // Load correct peer state for THIS contact
+    if (!peer_prepare_for_contact(contact)) {
+        ESP_LOGE(TAG, "[FAIL] peer_send_raw_agent_msg: peer_prepare failed!");
+        return false;
+    }
+
+    // Reconnect to peer if needed
+    if (!peer_state.connected) {
+        if (peer_state.last_host[0] == '\0' || peer_state.last_port == 0) {
+            ESP_LOGE(TAG, "[FAIL] peer_send_raw_agent_msg: no saved peer host/port!");
+            return false;
+        }
+        ESP_LOGI(TAG, "   [SYNC] Reconnecting to peer server %s:%d...",
+                 peer_state.last_host, peer_state.last_port);
+        if (!peer_connect(peer_state.last_host, peer_state.last_port)) {
+            ESP_LOGE(TAG, "[FAIL] peer_send_raw_agent_msg: reconnect failed!");
+            return false;
+        }
+        ESP_LOGI(TAG, "   [OK] Peer reconnected!");
+    }
+
+    if (!pending_peer.valid || !pending_peer.has_dh) {
+        ESP_LOGE(TAG, "[FAIL] peer_send_raw_agent_msg: no pending peer data!");
+        return false;
+    }
+
+    uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_8BIT);
+    if (!block) {
+        ESP_LOGE(TAG, "[FAIL] peer_send_raw_agent_msg: malloc failed!");
+        return false;
+    }
+
+    uint8_t our_dh_private[32];
+    uint8_t our_dh_public[32];
+
+    // Resolve per-contact auth key and DH keys
+    int cidx = (contact >= &contacts_db.contacts[0] &&
+                contact < &contacts_db.contacts[MAX_CONTACTS])
+               ? (int)(contact - &contacts_db.contacts[0]) : -1;
+    const uint8_t *auth_private = our_queue.rcv_auth_private;  // fallback
+
+    // Default: use contact DH
+    memcpy(our_dh_private, contact->rcv_dh_secret, 32);
+    memcpy(our_dh_public,  contact->rcv_dh_public,  32);
+
+    if (cidx >= 0) {
+        reply_queue_t *rq = reply_queue_get(cidx);
+        if (rq && rq->valid) {
+            auth_private = rq->rcv_auth_private;
+            /* Session 49: After rotation, use old DH for peer-send */
+            if (rq->has_peer_dh) {
+                memcpy(our_dh_private, rq->peer_dh_secret, 32);
+                memcpy(our_dh_public,  rq->peer_dh_public,  32);
+            }
+        }
+    }
+
+    bool ok = send_raw_agent_message(
+        &peer_state.ssl,
+        block,
+        peer_state.session_id,
+        pending_peer.queue_id,
+        pending_peer.queue_id_len,
+        pending_peer.dh_public,
+        our_dh_private,
+        our_dh_public,
+        ratchet_get_state(),
+        auth_private,
+        a_message,
+        a_message_len,
+        'Q', true, label
+    );
+
+    if (!ok && handshake_has_retry_pending()) {
+        ESP_LOGW(TAG, "%s write failed - FORCE reconnect + retry...", label);
+
+        peer_disconnect();
+
+        if (peer_connect(peer_state.last_host, peer_state.last_port)) {
+            ESP_LOGI(TAG, "Reconnected! Retrying failed %s...", label);
+            ok = handshake_retry_send(&peer_state.ssl, block, peer_state.session_id);
+
+            if (ok) {
+                ESP_LOGI(TAG, "%s retry successful!", label);
+            } else {
+                ESP_LOGW(TAG, "%s retry failed - buffer preserved", label);
+            }
+        } else {
+            ESP_LOGE(TAG, "Reconnect failed - %s retry buffer preserved", label);
         }
     }
 

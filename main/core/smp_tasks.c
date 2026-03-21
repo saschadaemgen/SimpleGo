@@ -28,6 +28,7 @@
 #include "smp_handshake.h" // handshake_get_last_msg_id()
 #include "smp_ratchet.h"  // ratchet_set_active()
 #include "smp_history.h"  // encrypted chat history on SD
+#include "smp_rotation.h" // Session 49: Queue Rotation
 #include <string.h>
 #include <stdio.h>             // Session 48: snprintf for splash status
 #include <time.h>          // time(NULL) for history timestamps
@@ -73,8 +74,19 @@ static reconnect_ctx_t *s_rctx = NULL;
 static volatile bool s_reconnect_needed = false;
 static volatile bool s_reconnect_done   = false;
 
+/* Session 49: Queue Rotation - second TLS connection to target server */
+static reconnect_ctx_t *s_rot_ctx = NULL;
+static uint8_t s_rot_session_id[32] = {0};
+static bool s_rot_connected = false;
+
+/* SPKI headers (defined in smp_contacts.c) */
+extern const uint8_t ED25519_SPKI_HEADER[12];
+extern const uint8_t X25519_SPKI_HEADER[12];
+
 // Post-confirmation state (set by Reply Queue decrypt, read by 42d handler later)
 static uint8_t s_peer_sender_auth_key[44];
+static uint8_t s_cq_e2e_peer_public[32];   // CQ E2E peer key (after rotation)
+static bool s_cq_e2e_peer_valid = false;
 static bool s_has_peer_sender_auth = false;
 // Per-contact 42d completion: bit N = contact[N] completed handshake
 static uint8_t s_42d_bitmap[16] = {0};  // 128 bits = MAX_CONTACTS
@@ -424,6 +436,13 @@ static void network_task(void *arg)
                                     invite, sizeof(invite))) {
                                 smp_notify_ui_show_qr(invite);
                                 smp_notify_ui_status("Scan to connect");
+                                // Fix 1: Log invite link for desktop app connection
+                                // Use printf (no tag prefix) for clean copy-paste
+                                printf("\n");
+                                printf("========== INVITE LINK ==========\n");
+                                printf("%s\n", invite);
+                                printf("=================================\n");
+                                printf("\n");
                             }
                         } else {
                             ESP_LOGE(TAG, "NET: Failed to create contact '%s'",
@@ -973,6 +992,9 @@ static void app_init_run(QueueHandle_t kbd_queue, uint8_t **local_block_out)
     }
 
     ESP_LOGI(TAG_APP, "APP: Boot complete, entering main loop");
+
+    /* Session 49: Initialize rotation module (restores in-progress rotation from NVS) */
+    rotation_init();
 }
 
 /* ================================================================
@@ -1160,6 +1182,724 @@ fail:
     return false;
 }
 
+/* ================================================================
+ * Session 49: Queue Rotation - Second TLS Connection
+ *
+ * Establishes a second SMP connection to the target server for
+ * NEW/KEY commands during queue rotation. The first (main) connection
+ * stays active for receiving messages and sending QADD/QUSE/QTEST.
+ *
+ * Pattern mirrors app_do_reconnect() but targets a different server.
+ * ================================================================ */
+
+extern const int ciphersuites[];  // defined in main.c
+
+static void app_rotation_disconnect(void)
+{
+    if (s_rot_ctx) {
+        if (s_rot_ctx->sock >= 0) close(s_rot_ctx->sock);
+        mbedtls_ssl_free(&s_rot_ctx->ssl);
+        mbedtls_ssl_config_free(&s_rot_ctx->conf);
+        mbedtls_ctr_drbg_free(&s_rot_ctx->ctr_drbg);
+        mbedtls_entropy_free(&s_rot_ctx->entropy);
+        heap_caps_free(s_rot_ctx);
+        s_rot_ctx = NULL;
+    }
+    s_rot_connected = false;
+    sodium_memzero(s_rot_session_id, 32);
+    ESP_LOGI(TAG_APP, "[ROT] Second TLS connection closed");
+}
+
+static bool app_rotation_connect(void)
+{
+    const rotation_context_t *ctx = rotation_get_context();
+    if (!ctx || ctx->state != ROT_GLOBAL_ACTIVE) return false;
+
+    ESP_LOGI(TAG_APP, "[ROT] Connecting to target server %s:%d...",
+             ctx->target_host, ctx->target_port);
+
+    /* Free previous rotation context if any */
+    if (s_rot_ctx) {
+        app_rotation_disconnect();
+    }
+
+    /* Allocate in Internal SRAM (mbedTLS DMA requirement) */
+    s_rot_ctx = heap_caps_calloc(1, sizeof(reconnect_ctx_t), MALLOC_CAP_INTERNAL);
+    if (!s_rot_ctx) {
+        ESP_LOGE(TAG_APP, "[ROT] Failed to allocate TLS context!");
+        return false;
+    }
+
+    mbedtls_ssl_init(&s_rot_ctx->ssl);
+    mbedtls_ssl_config_init(&s_rot_ctx->conf);
+    mbedtls_entropy_init(&s_rot_ctx->entropy);
+    mbedtls_ctr_drbg_init(&s_rot_ctx->ctr_drbg);
+    s_rot_ctx->sock = -1;
+
+    int ret;
+
+    ret = mbedtls_ctr_drbg_seed(&s_rot_ctx->ctr_drbg, mbedtls_entropy_func,
+                                 &s_rot_ctx->entropy, NULL, 0);
+    if (ret != 0) {
+        ESP_LOGE(TAG_APP, "[ROT] DRBG seed failed: -0x%04x", -ret);
+        goto rot_fail;
+    }
+
+    /* Step 1: TCP Connect to target server */
+    s_rot_ctx->sock = smp_tcp_connect(ctx->target_host, ctx->target_port);
+    if (s_rot_ctx->sock < 0) {
+        ESP_LOGE(TAG_APP, "[ROT] TCP connect to %s:%d failed",
+                 ctx->target_host, ctx->target_port);
+        goto rot_fail;
+    }
+
+    /* Step 2: TLS 1.3 Handshake */
+    ret = mbedtls_ssl_config_defaults(&s_rot_ctx->conf, MBEDTLS_SSL_IS_CLIENT,
+                                       MBEDTLS_SSL_TRANSPORT_STREAM,
+                                       MBEDTLS_SSL_PRESET_DEFAULT);
+    if (ret != 0) goto rot_fail;
+
+    mbedtls_ssl_conf_min_tls_version(&s_rot_ctx->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_max_tls_version(&s_rot_ctx->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_ciphersuites(&s_rot_ctx->conf, ciphersuites);
+    mbedtls_ssl_conf_authmode(&s_rot_ctx->conf, MBEDTLS_SSL_VERIFY_NONE);
+    mbedtls_ssl_conf_rng(&s_rot_ctx->conf, mbedtls_ctr_drbg_random, &s_rot_ctx->ctr_drbg);
+
+    static const char *rot_alpn[] = {"smp/1", NULL};
+    mbedtls_ssl_conf_alpn_protocols(&s_rot_ctx->conf, rot_alpn);
+
+    ret = mbedtls_ssl_setup(&s_rot_ctx->ssl, &s_rot_ctx->conf);
+    if (ret != 0) goto rot_fail;
+
+    mbedtls_ssl_set_hostname(&s_rot_ctx->ssl, ctx->target_host);
+    mbedtls_ssl_set_bio(&s_rot_ctx->ssl, &s_rot_ctx->sock, my_send_cb, my_recv_cb, NULL);
+
+    while ((ret = mbedtls_ssl_handshake(&s_rot_ctx->ssl)) != 0) {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            ESP_LOGE(TAG_APP, "[ROT] TLS handshake failed: -0x%04x", -ret);
+            goto rot_fail;
+        }
+    }
+    ESP_LOGI(TAG_APP, "[ROT] TLS OK to %s", ctx->target_host);
+
+    /* Step 3: SMP ServerHello -> session_id + ClientHello (keyHash) */
+    {
+        uint8_t *hblock = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
+        if (!hblock) { ESP_LOGE(TAG_APP, "[ROT] block alloc failed"); goto rot_fail; }
+
+        int content_len = smp_read_block(&s_rot_ctx->ssl, hblock, 15000);
+        if (content_len < 37) {
+            ESP_LOGE(TAG_APP, "[ROT] No ServerHello (len=%d)", content_len);
+            heap_caps_free(hblock);
+            goto rot_fail;
+        }
+
+        uint8_t *hello = hblock + 2;
+        uint8_t sessIdLen = hello[4];
+        if (sessIdLen != 32) {
+            ESP_LOGE(TAG_APP, "[ROT] Bad sessIdLen %d", sessIdLen);
+            heap_caps_free(hblock);
+            goto rot_fail;
+        }
+        memcpy(s_rot_session_id, &hello[5], 32);
+
+        /* Parse cert chain and compute keyHash */
+        int cert1_off, cert1_len, cert2_off, cert2_len;
+        parse_cert_chain(hello, content_len, &cert1_off, &cert1_len,
+                         &cert2_off, &cert2_len);
+
+        uint8_t ca_hash[32];
+        if (cert2_off >= 0) {
+            mbedtls_sha256(hello + cert2_off, cert2_len, ca_hash, 0);
+        } else {
+            mbedtls_sha256(hello + cert1_off, cert1_len, ca_hash, 0);
+        }
+
+        /* SEC-07: Verify fingerprint against expected target server */
+        if (memcmp(ca_hash, ctx->target_key_hash, 32) != 0) {
+            ESP_LOGE(TAG_APP, "[ROT] SEC-07: FINGERPRINT MISMATCH for %s!",
+                     ctx->target_host);
+            heap_caps_free(hblock);
+            goto rot_fail;
+        }
+        ESP_LOGI(TAG_APP, "[ROT] SEC-07: Target server fingerprint verified");
+
+        /* Send ClientHello: version(2B) + keyHash(1B len + 32B) */
+        uint8_t client_hello[35];
+        int pos = 0;
+        client_hello[pos++] = 0x00;
+        client_hello[pos++] = 0x07;  // SMP v7
+        client_hello[pos++] = 32;
+        memcpy(&client_hello[pos], ca_hash, 32);
+        pos += 32;
+
+        ret = smp_write_handshake_block(&s_rot_ctx->ssl, hblock, client_hello, pos);
+        heap_caps_free(hblock);
+        if (ret != 0) {
+            ESP_LOGE(TAG_APP, "[ROT] ClientHello send failed");
+            goto rot_fail;
+        }
+    }
+
+    s_rot_connected = true;
+    ESP_LOGI(TAG_APP, "[ROT] SMP handshake OK! sessId=%02x%02x%02x%02x...",
+             s_rot_session_id[0], s_rot_session_id[1],
+             s_rot_session_id[2], s_rot_session_id[3]);
+    return true;
+
+rot_fail:
+    app_rotation_disconnect();
+    return false;
+}
+
+/**
+ * Send NEW command on second (rotation) TLS connection.
+ * Parses IDS response and fills rotation data.
+ *
+ * @param contact_idx  Contact slot
+ * @param is_rq        true = Reply Queue, false = Main Queue
+ * @return true on success
+ */
+static bool app_rotation_send_new(int contact_idx, bool is_rq)
+{
+    if (!s_rot_connected || !s_rot_ctx) return false;
+
+    const rotation_contact_data_t *rd = rotation_get_contact_data(contact_idx);
+    if (!rd) return false;
+
+    /* Select correct keypair based on main/RQ */
+    const uint8_t *auth_public = is_rq ? rd->rq_new_rcv_auth_public : rd->new_rcv_auth_public;
+    const uint8_t *auth_private = is_rq ? rd->rq_new_rcv_auth_private : rd->new_rcv_auth_private;
+    const uint8_t *dh_public = is_rq ? rd->rq_new_rcv_dh_public : rd->new_rcv_dh_public;
+
+    ESP_LOGI(TAG_APP, "[ROT][%d] Sending NEW for %s queue...",
+             contact_idx, is_rq ? "Reply" : "Main");
+
+    /* Build NEW command body: corrId + entityId(empty) + "NEW " + keys + subMode */
+    uint8_t trans_body[256];
+    int pos = 0;
+
+    trans_body[pos++] = 1;     // corrId length
+    trans_body[pos++] = 'R';   // corrId = 'R' (rotation)
+    trans_body[pos++] = 0;     // entityId = empty (new queue)
+
+    trans_body[pos++] = 'N';
+    trans_body[pos++] = 'E';
+    trans_body[pos++] = 'W';
+    trans_body[pos++] = ' ';
+
+    /* rcvAuthKey = Ed25519 SPKI */
+    trans_body[pos++] = 44;
+    memcpy(&trans_body[pos], ED25519_SPKI_HEADER, 12);
+    pos += 12;
+    memcpy(&trans_body[pos], auth_public, 32);
+    pos += 32;
+
+    /* rcvDhKey = X25519 SPKI */
+    trans_body[pos++] = 44;
+    memcpy(&trans_body[pos], X25519_SPKI_HEADER, 12);
+    pos += 12;
+    memcpy(&trans_body[pos], dh_public, 32);
+    pos += 32;
+
+    /* subMode = 'S' (subscribe immediately) */
+    trans_body[pos++] = 'S';
+
+    int body_len = pos;
+
+    /* Sign: sessionId + body */
+    uint8_t to_sign[1 + 32 + 256];
+    int sp = 0;
+    to_sign[sp++] = 32;
+    memcpy(&to_sign[sp], s_rot_session_id, 32);
+    sp += 32;
+    memcpy(&to_sign[sp], trans_body, body_len);
+    sp += body_len;
+
+    uint8_t signature[64];
+    crypto_sign_detached(signature, NULL, to_sign, sp, auth_private);
+
+    /* Build transmission: sigLen + sig + body
+     * NOTE: SMP v7 signs WITH sessionId but does NOT put it on the wire.
+     * This matches the KEY command format in network_task. */
+    uint8_t transmission[256];
+    int tp = 0;
+    transmission[tp++] = 64;
+    memcpy(&transmission[tp], signature, 64);
+    tp += 64;
+    memcpy(&transmission[tp], trans_body, body_len);
+    tp += body_len;
+
+    /* Send on second connection */
+    uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
+    if (!block) return false;
+
+    int ret = smp_write_command_block(&s_rot_ctx->ssl, block, transmission, tp);
+    if (ret != 0) {
+        ESP_LOGE(TAG_APP, "[ROT][%d] NEW send failed!", contact_idx);
+        heap_caps_free(block);
+        return false;
+    }
+
+    /* Parse IDS response */
+    int content_len = smp_read_block(&s_rot_ctx->ssl, block, 10000);
+    if (content_len < 10) {
+        ESP_LOGE(TAG_APP, "[ROT][%d] No IDS response (len=%d)", contact_idx, content_len);
+        heap_caps_free(block);
+        return false;
+    }
+
+    uint8_t *resp = block + 2;
+    int p = 0;
+
+    /* Skip transport header: txCount + 2 skip + authLen + corrLen + entLen
+     * NOTE: SMP v7 has NO sessLen field in responses (unlike queue_create's v6) */
+    p++;       // txCount
+    p += 2;    // skip bytes
+    int authLen = resp[p++]; p += authLen;
+    int corrLen = resp[p++]; p += corrLen;
+    int entLen  = resp[p++]; p += entLen;
+
+    /* Check for IDS */
+    if (p + 3 > content_len || resp[p] != 'I' || resp[p+1] != 'D' || resp[p+2] != 'S') {
+        ESP_LOGE(TAG_APP, "[ROT][%d] Expected IDS, got %c%c%c",
+                 contact_idx, resp[p], resp[p+1], resp[p+2]);
+        heap_caps_free(block);
+        return false;
+    }
+    p += 3;
+    if (p < content_len && resp[p] == ' ') p++;
+
+    /* Parse: rcvId + sndId + dhKey */
+    uint8_t rcv_id[24], snd_id[24];
+    uint8_t rcv_id_len = resp[p++];
+    if (rcv_id_len > 24) { heap_caps_free(block); return false; }
+    memcpy(rcv_id, &resp[p], rcv_id_len);
+    p += rcv_id_len;
+
+    uint8_t snd_id_len = resp[p++];
+    if (snd_id_len > 24) { heap_caps_free(block); return false; }
+    memcpy(snd_id, &resp[p], snd_id_len);
+    p += snd_id_len;
+
+    uint8_t dh_len = resp[p++];
+    if (dh_len != 44) {
+        ESP_LOGE(TAG_APP, "[ROT][%d] Unexpected DH key length: %d", contact_idx, dh_len);
+        heap_caps_free(block);
+        return false;
+    }
+    /* Skip 12-byte SPKI header, copy 32-byte raw key */
+    uint8_t srv_dh_public[32];
+    memcpy(srv_dh_public, &resp[p + 12], 32);
+
+    heap_caps_free(block);
+
+    /* Complete queue creation in rotation state machine */
+    bool ok;
+    if (is_rq) {
+        ok = rotation_complete_rq_creation(contact_idx,
+                rcv_id, rcv_id_len, snd_id, snd_id_len, srv_dh_public);
+    } else {
+        ok = rotation_complete_queue_creation(contact_idx,
+                rcv_id, rcv_id_len, snd_id, snd_id_len, srv_dh_public);
+    }
+
+    if (ok) {
+        ESP_LOGI(TAG_APP, "[ROT][%d] %s queue IDS parsed: rcvId=%02x%02x sndId=%02x%02x",
+                 contact_idx, is_rq ? "RQ" : "Main",
+                 rcv_id[0], rcv_id[1], snd_id[0], snd_id[1]);
+    }
+    return ok;
+}
+
+/**
+ * Phase 2: Send KEY command on new queue via second TLS connection.
+ * Registers the peer's sender key (from QKEY response) on our new queue,
+ * so the peer can authenticate their SEND commands after switching.
+ *
+ * Format is identical to NET_CMD_SEND_KEY but uses:
+ * - s_rot_ctx->ssl (second TLS connection to target server)
+ * - s_rot_session_id (session from second TLS handshake)
+ * - new queue's rcv_id and rcv_auth_private (from rotation_contact_data_t)
+ */
+static bool app_rotation_send_key(int contact_idx)
+{
+    if (!s_rot_ctx || !s_rot_connected) {
+        ESP_LOGE(TAG_APP, "[ROT][%d] KEY: second TLS not connected!", contact_idx);
+        return false;
+    }
+
+    const rotation_contact_data_t *rd = rotation_get_contact_data(contact_idx);
+    if (!rd || !rd->has_peer_sender_key) {
+        ESP_LOGE(TAG_APP, "[ROT][%d] KEY: no peer sender key!", contact_idx);
+        return false;
+    }
+
+    ESP_LOGI(TAG_APP, "[ROT][%d] Sending KEY on new queue (rcvId=%02x%02x...)...",
+             contact_idx, rd->new_rcv_id[0], rd->new_rcv_id[1]);
+
+    /* Build KEY command body: corrId + entityId(rcvId) + "KEY " + [len]senderKey */
+    uint8_t body[128];
+    int bp = 0;
+
+    /* corrId = 24 random bytes */
+    body[bp++] = 24;
+    uint8_t corr[24];
+    esp_fill_random(corr, 24);
+    memcpy(&body[bp], corr, 24);
+    bp += 24;
+
+    /* entityId = new queue rcvId */
+    body[bp++] = (uint8_t)rd->new_rcv_id_len;
+    memcpy(&body[bp], rd->new_rcv_id, rd->new_rcv_id_len);
+    bp += rd->new_rcv_id_len;
+
+    /* Command: "KEY " */
+    body[bp++] = 'K';
+    body[bp++] = 'E';
+    body[bp++] = 'Y';
+    body[bp++] = ' ';
+
+    /* senderKey = length-prefixed SPKI (44 bytes) */
+    body[bp++] = 44;
+    memcpy(&body[bp], rd->peer_sender_key, 44);
+    bp += 44;
+
+    /* Sign: [sessIdLen=32][sessionId] + body (SMP v7: sign with sessId, don't put on wire) */
+    uint8_t to_sign[1 + 32 + 128];
+    int sp = 0;
+    to_sign[sp++] = 32;
+    memcpy(&to_sign[sp], s_rot_session_id, 32);
+    sp += 32;
+    memcpy(&to_sign[sp], body, bp);
+    sp += bp;
+
+    uint8_t signature[64];
+    crypto_sign_detached(signature, NULL, to_sign, sp, rd->new_rcv_auth_private);
+
+    /* Build transmission: sigLen + sig + body (v7: no sessionId on wire) */
+    uint8_t transmission[256];
+    int tp = 0;
+    transmission[tp++] = 64;
+    memcpy(&transmission[tp], signature, 64);
+    tp += 64;
+    memcpy(&transmission[tp], body, bp);
+    tp += bp;
+
+    /* Send on second TLS connection */
+    uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
+    if (!block) return false;
+
+    int ret = smp_write_command_block(&s_rot_ctx->ssl, block, transmission, tp);
+    if (ret != 0) {
+        ESP_LOGE(TAG_APP, "[ROT][%d] KEY send failed!", contact_idx);
+        heap_caps_free(block);
+        return false;
+    }
+
+    /* Wait for OK response */
+    int content_len = smp_read_block(&s_rot_ctx->ssl, block, 5000);
+    if (content_len < 5) {
+        ESP_LOGE(TAG_APP, "[ROT][%d] KEY: no response (len=%d)", contact_idx, content_len);
+        heap_caps_free(block);
+        return false;
+    }
+
+    uint8_t *resp = block + 2;
+    int p = 0;
+    p++;       // txCount
+    p += 2;    // skip
+    int authLen = resp[p++]; p += authLen;
+    int corrLen = resp[p++]; p += corrLen;
+    int entLen  = resp[p++]; p += entLen;
+
+    bool ok = false;
+    if (p + 1 < content_len && resp[p] == 'O' && resp[p+1] == 'K') {
+        ESP_LOGI(TAG_APP, "");
+        ESP_LOGI(TAG_APP, "      +----------------------------------------------+");
+        ESP_LOGI(TAG_APP, "      |  [ROT][%d] KEY ACCEPTED on new queue!         |", contact_idx);
+        ESP_LOGI(TAG_APP, "      +----------------------------------------------+");
+        ok = true;
+    } else {
+        ESP_LOGE(TAG_APP, "[ROT][%d] KEY response: %c%c%c (not OK)",
+                 contact_idx, resp[p], resp[p+1], resp[p+2]);
+    }
+
+    heap_caps_free(block);
+    return ok;
+}
+
+/**
+ * Send QADD/QUSE to contact via peer (first) connection.
+ * Uses the existing Double Ratchet + NaCl encrypt pipeline.
+ *
+ * Declared in smp_peer.h, implemented in smp_peer.c.
+ * Signature: peer_send_raw_agent_msg(contact_t*, const uint8_t*, int, const char*)
+ */
+extern bool peer_send_raw_agent_msg(contact_t *contact,
+                                     const uint8_t *a_message, int a_message_len,
+                                     const char *label);
+
+/**
+ * One rotation step per app loop iteration. Processes one contact.
+ * Called from app_process_deferred_work() when rotation is active.
+ */
+static void app_rotation_step(void)
+{
+    if (!rotation_is_active()) return;
+
+    /* NOTE: No eager "Step 0" connection here. The rotation TLS is connected
+     * on demand in ROT_IDLE (for NEW) and ROT_QKEY_RECEIVED (for KEY), then
+     * disconnected immediately after. This prevents 3 simultaneous TLS
+     * connections (main + rotation + peer) which exhaust SRAM for sdmmc DMA. */
+
+    /* Find next contact that needs work */
+    for (int i = 0; i < 128; i++) {
+        if (!contacts_db.contacts[i].active) continue;
+
+        rotation_contact_state_t state = rotation_get_contact_state(i);
+
+        switch (state) {
+            case ROT_IDLE: {
+                /* Generate keys for this contact */
+                ESP_LOGI(TAG_APP, "[ROT] Phase 1 for contact [%d] '%s'",
+                         i, contacts_db.contacts[i].name);
+
+                rotation_create_queue_for_contact(i);
+
+                /* Connect rotation TLS for NEW commands */
+                if (!s_rot_connected) {
+                    if (!app_rotation_connect()) {
+                        ESP_LOGW(TAG_APP, "[ROT][%d] Cannot connect for NEWs, retry next loop", i);
+                        return;
+                    }
+                }
+
+                /* Send NEW for main queue */
+                if (!app_rotation_send_new(i, false)) {
+                    ESP_LOGE(TAG_APP, "[ROT][%d] Main queue NEW failed!", i);
+                    return;  /* Retry next loop */
+                }
+
+                /* Send NEW for reply queue */
+                if (!app_rotation_send_new(i, true)) {
+                    ESP_LOGE(TAG_APP, "[ROT][%d] Reply queue NEW failed!", i);
+                    return;
+                }
+
+                /* State should now be ROT_QUEUE_CREATED (both done) */
+                ESP_LOGI(TAG_APP, "[ROT][%d] Both queues created! State: %s",
+                         i, rotation_state_name(rotation_get_contact_state(i)));
+
+                /* Fix 3: Close rotation TLS after NEWs to free SRAM.
+                 * Will reconnect on demand for KEY command in Phase 2.
+                 * This prevents 3 simultaneous TLS (main + rotation + peer). */
+                app_rotation_disconnect();
+                ESP_LOGI(TAG_APP, "[ROT][%d] Rotation TLS closed (SRAM reclaim after NEWs)", i);
+
+                return;  /* One contact per loop iteration */
+            }
+
+            case ROT_QUEUE_CREATED: {
+                /* Validate peer state before attempting QADD */
+                if (!peer_load_state(i)) {
+                    ESP_LOGW(TAG_APP, "[ROT][%d] No valid peer state - skipping contact", i);
+                    rotation_mark_qadd_sent(i);
+                    continue;
+                }
+
+                /* Build and send QADD via peer connection */
+                uint8_t qadd_buf[512];
+                int qadd_len = rotation_build_qadd_payload(i, qadd_buf, sizeof(qadd_buf));
+                if (qadd_len < 0) {
+                    ESP_LOGE(TAG_APP, "[ROT][%d] Failed to build QADD payload!", i);
+                    return;
+                }
+
+                ESP_LOGI(TAG_APP, "[ROT][%d] QADD payload: %d bytes", i, qadd_len);
+
+                /* Set ratchet + handshake to this contact before sending */
+                ratchet_set_active(i);
+                handshake_set_active(i);
+
+                /* Send QADD via peer connection (Double Ratchet encrypted) */
+                if (peer_send_raw_agent_msg(&contacts_db.contacts[i],
+                                             qadd_buf, qadd_len, "QADD")) {
+                    rotation_mark_qadd_sent(i);
+                    ESP_LOGI(TAG_APP, "[ROT][%d] QADD sent! Waiting for QKEY...", i);
+                } else {
+                    ESP_LOGW(TAG_APP, "[ROT][%d] QADD send failed! Will retry.", i);
+                }
+
+                /* Close peer connection - never run 3 TLS simultaneously */
+                peer_disconnect();
+
+                return;  /* One contact per loop */
+            }
+
+            case ROT_QADD_SENT:
+            case ROT_WAITING:
+                /* Waiting for QKEY response (handled in smp_agent.c) */
+                /* TODO: Add timeout and retry logic */
+                continue;
+
+            case ROT_QKEY_RECEIVED: {
+                /* Phase 2a: Send KEY on new queue (register peer's sender key) */
+                ESP_LOGI(TAG_APP, "[ROT] Phase 2 for contact [%d] '%s'",
+                         i, contacts_db.contacts[i].name);
+
+                /* Ensure second TLS is still connected (may have timed out) */
+                if (!s_rot_connected) {
+                    if (!app_rotation_connect()) {
+                        ESP_LOGW(TAG_APP, "[ROT][%d] Second TLS reconnect failed, retry next loop", i);
+                        return;
+                    }
+                }
+
+                if (!app_rotation_send_key(i)) {
+                    ESP_LOGE(TAG_APP, "[ROT][%d] KEY on new queue failed!", i);
+                    return;  /* Retry next loop */
+                }
+                rotation_mark_key_sent(i);
+
+                /* Fix 3: Close rotation TLS after KEY - QUSE goes via peer.
+                 * This ensures max 2 TLS at any time (main + peer for QUSE). */
+                app_rotation_disconnect();
+                ESP_LOGI(TAG_APP, "[ROT][%d] Rotation TLS closed (SRAM reclaim after KEY)", i);
+
+                /* Phase 2b: Send QUSE via peer connection (Double Ratchet) */
+                ESP_LOGI(TAG_APP, "[ROT][%d] Sending QUSE (switch to new queue)...", i);
+
+                /* Load peer state for this contact (needed for peer_send_raw_agent_msg) */
+                if (!peer_load_state(i)) {
+                    ESP_LOGW(TAG_APP, "[ROT][%d] No peer state for QUSE - skipping", i);
+                    rotation_mark_quse_sent(i);  /* Mark done anyway - KEY was sent */
+                    continue;
+                }
+
+                uint8_t quse_buf[128];
+                int quse_len = rotation_build_quse_payload(i, quse_buf, sizeof(quse_buf));
+                if (quse_len < 0) {
+                    ESP_LOGE(TAG_APP, "[ROT][%d] Failed to build QUSE payload!", i);
+                    return;
+                }
+
+                ratchet_set_active(i);
+                handshake_set_active(i);
+
+                if (peer_send_raw_agent_msg(&contacts_db.contacts[i],
+                                             quse_buf, quse_len, "QUSE")) {
+                    rotation_mark_quse_sent(i);  /* -> ROT_DONE */
+                    ESP_LOGI(TAG_APP, "[ROT][%d] QUSE sent! Waiting for QTEST phase.", i);
+                } else {
+                    ESP_LOGW(TAG_APP, "[ROT][%d] QUSE send failed! Will retry.", i);
+                }
+
+                peer_disconnect();
+                ESP_LOGI(TAG_APP, "[ROT][%d] Peer disconnected (SRAM reclaim)", i);
+
+                return;  /* One contact per loop */
+            }
+
+            case ROT_KEY_SENT: {
+                /* KEY was sent but QUSE not yet - resume from here */
+                ESP_LOGI(TAG_APP, "[ROT][%d] Resuming Phase 2b: sending QUSE...", i);
+
+                if (!peer_load_state(i)) {
+                    ESP_LOGW(TAG_APP, "[ROT][%d] No peer state for QUSE - skipping", i);
+                    rotation_mark_quse_sent(i);
+                    continue;
+                }
+
+                uint8_t quse_buf[128];
+                int quse_len = rotation_build_quse_payload(i, quse_buf, sizeof(quse_buf));
+                if (quse_len < 0) {
+                    ESP_LOGE(TAG_APP, "[ROT][%d] Failed to build QUSE payload!", i);
+                    return;
+                }
+
+                ratchet_set_active(i);
+                handshake_set_active(i);
+
+                if (peer_send_raw_agent_msg(&contacts_db.contacts[i],
+                                             quse_buf, quse_len, "QUSE")) {
+                    rotation_mark_quse_sent(i);
+                    ESP_LOGI(TAG_APP, "[ROT][%d] QUSE sent! Waiting for QTEST phase.", i);
+                } else {
+                    ESP_LOGW(TAG_APP, "[ROT][%d] QUSE send failed! Will retry.", i);
+                }
+
+                peer_disconnect();
+                return;
+            }
+
+            case ROT_QUSE_SENT:
+                /* Waiting for QTEST from App (App sends it on the NEW queue).
+                 * When QTEST arrives, smp_agent.c handles it and marks DONE. */
+                continue;
+
+            case ROT_QTEST_SENT:
+                /* Legacy state - should not occur in new flow */
+                continue;
+
+            case ROT_DONE:
+            case ROT_ERROR:
+                continue;
+
+            default:
+                continue;
+        }
+    }
+
+    /* If we get here, all contacts have been processed (or are waiting) */
+    /* Check if all contacts have at least sent QUSE (ready for live-switch).
+     * QTEST will arrive on the NEW server AFTER we reconnect there. */
+    int ready_count = 0;
+    int active_count = 0;
+    for (int i = 0; i < 128; i++) {
+        if (!contacts_db.contacts[i].active) continue;
+        active_count++;
+        rotation_contact_state_t st = rotation_get_contact_state(i);
+        if (st == ROT_QUSE_SENT || st == ROT_DONE) ready_count++;
+    }
+
+    if (ready_count == active_count && active_count > 0) {
+        /* Only trigger the live-switch once */
+        static bool s_complete_logged = false;
+        if (!s_complete_logged) {
+            s_complete_logged = true;
+
+            /* Check if we're already on the target server (reboot after live-switch).
+             * If so, credentials are already migrated - just wait for QTEST. */
+            const char *target = rotation_get_target_host();
+            if (target && strcmp(our_queue.server_host, target) == 0) {
+                ESP_LOGI(TAG_APP, "[ROT] Already on target server %s - waiting for QTEST",
+                         our_queue.server_host);
+                return;
+            }
+
+            ESP_LOGI(TAG_APP, "");
+            ESP_LOGI(TAG_APP, "+----------------------------------------+");
+            ESP_LOGI(TAG_APP, "|  [ROT] ALL QUSE SENT - LIVE SWITCH     |");
+            ESP_LOGI(TAG_APP, "+----------------------------------------+");
+
+            app_rotation_disconnect();
+
+            /* Credential swap + NVS save + set our_queue.server_host to new server */
+            rotation_complete();
+
+            /* Force reconnect to new server.
+             * After reconnect, subscribe on new queues.
+             * QTEST from the App will arrive on the new queue there. */
+            ESP_LOGI(TAG_APP, "[ROT] Forcing reconnect to new server %s:%d...",
+                     our_queue.server_host, our_queue.server_port);
+            if (s_sock_fd >= 0) {
+                shutdown(s_sock_fd, SHUT_RDWR);
+            }
+        }
+    }
+}
+
 static void app_process_deferred_work(void)
 {
     /* Session 48: Auto-reconnect with exponential backoff */
@@ -1269,6 +2009,11 @@ static void app_process_deferred_work(void)
         } else {
             ESP_LOGE(TAG_APP, "History: PSRAM alloc failed for batch buffer");
         }
+    }
+
+    /* Session 49: Queue Rotation processing */
+    if (rotation_is_active()) {
+        app_rotation_step();
     }
 }
 
@@ -1478,6 +2223,82 @@ static void app_handle_contact_queue_msg(
         ESP_LOGW(TAG_APP, "APP: Contact Queue decrypt for [%s] (slot %d), enc_len=%d",
                  contact->name, cq_contact_idx, enc_len);
 
+        /* Session 49: During rotation QUSE_SENT, any MSG = QTEST */
+        if (rotation_is_active() && cq_contact_idx >= 0 && cq_contact_idx < MAX_CONTACTS) {
+            rotation_contact_state_t rs = rotation_get_contact_state(cq_contact_idx);
+            if (rs == ROT_QUSE_SENT) {
+                ESP_LOGI(TAG_APP, "");
+                ESP_LOGI(TAG_APP, "      +----------------------------------------------+");
+                ESP_LOGI(TAG_APP, "      |  [ROT] QTEST received from contact [%d]      |", cq_contact_idx);
+                ESP_LOGI(TAG_APP, "      +----------------------------------------------+");
+                rotation_mark_qtest_received(cq_contact_idx);
+                /* ACK the QTEST message, but skip all decrypt */
+                app_send_ack(contact->recipient_id, contact->recipient_id_len,
+                             msg_id, msgIdLen, contact->rcv_auth_secret);
+                return;
+            }
+        }
+
+        /* Post-handshake messages need full pipeline: Layer 3+2+1.
+         * Pre-handshake (AgentConfirmation) only need Layer 3.
+         * Detection: is_42d_done means handshake completed -> full pipeline. */
+        if (is_42d_done(cq_contact_idx)) {
+            /* FULL PIPELINE: Layer 3 (Server) + Layer 2 (E2E) via smp_e2e,
+             * then Layer 1 (Ratchet) via smp_agent. */
+
+            /* Ensure CQ E2E peer key is populated (from rotation QKEY) */
+            if (!s_cq_e2e_peer_valid) {
+                if (rotation_get_cq_peer_e2e(s_cq_e2e_peer_public)) {
+                    s_cq_e2e_peer_valid = true;
+                    ESP_LOGI(TAG_APP, "   CQ E2E peer key loaded from rotation");
+                }
+            }
+
+            uint8_t cq_shared[32];
+            if (crypto_box_beforenm(cq_shared, contact->srv_dh_public,
+                                     contact->rcv_dh_secret) != 0) {
+                ESP_LOGE(TAG_APP, "   CQ shared secret computation failed");
+                goto fallback;
+            }
+
+            uint8_t *e2e_plain = NULL;
+            size_t e2e_plain_len = 0;
+            uint8_t new_peer[32];
+            bool new_peer_found = false;
+
+            int e2e_ret = smp_e2e_decrypt_reply_message_ex(
+                &resp[p], enc_len, msg_id, msgIdLen,
+                cq_shared,
+                our_queue.e2e_private,
+                s_cq_e2e_peer_public,
+                s_cq_e2e_peer_valid,
+                new_peer, &new_peer_found,
+                &e2e_plain, &e2e_plain_len);
+
+            sodium_memzero(cq_shared, 32);
+
+            if (new_peer_found) {
+                memcpy(s_cq_e2e_peer_public, new_peer, 32);
+                s_cq_e2e_peer_valid = true;
+                ESP_LOGI(TAG_APP, "   CQ E2E peer key cached");
+            }
+
+            if (e2e_ret == 0 && e2e_plain) {
+                ESP_LOGI(TAG_APP, "   CQ Full pipeline: Layer 3+2 OK (%zu bytes)", e2e_plain_len);
+                smp_agent_process_message(e2e_plain, e2e_plain_len,
+                    contact, s_peer_sender_auth_key, &s_has_peer_sender_auth);
+                free(e2e_plain);
+
+                app_send_ack(contact->recipient_id, contact->recipient_id_len,
+                             msg_id, msgIdLen, contact->rcv_auth_secret);
+                return;
+            }
+            ESP_LOGW(TAG_APP, "   CQ E2E failed (ret=%d), falling back to Layer 3 only", e2e_ret);
+            if (e2e_plain) free(e2e_plain);
+        }
+
+fallback:;
+        /* FALLBACK: Layer 3 only (handshake messages, AgentConfirmation) */
         uint8_t *plain = heap_caps_malloc(enc_len, MALLOC_CAP_SPIRAM);
         if (plain) {
             int plain_len = 0;
@@ -1512,6 +2333,16 @@ void smp_app_run(QueueHandle_t kbd_queue)
     while (1) {
         app_process_deferred_work();
         app_process_keyboard_queue(kbd_queue);
+
+        /* Fix 3: Restore Reply Queue subscriptions after rotation completes.
+         * During rotation, RQ SUBs are skipped (SRAM conservation).
+         * Trigger a clean reconnect which will subscribe everything fresh. */
+        if (rotation_rq_subs_needed()) {
+            ESP_LOGI(TAG_APP, "[ROT] Rotation complete - triggering reconnect for RQ subscriptions");
+            if (s_sock_fd >= 0) {
+                shutdown(s_sock_fd, SHUT_RDWR);
+            }
+        }
 
         // Read frame from ring buffer (blocking with timeout)
         size_t item_size = 0;

@@ -22,6 +22,7 @@
 #include "smp_storage.h"  // 36a: smp_storage_delete for NVS key cleanup
 #include "smp_ratchet.h"  // Bug #26: ratchet_wipe_slot for contact deletion
 #include "smp_history.h"  // Bug #26: smp_history_delete for SD card cleanup
+#include "smp_rotation.h" // Session 49: skip RQ SUB during rotation
 extern void smp_clear_42d(int idx);  // 36b: reset 42d bitmap on delete
 #include "freertos/ringbuf.h"
 
@@ -853,8 +854,15 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
     ESP_LOGI(TAG, "[NET] Contact subscriptions: %d/%d", success_count, contacts_db.num_contacts);
     
     // ========== Reply Queue SUBs (Session 34 Phase 6: per-contact) ==========
-    // Subscribe ALL active per-contact reply queues on main socket
+    // Session 49: Skip RQ SUBs during rotation (awaiting QTEST).
+    // QTEST arrives on the CONTACT queue, not reply queue.
+    // RQ SUBs consume ~30KB SRAM per attempt and block the App Task
+    // from processing the batched QTEST in the ring buffer.
     int rq_success = 0;
+    if (rotation_is_active()) {
+        ESP_LOGW(TAG, "   [RQ] Skipping reply queue SUBs (rotation active, SRAM conservation)");
+        goto skip_rq_subs;
+    }
     for (int rqi = 0; rqi < MAX_CONTACTS; rqi++) {
         reply_queue_t *rq = reply_queue_get(rqi);
         if (!rq || !rq->valid) continue;
@@ -1064,6 +1072,7 @@ void subscribe_all_contacts(mbedtls_ssl_context *ssl, uint8_t *block,
         }
     }
 
+skip_rq_subs:
     ESP_LOGI(TAG, "Reply queue subscriptions: %d", rq_success);
 }
 

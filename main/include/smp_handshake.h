@@ -172,6 +172,49 @@ bool complete_handshake(
     const uint8_t *snd_auth_private
 );
 
+/**
+ * Send a raw agent message (QADD/QKEY/QUSE/QTEST) to peer.
+ * Wraps the caller-provided aMessage payload in agentMessage header,
+ * encrypts via Double Ratchet + NaCl layers, and sends as SEND command.
+ *
+ * Same encrypt pipeline as send_chat_message and send_receipt_message.
+ * The aMessage payload must include its own tag (e.g. "QA" for QADD).
+ *
+ * @param ssl               TLS context for peer connection
+ * @param block             Work buffer (SMP_BLOCK_SIZE)
+ * @param session_id        Current session ID (32 bytes)
+ * @param peer_queue_id     Peer's queue ID
+ * @param peer_queue_id_len Length of peer's queue ID
+ * @param peer_dh_public    Peer's X25519 DH public key (32 bytes)
+ * @param our_dh_private    Our X25519 DH private key (32 bytes)
+ * @param our_dh_public     Our X25519 DH public key (32 bytes)
+ * @param ratchet           Ratchet state for encryption
+ * @param snd_auth_private  Ed25519 private key for signing SEND (64 bytes)
+ * @param a_message         Raw aMessage payload (tag + data)
+ * @param a_message_len     Length of aMessage
+ * @param corr_id           CorrId character (e.g. 'Q' for queue rotation)
+ * @param notify            true = push notification, false = silent
+ * @param label             Logging label (e.g. "QADD")
+ * @return true on success
+ */
+bool send_raw_agent_message(
+    mbedtls_ssl_context *ssl,
+    uint8_t *block,
+    const uint8_t *session_id,
+    const uint8_t *peer_queue_id,
+    int peer_queue_id_len,
+    const uint8_t *peer_dh_public,
+    const uint8_t *our_dh_private,
+    const uint8_t *our_dh_public,
+    ratchet_state_t *ratchet,
+    const uint8_t *snd_auth_private,
+    const uint8_t *a_message,
+    int a_message_len,
+    char corr_id,
+    bool notify,
+    const char *label
+);
+
 // Status getters
 bool is_handshake_complete(void);
 bool is_hello_sent(void);

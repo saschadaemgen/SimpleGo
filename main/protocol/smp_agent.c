@@ -19,6 +19,7 @@
 #include "smp_tasks.h"  // Session 32: UI notification
 #include "smp_contacts.h"  // 35e: contacts_db for contact_idx computation
 #include "smp_history.h"  // Session 37: encrypted chat history on SD
+#include "smp_rotation.h" // Session 49: Queue Rotation (QADD/QKEY/QUSE/QTEST)
 #include <time.h>          // Session 37: time(NULL) for history timestamps
 
 static const char *TAG = "SMP_AGENT";
@@ -651,6 +652,75 @@ static void extract_chat_text(const uint8_t *body, size_t body_len, int contact_
                 && total > 0) {
                 smp_history_update_delivered((uint8_t)contact_idx, total - 1);
             }
+        }
+    }
+
+    // ---- Queue Rotation Messages (Session 49) ----
+    // Tags: "QA" = QADD, "QK" = QKEY, "QU" = QUSE, "QT" = QTEST
+    // These are two-byte tags: first byte 'Q', second byte identifies the type.
+    // SimpleGo initiates rotation, so we primarily RECEIVE QKEY responses.
+    // QADD/QUSE/QTEST from the peer would mean THEY initiated rotation
+    // (not implemented yet, but we log them for future support).
+    else if (inner_tag == 'Q' && inner_off + 1 < (int)body_len) {
+        uint8_t q_sub = body[inner_off + 1];
+        int payload_off = inner_off + 2;
+        int payload_len = (int)body_len - payload_off;
+
+        switch (q_sub) {
+            case 'K': {
+                // QKEY: Contact sends their sender key for our new queue
+                ESP_LOGI(TAG, "");
+                ESP_LOGI(TAG, "      +----------------------------------------------+");
+                ESP_LOGI(TAG, "      |  [ROT] QKEY received from contact [%d]       |", contact_idx);
+                ESP_LOGI(TAG, "      +----------------------------------------------+");
+
+                if (rotation_is_active() && payload_len > 0) {
+                    if (rotation_handle_qkey(contact_idx, &body[payload_off], payload_len)) {
+                        ESP_LOGI(TAG, "      QKEY processed - sender key stored");
+                    } else {
+                        ESP_LOGW(TAG, "      QKEY processing failed");
+                    }
+                } else {
+                    ESP_LOGW(TAG, "      QKEY ignored (no active rotation or empty payload)");
+                }
+                break;
+            }
+            case 'A':
+                // QADD: Peer initiated rotation (they want us to use new queue)
+                // Not yet implemented - SimpleGo only initiates, does not respond
+                ESP_LOGI(TAG, "      [ROT] QADD received from contact [%d] (not handled yet)",
+                         contact_idx);
+                break;
+            case 'U':
+                // QUSE: Peer says "use new queue now"
+                ESP_LOGI(TAG, "      [ROT] QUSE received from contact [%d] (not handled yet)",
+                         contact_idx);
+                break;
+            case 'T': {
+                /* QTEST: App confirms the queue switch is complete.
+                 * The App sends this on the NEW queue after receiving our QUSE.
+                 * This means "changing address..." is done on the App side. */
+                ESP_LOGI(TAG, "");
+                ESP_LOGI(TAG, "      +----------------------------------------------+");
+                ESP_LOGI(TAG, "      |  [ROT] QTEST received from contact [%d]      |", contact_idx);
+                ESP_LOGI(TAG, "      +----------------------------------------------+");
+
+                if (rotation_is_active()) {
+                    rotation_contact_state_t st = rotation_get_contact_state(contact_idx);
+                    if (st == ROT_QUSE_SENT) {
+                        rotation_mark_qtest_received(contact_idx);
+                        ESP_LOGI(TAG, "      QTEST processed - contact fully migrated!");
+                    } else {
+                        ESP_LOGW(TAG, "      QTEST ignored (contact state=%d, expected QUSE_SENT)", st);
+                    }
+                } else {
+                    ESP_LOGW(TAG, "      QTEST ignored (no active rotation)");
+                }
+                break;
+            }
+            default:
+                ESP_LOGW(TAG, "      [ROT] Unknown Q-message: Q%c (0x%02x)", q_sub, q_sub);
+                break;
         }
     }
 }

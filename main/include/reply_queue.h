@@ -47,6 +47,13 @@ typedef struct {
 
     // Slot is initialized and has valid server-assigned IDs
     bool valid;
+
+    // Session 49: Old DH keys preserved for peer-send after queue rotation.
+    // After rotation, contact->rcv_dh_* gets new values (for decrypt on new server).
+    // Peer-send still needs old values (peer server hasn't changed).
+    uint8_t peer_dh_secret[DH_PUBLIC_SIZE];     // old rcv_dh_secret for peer send
+    uint8_t peer_dh_public[DH_PUBLIC_SIZE];     // old rcv_dh_public for peer send
+    bool    has_peer_dh;                         // true if peer_dh fields are valid
 } reply_queue_t;
 
 // PSRAM-allocated array: one reply_queue_t per contact slot

@@ -1061,6 +1061,127 @@ bool send_receipt_message(
     return ok;
 }
 
+// ============== Raw Agent Message (Queue Rotation) ==============
+
+/**
+ * Build agentMessage with a raw aMessage payload.
+ * Used for QADD ("QA"), QKEY ("QK"), QUSE ("QU"), QTEST ("QT").
+ *
+ * Format: agentMessage = 'M' + agentMsgHeader + aMessage
+ *   agentMsgHeader = agentMsgId(8B BE) + prevMsgHash(shortString)
+ *   aMessage = raw payload (caller provides tag + data)
+ *
+ * @param a_message     Raw aMessage payload (e.g. "QA" + sndQueues binary)
+ * @param a_message_len Length of aMessage
+ * @param output        Output buffer for full agentMessage
+ * @param max_len       Output buffer size
+ * @return length of built message, or -1 on error
+ */
+static int build_raw_agent_message(const uint8_t *a_message, int a_message_len,
+                                    uint8_t *output, int max_len) {
+    int p = 0;
+
+    // agentMessage tag = 'M'
+    if (p + 1 > max_len) return -1;
+    output[p++] = 'M';
+
+    // agentMsgId = 8 bytes Big-Endian
+    if (p + 8 > max_len) return -1;
+    handshake_state.msg_id++;
+    uint64_t msg_id = handshake_state.msg_id;
+    output[p++] = (msg_id >> 56) & 0xFF;
+    output[p++] = (msg_id >> 48) & 0xFF;
+    output[p++] = (msg_id >> 40) & 0xFF;
+    output[p++] = (msg_id >> 32) & 0xFF;
+    output[p++] = (msg_id >> 24) & 0xFF;
+    output[p++] = (msg_id >> 16) & 0xFF;
+    output[p++] = (msg_id >> 8) & 0xFF;
+    output[p++] = msg_id & 0xFF;
+
+    // prevMsgHash = shortString
+    if (handshake_state.msg_id == 1) {
+        if (p + 1 > max_len) return -1;
+        output[p++] = 0x00;  // empty
+    } else {
+        if (p + 1 + 32 > max_len) return -1;
+        output[p++] = 32;
+        memcpy(&output[p], handshake_state.prev_msg_hash, 32);
+        p += 32;
+    }
+
+    // aMessage = raw payload from caller (tag + data)
+    if (p + a_message_len > max_len) return -1;
+    memcpy(&output[p], a_message, a_message_len);
+    p += a_message_len;
+
+    return p;
+}
+
+/**
+ * Send a raw agent message (QADD/QKEY/QUSE/QTEST) to peer.
+ * Uses the same encrypt pipeline as A_MSG and A_RCVD.
+ *
+ * The caller builds the aMessage payload (e.g. "QA" + binary data)
+ * and this function wraps it in agentMessage header, then encrypts
+ * and sends via the shared pipeline.
+ *
+ * @param a_message     Raw aMessage payload (tag + data)
+ * @param a_message_len Length of aMessage
+ * @param corr_id       CorrId character (e.g. 'Q' for queue rotation)
+ * @param notify        true = push notification, false = silent
+ * @param label         Logging label (e.g. "QADD")
+ */
+bool send_raw_agent_message(
+    mbedtls_ssl_context *ssl,
+    uint8_t *block,
+    const uint8_t *session_id,
+    const uint8_t *peer_queue_id,
+    int peer_queue_id_len,
+    const uint8_t *peer_dh_public,
+    const uint8_t *our_dh_private,
+    const uint8_t *our_dh_public,
+    ratchet_state_t *ratchet,
+    const uint8_t *snd_auth_private,
+    const uint8_t *a_message,
+    int a_message_len,
+    char corr_id,
+    bool notify,
+    const char *label
+) {
+    ESP_LOGI(TAG, "");
+    ESP_LOGI(TAG, "+----------------------------------------+");
+    ESP_LOGI(TAG, "|  [SEND] SENDING %s                     |", label);
+    ESP_LOGI(TAG, "+----------------------------------------+");
+
+    handshake_state.ratchet = ratchet;
+
+    // Build full agentMessage: 'M' + header + raw aMessage
+    uint8_t msg_plain[1024];
+    int msg_plain_len = build_raw_agent_message(a_message, a_message_len,
+                                                 msg_plain, sizeof(msg_plain));
+    if (msg_plain_len < 0) {
+        ESP_LOGE(TAG, "   [FAIL] Failed to build %s agentMessage!", label);
+        return false;
+    }
+
+    ESP_LOGI(TAG, "   [%s] agentMessage: %d bytes (aMessage: %d bytes)",
+             label, msg_plain_len, a_message_len);
+
+    bool ok = encrypt_and_send_agent_msg(
+        ssl, block, session_id, peer_queue_id, peer_queue_id_len,
+        peer_dh_public, our_dh_private, our_dh_public,
+        ratchet, snd_auth_private,
+        msg_plain, msg_plain_len,
+        corr_id, notify, label
+    );
+
+    if (ok) {
+        ESP_LOGI(TAG, "   [OK] %s accepted by server!", label);
+    }
+
+    return ok;
+}
+
 // ============== Parse Incoming HELLO ==============
 
 /**

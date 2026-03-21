@@ -33,8 +33,13 @@ bool peer_send_hello(contact_t *contact);
 // Auftrag 44a: Send chat message to peer
 bool peer_send_chat_message(contact_t *contact, const char *message);
 
-// Auftrag 49b: Send delivery receipt to peer (enables ✓✓)
+// Auftrag 49b: Send delivery receipt to peer (enables checkmarks)
 bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8_t *msg_hash);
+
+// Session 49: Send raw agent message (QADD/QKEY/QUSE/QTEST) to peer via Double Ratchet
+bool peer_send_raw_agent_msg(contact_t *contact,
+                              const uint8_t *a_message, int a_message_len,
+                              const char *label);
 
 // ============== Persistence (Auftrag 50c) ==============
 
