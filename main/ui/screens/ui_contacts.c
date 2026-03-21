@@ -33,6 +33,7 @@
 #include "smp_contacts.h"
 #include "smp_storage.h"
 #include "smp_history.h"
+#include "smp_rotation.h"      // Session 49: Queue Rotation status per contact
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
@@ -76,6 +77,9 @@ static lv_group_t *search_group = NULL;
 static bool search_active = false;
 static char search_query[32] = {0};
 
+/* Session 49: Auto-refresh during rotation (1 second interval) */
+static lv_timer_t *s_rot_refresh_tmr = NULL;
+
 /* ============== Forward Declarations ============== */
 
 static void on_bar_back(lv_event_t *e);
@@ -86,6 +90,30 @@ static void on_search_input_changed(lv_event_t *e);
 static void on_contact_click(lv_event_t *e);
 static void on_contact_long_press(lv_event_t *e);
 static void rebuild_bottom_bar(void);
+
+/* Session 49: Auto-refresh contacts during active rotation */
+static void rot_refresh_cb(lv_timer_t *t)
+{
+    (void)t;
+    /* Stop timer if we navigated away from contacts screen */
+    if (ui_manager_get_current() != UI_SCREEN_CONTACTS || !list_container) {
+        if (s_rot_refresh_tmr) {
+            lv_timer_del(s_rot_refresh_tmr);
+            s_rot_refresh_tmr = NULL;
+        }
+        return;
+    }
+    if (rotation_is_active() || rotation_has_pending()) {
+        ui_contacts_refresh();
+    } else {
+        /* Rotation done - stop timer and do final refresh */
+        if (s_rot_refresh_tmr) {
+            lv_timer_del(s_rot_refresh_tmr);
+            s_rot_refresh_tmr = NULL;
+        }
+        ui_contacts_refresh();
+    }
+}
 
 /* ============== Style Helpers (from ui_chat.c) ============== */
 
@@ -449,6 +477,15 @@ static void on_contact_click(lv_event_t *e)
     if (ui_contacts_popup_active()) return;
     int idx = (int)(intptr_t)lv_event_get_user_data(e);
     if (idx >= 0 && idx < MAX_CONTACTS && contacts_db.contacts[idx].active) {
+        /* Session 49: Block chat for contacts being migrated */
+        if (rotation_is_active() || rotation_has_pending()) {
+            rotation_contact_state_t rs = rotation_get_contact_state(idx);
+            if (rs != ROT_IDLE && rs != ROT_DONE) {
+                ESP_LOGI("UI_CONT", "Contact [%d] blocked: migration state %d", idx, rs);
+                /* TODO: Show info popup "Kontakt wird migriert. Chat verfuegbar nach Abschluss." */
+                return;  /* Ignore click - contact not yet migrated */
+            }
+        }
         if (search_active) rebuild_bottom_bar();
         smp_set_active_contact(idx);
         ui_chat_set_contact(contacts_db.contacts[idx].name);
@@ -516,6 +553,15 @@ lv_obj_t *ui_contacts_create(void)
 
     /* Populate */
     ui_contacts_refresh();
+
+    /* Session 49: Start auto-refresh timer during active rotation */
+    if (rotation_is_active() || rotation_has_pending()) {
+        if (!s_rot_refresh_tmr) {
+            s_rot_refresh_tmr = lv_timer_create(rot_refresh_cb, 1000, NULL);
+            ESP_LOGI("UI_CONT", "Rotation refresh timer started (1s interval)");
+        }
+    }
+
     return screen;
 }
 
@@ -573,6 +619,24 @@ void ui_contacts_refresh(void)
             }
         } else if (s_connect[i].state == CONN_ST_FAILED) {
             status_text = s_connect[i].text;
+        }
+
+        /* Session 49: Queue Rotation status overrides connection status */
+        if (rotation_is_active() || rotation_has_pending()) {
+            rotation_contact_state_t rs = rotation_get_contact_state(i);
+            switch (rs) {
+                case ROT_IDLE:            status_text = "1/7 Waiting...";         break;
+                case ROT_QUEUE_CREATED:   status_text = "2/7 Queue created";      break;
+                case ROT_QADD_SENT:       status_text = "3/7 QADD sent";          break;
+                case ROT_QKEY_RECEIVED:   status_text = "4/7 Key received";       break;
+                case ROT_KEY_SENT:        status_text = "5/7 Key confirmed";      break;
+                case ROT_QUSE_SENT:       status_text = "6/7 Switching...";       break;
+                case ROT_QTEST_SENT:      status_text = "6/7 Switching...";       break;
+                case ROT_DONE:            status_text = "7/7 Migrated";           break;
+                case ROT_ERROR:           status_text = "ERROR";                  break;
+                case ROT_WAITING:         status_text = "Waiting (offline)";      break;
+                default:                                                          break;
+            }
         }
 
         ui_contacts_row_create(list_container, i, &contacts_db.contacts[i],

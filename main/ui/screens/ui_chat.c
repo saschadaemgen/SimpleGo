@@ -30,6 +30,7 @@ extern void chat_bubble_cleanup(void);
 #include "tdeck_keyboard.h"
 #include "smp_history.h"       /* history_message_t for PSRAM cache */
 #include "smp_ratchet.h"      /* Session 47: PQ status display (read-only) */
+#include "smp_rotation.h"    /* Session 49: Block send during migration */
 #include "esp_heap_caps.h"     /* PSRAM allocation */
 #include "esp_log.h"
 #include <sodium.h>            /* SEC-01: sodium_memzero for secure cache wipe */
@@ -443,6 +444,19 @@ static void do_send_message(void)
 {
     const char *text = lv_textarea_get_text(input_area);
     if (!text || text[0] == '\0') return;
+
+    /* Session 49: Block send for contacts being migrated */
+    if (rotation_is_active()) {
+        rotation_contact_state_t rs = rotation_get_contact_state(s_chat_active_contact);
+        if (rs != ROT_IDLE && rs != ROT_DONE) {
+            ESP_LOGW(TAG, "Send blocked: contact [%d] migration state %d",
+                     s_chat_active_contact, rs);
+            /* Show brief status in input area, then restore */
+            lv_textarea_set_text(input_area, "");
+            lv_textarea_set_placeholder_text(input_area, "Migration in progress...");
+            return;
+        }
+    }
 
     ESP_LOGI(TAG, "Send: \"%s\"", text);
 
