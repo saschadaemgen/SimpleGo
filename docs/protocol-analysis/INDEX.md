@@ -3,15 +3,15 @@ slug: /protocol-analysis/session-index
 title: Session Index
 ---
 
-## Session 48 - 2026-03-16 to 2026-03-17
-**Type:** Monster UX + Performance Session
-**File:** 47_PART45_SESSION_48.md
-**Summary:** Bug #30 CLOSED: subscribe_all_contacts() 7x per handshake -> boot+reconnect only (QR 5590ms->650ms, boot 16s->9s). Shared statusbar module (FULL+CHAT variants, 4 screens migrated). Splash screen redesign with real boot progress. Matrix Rain screensaver (canvas, PSRAM, 20 FPS). NTP non-blocking, configurable timezone + lock timer. Pending contact abort. 3 crashes resolved. 22 files changed, 2 deleted. Bug #31 NEW (auto-reconnect).
+## Session 49 - 2026-03-18 to 2026-03-21
+**Type:** Protocol Implementation (4 days, longest session)
+**File:** 48_PART46_SESSION_49.md
+**Summary:** Queue Rotation from zero to working. QADD/QKEY/QUSE/QTEST with live server switch, no reboot. 7 QADD format iterations over 2 days uncovered 3 critical undocumented protocol rules (client versions v1-v4, replacedSndQueue=Nothing forbidden, per-contact snd_id). Multi-server: 21 presets, radio-button UI, SEC-07 fingerprint at 4 TLS points. Bug #32 closed. 16 files, 13 lessons (#258-#270).
 
 ## Session 48 - 2026-03-16 to 2026-03-17
 **Type:** Performance + UX + Infrastructure (16 hours)
 **File:** 47_PART45_SESSION_48.md
-**Summary:** Most extensive session. Bug #30 closed (subscribe feedback loop, O(NxM) to O(1), 8.6x QR speedup). Bug #31 closed (network auto-reconnect, exponential backoff). Shared statusbar module. Splash screen redesign with live progress. Matrix screensaver (cyan/blue/purple). Lock timer configurable (5s-15min). Timezone UTC offset. Pending contact abort. 3 crashes resolved. Developer screen deleted. 23 files, 4 new modules, 7 lessons (#258-#264).
+**Summary:** Most extensive session. Bug #30 closed (subscribe O(NxM) to O(1), QR 8.6x). Bug #31 closed (auto-reconnect). Shared statusbar, splash, Matrix screensaver, lock timer, timezone. 23 files, 4 new modules, 7 lessons (#258-#264).
 
 ## Session 47 - 2026-03-15 to 2026-03-16
 **Type:** UX Overhaul + Security Fixes

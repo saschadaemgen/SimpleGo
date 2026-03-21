@@ -1,42 +1,33 @@
 
-## Status after Session 48 - 2026-03-17
+## Status after Session 49 - 2026-03-21
 
-### Performance (Session 48)
-- Bug #30 CLOSED: subscribe feedback loop eliminated, O(NxM) to O(1)
-- QR creation: 5590ms to 650ms (8.6x faster)
-- Boot: 16.2s to 8.7s (7.5s saved, all boot tests removed)
-- 128 contacts scaling: 11 minutes to < 2 seconds
-
-### New Modules (Session 48)
-- Shared statusbar (FULL + CHAT variants, pixel-art WiFi/battery, global timer)
-- Splash screen (live progress 9 stages, dynamic final message, cross-core safe)
-- Matrix screensaver (canvas RGB565 ~153 KB, 20 FPS, cyan/blue/purple)
-- Lock timer configurable (5s/10s/20s/30s/60s/5min/15min)
-- Timezone UTC offset (-12 to +14, privacy-first, no cities)
-- Pending contact abort (two-stage: UI immediate + App Task deferred)
-
-### Infrastructure (Session 48)
-- Bug #31 CLOSED: Network auto-reconnect (exponential backoff 2s-60s)
-- NTP non-blocking callback
-- Developer screen deleted, theme cleanup (~120 lines removed)
-- 3 crashes resolved (SPI2 splash, NVS PSRAM-stack, MMU WiFi-splash)
-- 23 files changed, 4 new modules, 2 deleted
+### Queue Rotation (Session 49 - 4 days)
+- QADD/QKEY/QUSE/QTEST protocol operational with live server switch
+- 7 QADD format iterations, 3 critical protocol rules discovered
+- Multi-server: 21 presets (14 SimpleX, 6 Flux, 1 SimpleGo), radio-button UI
+- SEC-07: TLS fingerprint verification at 4 connection points
+- Server-switch override protects existing contacts until rotation
+- Dual-TLS: ~1,500 bytes SRAM per connection, max 2-3 simultaneous
+- Live-switch: no reboot, credentials in RAM, NVS save, reconnect
+- Bug #32 closed (subscribe_all removed in S48, restored)
 
 ### Firmware
 - Post-quantum Double Ratchet (sntrup761, five encryption layers)
+- Queue Rotation (QADD/QKEY/QUSE/QTEST, live server switch)
+- 21 preset SMP servers, SEC-07 fingerprint verification
 - NVS 1 MB, 128 PQ contacts, HMAC vault, device-bound HKDF
-- 16-stage QR connection flow, PQ chat header
 - Shared statusbar, Matrix screensaver, animated splash
-- Auto-lock with memory wipe, configurable timer
 - 6/6 Security Findings CLOSED
 
-### Bugs
-- #25 CLOSED (S48), #30 CLOSED (S48), #31 CLOSED (S48)
-- #27 OPEN (Szenni: QR after panic reboot)
-- #28 PARTIAL (NTP works, TZ settable)
+### Known Issues (Queue Rotation)
+1. Second rotation crashes (state not reset)
+2. RQ SUB non-matching frame (auth keys on new server)
+3. Chat 10s delay (RQ retries block App Task)
+4. Refresh timer endlessly running
+5. CQ E2E peer key only first contact
+6. Late-arrival flow for offline contacts
 
 ### Open Items
-- Events re-commit from S47 git checkout
-- Row-update optimization (no full contact list rebuild)
+- 6 Queue Rotation issues for Session 50
 - Alpha firmware binary for simplego.dev/installer
-- Multi-server management (hardcoded server removal)
+- Per-contact PQ toggle via Queue Rotation (future)

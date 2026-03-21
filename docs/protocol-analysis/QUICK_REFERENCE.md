@@ -3910,3 +3910,144 @@ Always delegate to App Task via volatile flag.
 *22 Milestones Achieved*
 *264 Lessons Learned*
 *Next: Session 49 -- Events re-commit, row-update, multi-server*
+
+---
+
+## Section 48: Session 49 -- Queue Rotation Protocol
+
+### 48.1 QADD/QKEY/QUSE/QTEST Message Format
+
+```
+QADD ("QA"): Us -> Peer
+  [AgentVersion 7][Tag 'M'][sndMsgId 8B][prevHash 0|32B]
+  [Tag 'M'][Inner: "QA" + count(1) + SMPQueueUri + replacedSndQueue]
+
+  SMPQueueUri:
+    clientVRange: v1-v4 (NOT v6-v17!)
+    count: 1
+    SMPQueueAddress: host + port + queueId + dhPublicKey + keyHash
+
+  replacedSndQueue:
+    MUST be per-contact: reply_queue_get(contact_idx)->snd_id
+    Nothing (0x00) is FORBIDDEN: "adding queue without switching not supported"
+
+QKEY ("QK"): Peer -> Us
+  Contains sender's public authentication key for new queue.
+  Followed by KEY command to register key on new server.
+
+QUSE ("QU"): Us -> Peer
+  "QU" + count(1) + SMPServer + SenderId + 'T' (primary flag)
+  NOT just "QU" (2 bytes) -- needs full queue reference.
+
+QTEST ("QT"): Peer -> Us (ASYMMETRIC!)
+  App sends QTEST to us. We do NOT send QTEST to app.
+  Confirms new queue is operational.
+```
+
+### 48.2 Queue Rotation State Machine
+
+```
+Per-contact states (smp_rotation.h):
+  ROT_IDLE          -- no rotation in progress
+  ROT_QADD_SENT     -- QADD sent, waiting for QKEY
+  ROT_QKEY_RECEIVED -- KEY command sent on new server
+  ROT_QUSE_SENT     -- QUSE sent, waiting for QTEST
+  ROT_DONE          -- rotation complete, cleanup pending
+
+State persisted to NVS per contact.
+Write-Before-Send at every transition.
+```
+
+### 48.3 Live Server Switch Sequence
+
+```
+1. Create new queue on new server (NEW command via second TLS)
+2. Send QADD to peer (new queue address + old snd_id)
+3. Receive QKEY (peer's sender key)
+4. Send KEY on new server (register peer's key)
+5. Send QUSE to peer (switch your send target)
+6. Receive QTEST (peer confirms new queue works)
+7. Live-switch:
+   a. Overwrite credentials in RAM
+   b. Save to NVS (Write-Before-Send)
+   c. Close old connection
+   d. Connect to new server
+   e. Subscribe
+
+NO REBOOT. Bidirectional chat continues immediately.
+```
+
+### 48.4 DH Key Separation After Rotation
+
+```
+Problem: After rotation, receiving and sending use different servers.
+  Receiving: NEW server (new DH keys from queue creation)
+  Sending: PEER's server (unchanged, old DH keys)
+
+Solution: reply_queue_t extended:
+  peer_dh_secret[32]  -- old DH secret for peer-send
+  peer_dh_public[32]  -- old DH public for peer-send
+  has_peer_dh         -- flag: use peer_dh instead of main dh
+
+rotation_complete():
+  Save old DH keys to peer_dh fields BEFORE overwriting
+  Overwrite ONLY: IDs, server-DH fields
+  Keep: auth keys, DH keys for peer-send path
+```
+
+### 48.5 SMP Version Rules (Critical Discovery)
+
+```
+TWO SEPARATE version numbering systems:
+
+  Transport versions: v6-v17 (SMP wire protocol)
+    Negotiated during TLS+SMP handshake
+    Server reports e.g. "6-17" in SMPServerHandshake
+
+  Agent/Client versions: v1-v4 (protocol features)
+    Used in QADD clientVRange field
+    Determines which features the client supports
+
+  QADD MUST use v1-v4. Using v6+ causes SILENT rejection.
+  A_QUEUE = replaced queue address not found (findQ mismatch)
+  A_VERSION = version range mismatch
+```
+
+### 48.6 21 Preset SMP Servers
+
+```
+14 SimpleX servers (Storage+Proxy):
+  smp1-smp14.simplex.im, smp1-smp8.simplexonflux.com
+
+6 Flux servers (Storage+Proxy, NOT Proxy-only):
+  smp1-smp6.simplexonflux.com (corrected from Presets.hs analysis)
+
+1 SimpleGo server (Storage+Proxy, default):
+  smp.simplego.dev (fingerprint: XfTKGkd9rBkebeTnXMKSnLMAh82tHjNubpJRylz7KXg=)
+
+SEC-07: Fingerprint verified at 4 TLS connection points.
+Server-switch override: connect to queue server until rotation completes.
+Radio-button UI: one active, switch with popup + reboot.
+```
+
+### 48.7 Dual-TLS Budget
+
+```
+Per additional TLS connection: ~1,500 bytes SRAM
+  2 connections: normal operation (main + peer)
+  3 connections: during rotation (main + peer + new server)
+  3 connections: 6,351 bytes SRAM free, 30s stable
+  >3 connections: sdmmc DMA failures
+
+Rotation uses lazy second TLS: opened when needed, closed after.
+One contact rotated at a time to manage SRAM budget.
+```
+
+---
+
+*Quick Reference v45.0*
+*Last updated: March 21, 2026 - Session 49*
+*Status: Queue Rotation Operational -- QADD/QKEY/QUSE/QTEST*
+*22 Milestones Achieved*
+*270 Lessons Learned*
+*Next: Session 50 -- 6 Queue Rotation fixes*

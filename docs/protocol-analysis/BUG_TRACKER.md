@@ -3687,3 +3687,152 @@ Server DEL not needed: orphaned queues auto-cleaned.
 *Total bugs documented: 80 (#25, #30, #31 closed in S48) + Bug E*
 *264 lessons learned*
 *Session 48: 16 hours, 23 files, from 11-minute subscription loop to Matrix neon rain*
+
+---
+
+## Session 49 -- 2026-03-18 to 2026-03-21 (Queue Rotation - 4 Days)
+
+### First SMP Queue Rotation Outside Haskell
+
+### Bug #32 CLOSED: Second Contact Handshake Failure
+
+```
+Symptom: Second contact stuck at "Waiting for Peer" + timeout.
+
+Misdiagnosis (3 hours): Hasi analyzed PQ handshake path, built PQ
+in Confirmation code. Wrong direction -- PQ is in Ratchet, not Handshake.
+
+Correct diagnosis: git checkout Session 47 code -> works.
+Git diff: Session 48 removed app_request_subscribe_all() completely.
+
+Fix: subscribe_all restored at 3 points in smp_tasks.c:
+  A: after add_contact()
+  B: after reply_queue_create()
+  C: after 42d handshake completion
+```
+
+### QADD Format Debugging (2 Days, 7 Iterations)
+
+```
+Test 1: v6-v7, count=2           -> App silent
+Test 2: v8-v16, count=2          -> App silent
+Test 3: v8-v16, count=1          -> App silent
+Test 4: v8-v16, count=1, 'T'     -> App silent
+Test 5: v1-v4, count=1           -> A_QUEUE error (BREAKTHROUGH!)
+Test 6: v1-v4, replaced=Nothing  -> "not supported" (confirms rule)
+Test 7: v1-v4, per-contact snd_id -> QKEY RECEIVED!
+
+Three critical rules discovered:
+  1. SMP Client Versions are v1-v4 (NOT v6-v17, separate systems)
+  2. replacedSndQueue = Nothing is forbidden (Haskell line 3403)
+  3. THE BUG: global our_queue.snd_id instead of per-contact
+     reply_queue_get(contact_idx)->snd_id
+     App's findQ searches (server, snd_id) tuples, no match with global ID
+```
+
+### Queue Rotation Protocol
+
+```
+QADD ("QA"): Us -> Peer: "New queue on new server, here's address"
+  Format: clientVRange v1-v4, count=1, SMPQueueUri, replacedSndQueue
+  replacedSndQueue MUST be per-contact reply_queue snd_id
+
+QKEY ("QK"): Peer -> Us: "Here's my sender key for your new queue"
+  App sends automatically after accepting QADD
+  KEY command registers sender key on new server
+
+QUSE ("QU"): Us -> Peer: "I'm on the new queue now, switch send target"
+  Format: "QU" + count(1) + SMPServer + SenderId + 'T' (primary flag)
+  NOT just "QU" (2 bytes) -- initial implementation was too short
+
+QTEST ("QT"): Peer -> Us: "Test message on new queue, confirming it works"
+  ASYMMETRIC: App sends QTEST to us, NOT us to app
+  QTEST builder was removed, receive handler implemented instead
+```
+
+### Live Server Switch (Phase 4)
+
+```
+No reboot approach (mein Prinz decision):
+  1. Overwrite credentials in RAM
+  2. Save to NVS (Write-Before-Send)
+  3. Close old connection
+  4. Connect to new server
+  5. Subscribe
+
+DH Key Dilemma:
+  Receiving: needs NEW DH keys (new server)
+  Sending: needs OLD DH keys (peer server unchanged)
+  Fix: reply_queue_t extended with peer_dh_secret/public/has_peer_dh
+  rotation_complete() saves old keys before overwriting
+
+Auth Key Fix:
+  Initially overwrote rcv_auth + rcv_dh -- broke peer-send path
+  Fix: overwrite ONLY IDs + server-DH, keep auth/DH for peer-send
+```
+
+### Multi-Server Infrastructure
+
+```
+21 preset servers:
+  14 SimpleX (Storage+Proxy)
+  6 Flux (Storage+Proxy, NOT Proxy-only -- Presets.hs was wrong)
+  1 SimpleGo smp.simplego.dev (Storage+Proxy, default)
+
+SEC-07: TLS fingerprint verification at 4 points:
+  smp_queue.c (queue creation)
+  main.c (boot connection)
+  smp_tasks.c (reconnect)
+  smp_peer.c (peer server, fingerprint from smp:// URI)
+
+Server-switch override: smp_connect() uses queue server (not active
+server) when existing session found. Protects contacts until rotation.
+
+Radio-button UI: one active server, switch with popup + reboot.
+Fake operator features (use_for_proxy/use_for_recv) removed.
+```
+
+### Dual-TLS Measurement
+
+```
+Per additional TLS connection: ~1,500 bytes SRAM
+Three simultaneous: 6,351 bytes free, 30 seconds stable
+Maximum safe: 2-3 simultaneous connections
+Three causes sdmmc DMA failures
+Queue Rotation: one extra connection during rotation, closed after
+```
+
+### 6 Known Issues (for Session 50)
+
+```
+1. Second rotation crashes (state/keys not reset)     HIGH
+2. RQ SUB non-matching frame (auth keys wrong)        MEDIUM
+3. Chat 10s delay (RQ retries block App Task)          MEDIUM
+4. Refresh timer runs endlessly after DONE             LOW
+5. CQ E2E peer key only first contact                  LOW
+6. Late-arrival: offline contacts need 2nd TLS to old  HIGH
+```
+
+### New Lessons Learned (Session 49)
+
+258. **PQ negotiation happens in Ratchet, not Handshake** - Confirmation sends PQ=0. Misdiagnosing this cost 3 hours building wrong code (Session 49)
+259. **subscribe_all after handshake completion is needed for next contact** - Removing it (Session 48 optimization) broke second contact creation entirely. Bug #32 (Session 49)
+260. **No fake features, no toggle without backend** - Operator use_for_proxy/use_for_recv was theater. Removed entirely (Session 49)
+261. **Code analyses can be wrong, verify against live app** - Flux server capabilities incorrectly read from Presets.hs. Storage+Proxy, not Proxy-only (Session 49)
+262. **git checkout + test is fastest bug diagnosis** - Testing Session 47 code immediately proved the S48 regression (Session 49)
+263. **ESP32-S3 SRAM limits to 2-3 simultaneous TLS** - ~1,500 bytes per connection, three connections leave 6,351 bytes. sdmmc DMA fails at three (Session 49)
+264. **SMP Client Version Range is v1-v4, not v6-v17** - Separate numbering systems (agent-level vs transport). Always check Haskell version constants (Session 49)
+265. **findQ compares only Host+Port+QueueId** - KeyHash NOT compared by sameSrvAddr. Server+QueueID sufficient for identification (Session 49)
+266. **replacedSndQueue needs per-contact reply_queue snd_id** - Not global ID. Each contact has unique snd_id. Global causes findQ failure for all but one contact (Session 49)
+267. **QTEST is asymmetric** - App sends QTEST to us, not us to app. Building QTEST sender was wasted effort (Session 49)
+268. **Auth/DH keys for peer-send must survive rotation** - Receiving uses new server keys, sending uses old peer keys. Separate peer_dh fields in reply_queue_t (Session 49)
+269. **Live-switch, not reboot for server changes** - No reboot, no migration screen, overwrite RAM+NVS+reconnect. Simpler, fewer edge cases (Session 49)
+270. **Hasi delivers complete files, not construction instructions** - Partial snippets waste time and introduce integration bugs (Session 49)
+
+---
+
+*Bug Tracker v45.0*
+*Last updated: March 21, 2026 - Session 49*
+*Total bugs documented: 81 (Bug #32 closed, 6 rotation issues known) + Bug E*
+*270 lessons learned*
+*Session 49: Queue Rotation from Zero to Working -- First outside Haskell*

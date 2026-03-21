@@ -8,19 +8,22 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: Performance + Statusbar + Splash + Matrix + Reconnect (2026-03-17 Session 48)
+## LATEST: Queue Rotation from Zero to Working (2026-03-21 Session 49)
 
 ```
-16-hour mega session. 23 files, 4 new modules, 2 deleted.
-Bug #30 CLOSED: subscribe O(NxM) to O(1), QR 8.6x faster, boot 7.5s saved.
-Bug #31 CLOSED: network auto-reconnect (exponential backoff 2s-60s).
-Shared statusbar module (FULL+CHAT, 4 screens migrated).
-Splash screen: animated boot progress with 9 real stages.
-Matrix Rain screensaver: canvas PSRAM, 20 FPS, 3 neon palettes.
-NTP non-blocking, configurable timezone + lock timer.
-Pending contact abort. 3 crashes resolved. Developer screen deleted.
-7 lessons (#258-#264).
+4-day session (longest). Queue Rotation: QADD/QKEY/QUSE/QTEST operational.
+Live server switch: no reboot, credentials RAM+NVS+reconnect.
+7 QADD format iterations, 3 critical protocol rules discovered:
+  1. SMP Client versions v1-v4 (NOT v6-v17)
+  2. replacedSndQueue=Nothing forbidden
+  3. Per-contact snd_id required (not global)
+21 preset servers, SEC-07 fingerprint at 4 TLS points.
+Bug #32 closed. DH key separation (new server vs old peer keys).
+13 lessons (#258-#270). 6 known rotation issues for S50.
+First SMP Queue Rotation implementation outside Haskell.
 ```
+
+## Session 48: Performance + Statusbar + Splash + Matrix + Reconnect (2026-03-17)
 
 ## Session 47: UX Overhaul, NVS 1 MB, QR 16-Stage, PQ UI (2026-03-16)
 
@@ -584,6 +587,30 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **46** | **Mar 11-12** | **MEGABLAST: Post-Quantum Double Ratchet - WORLD FIRST** | **8 lessons, 6/6 SEC CLOSED** |
 | **47** | **Mar 15-16** | **UX Overhaul: NVS 1 MB, QR 16-Stage, PQ UI, 7 Bugs** | **7 lessons, Per-Contact PQ abandoned** |
 | **48** | **Mar 16-17** | **16h Mega: Performance + Statusbar + Splash + Matrix + Reconnect** | **7 lessons, Bug #30+#31 closed** |
+| **49** | **Mar 18-21** | **Queue Rotation: QADD/QKEY/QUSE/QTEST, Live Switch (4 days)** | **13 lessons, Bug #32, 3 protocol rules** |
+
+---
+
+## Session 49 Key Achievements -- Queue Rotation (First Outside Haskell)
+
+```
+QADD/QKEY/QUSE/QTEST protocol operational with live server switch
+7 format iterations over 2 days, 3 critical undocumented rules:
+  1. SMP Client versions v1-v4 (NOT v6-v17, separate systems)
+  2. replacedSndQueue=Nothing forbidden (Haskell line 3403)
+  3. Per-contact snd_id required (global ID breaks findQ)
+
+21 preset servers (14 SimpleX, 6 Flux, 1 SimpleGo)
+SEC-07: TLS fingerprint verification at 4 connection points
+DH key separation: new server keys vs old peer keys
+  reply_queue_t extended with peer_dh_secret/public/has_peer_dh
+Live-switch: no reboot, RAM+NVS overwrite, close old, connect new
+Server-switch override: smp_connect() uses queue server until rotation
+Bug #32 closed (subscribe_all restored after S48 removal)
+Dual-TLS: ~1,500 bytes SRAM per connection, max 2-3 safe
+Evgeny PR #1726 (spec/agent/connections.md) as authoritative source
+16 files changed (2 new: smp_rotation.h/c)
+```
 
 ---
 
@@ -1782,4 +1809,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 17, 2026 - Session 48 (16h Mega Session: Performance + Statusbar + Splash + Matrix + Reconnect)*
+*Last updated: March 21, 2026 - Session 49 (Queue Rotation: QADD/QKEY/QUSE/QTEST, First Outside Haskell)*

@@ -4,16 +4,18 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation
 **Version:** v0.1.18-alpha
-**Last Updated:** 2026-03-17 (Session 48 -- Performance, Statusbar, Splash, Matrix, Reconnect)
+**Last Updated:** 2026-03-21 (Session 49 -- Queue Rotation: From Zero to Working)
 
 ---
 
-## LATEST: Performance + Statusbar + Splash + Matrix + Reconnect (Session 48)
+## LATEST: Queue Rotation from Zero to Working (Session 49)
 
-Most extensive session (16 hours, 23 files, 4 new modules). Bug #30 CLOSED: subscribe feedback loop O(NxM) to O(1), QR 8.6x faster, boot 7.5s saved. Bug #31 CLOSED: network auto-reconnect with exponential backoff 2s-60s. Shared statusbar (FULL+CHAT). Splash with live boot progress. Matrix screensaver (20 FPS, cyan/blue/purple). Lock timer 5s-15min. Timezone offset. Pending contact abort. 3 crashes resolved. Developer screen deleted.
+Longest session (4 days). Queue Rotation implemented: QADD/QKEY/QUSE/QTEST protocol with live server switch, no reboot. 7 QADD format iterations uncovered 3 critical undocumented rules (client versions v1-v4, replacedSndQueue=Nothing forbidden, per-contact snd_id required). Multi-server: 21 presets, radio-button UI, SEC-07 fingerprint at 4 TLS points. Bug #32 closed. Dual-TLS confirmed ~1,500 bytes SRAM per connection. Bidirectional chat verified after live server switch with PQ crypto.
 
-Bugs: 80 total (#25, #30, #31 closed; #27 open, #28 partial)
-Lessons: 264 total (7 new in S48: #258-#264)
+Bugs: 81 total (Bug #32 closed, 6 rotation issues known)
+Lessons: 270 total (13 new in S49: #258-#270)
+
+## PREVIOUS: Performance + Statusbar + Splash + Matrix + Reconnect (Session 48)
 
 ## PREVIOUS: UX Overhaul, NVS Resize, PQ UI (Session 47)
 
@@ -96,7 +98,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 45 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 46 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -145,6 +147,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 45 
 | **43** | [**45_PART43_SESSION_46.md**](45_PART43_SESSION_46.md) | **~230** | ** MEGABLAST: Post-Quantum Double Ratchet - World First** |
 | **44** | [**46_PART44_SESSION_47.md**](46_PART44_SESSION_47.md) | **~200** | ** UX Overhaul: NVS 1 MB, QR 16-Stage Flow, PQ UI** |
 | **45** | [**47_PART45_SESSION_48.md**](47_PART45_SESSION_48.md) | **~190** | ** Performance + Statusbar + Splash + Matrix + Reconnect (16h)** |
+| **46** | [**48_PART46_SESSION_49.md**](48_PART46_SESSION_49.md) | **~220** | ** Queue Rotation: QADD/QKEY/QUSE/QTEST, Live Server Switch** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -208,6 +211,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 45 
 | **46** | **Mar 11-12, 2026** | **MEGABLAST** | ** Post-Quantum Double Ratchet - World First! 6/6 SEC CLOSED** |
 | **47** | **Mar 15-16, 2026** | **UX** | ** 7 Bugs, NVS 1 MB, QR 16-Stage Flow, PQ UI, Per-Contact PQ Abandoned** |
 | **48** | **Mar 16-17, 2026** | **MEGA SESSION** | ** Bug #30+#31, Statusbar, Splash, Matrix, Reconnect (16h, 23 files)** |
+| **49** | **Mar 18-21, 2026** | **QUEUE ROTATION** | ** QADD/QKEY/QUSE/QTEST, Live Server Switch, 21 Servers, SEC-07 (4 days)** |
 
 ---
 
@@ -368,6 +372,15 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 45 
 - **Bug #31 CLOSED: Network Auto-Reconnect (exponential backoff 2s-60s)** ⚡
 - **Developer Screen Deleted** ⚡
 - **42d Bitmap Boot Reset (CONNECT_SCANNED spam eliminated)** ⚡
+- **Queue Rotation: QADD/QKEY/QUSE/QTEST Protocol Operational** 🔄
+- **Live Server Switch (no reboot, credentials in RAM + NVS)** 🔄
+- **21 Preset SMP Servers (14 SimpleX, 6 Flux, 1 SimpleGo)** 🔄
+- **SEC-07: TLS Fingerprint Verification at 4 Connection Points** 🔄
+- **Server-Switch Override (protects existing contacts)** 🔄
+- **Bug #32 CLOSED (subscribe_all restored after S48 removal)** 🔄
+- **3 Critical Protocol Rules: v1-v4 versions, Nothing forbidden, per-contact snd_id** 🔄
+- **Dual-TLS: ~1,500 bytes SRAM per connection confirmed** 🔄
+- **DH Key Separation (new server keys vs old peer keys)** 🔄
 
 ### Session 23: The 7-Step Handshake
 ```
@@ -574,28 +587,21 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 49)
+## Next Steps (Session 50)
 
-### Phase 1: Stability + Polish
+### Phase 1: Queue Rotation Fixes (6 Known Issues)
 ```
-P0: Events re-commit from S47 git checkout
-P1: Row-update optimization (no full contact list rebuild)
-P2: Connect screen redesign
-P3: Settings statusbar migration
-```
-
-### Phase 2: Hardware
-```
-P4: Battery ADC real reading
-P5: Screensaver smoothness optimization
-P6: Multi-server management (hardcoded server removal)
+P0: Second rotation crash (state/keys not reset after cleanup)
+P1: RQ SUB non-matching frame (auth keys on new server)
+P2: Chat 10s delay (RQ retries blocking App Task)
+P3: Refresh timer stops, CQ E2E per-contact keys
+P4: Late-arrival flow (second TLS to old server for offline contacts)
 ```
 
-### Phase 3: Future Architecture
+### Phase 2: Polish
 ```
-P7: Custom SMP server UI (host, port, fingerprint)
-P8: Private Message Routing (PFWD/RFWD)
-P9: GoRelay integration
+P5: Row-update optimization
+P6: Alpha firmware binary for simplego.dev/installer
 ```
 
 ---
@@ -632,32 +638,35 @@ P9: GoRelay integration
 
 ## Current Project Status
 
-**Version:** v0.1.18-alpha | **Last updated:** 2026-03-17 Session 48
+**Version:** v0.1.18-alpha | **Last updated:** 2026-03-21 Session 49
 
 ### Firmware
 
 - Post-quantum Double Ratchet (sntrup761, five encryption layers)
+- **Queue Rotation: QADD/QKEY/QUSE/QTEST with live server switch**
+- **21 preset SMP servers, SEC-07 TLS fingerprint at 4 connection points**
 - NVS 1 MB (128 PQ contacts), HMAC vault, device-bound HKDF
-- QR 16-stage connection flow (650ms creation, was 5590ms)
-- Shared statusbar (FULL+CHAT), animated splash with boot progress
-- Matrix Rain screensaver, configurable lock timer (5s-15min)
-- NTP non-blocking, configurable timezone (UTC-12 to +14)
-- Boot: ~9 seconds (was ~16 seconds before Bug #30 fix)
-- 6/6 Security Findings CLOSED
+- QR 16-stage connection flow, shared statusbar, animated splash
+- Matrix screensaver, configurable lock timer, auto-reconnect
+- Boot: ~9 seconds, 6/6 Security Findings CLOSED
+
+### Queue Rotation Status
+
+- Bidirectional chat verified after live server switch (send, receive, receipts, PQ)
+- 6 known issues for Session 50 (second rotation, RQ auth, delays, late-arrivals)
 
 ### Bugs
 
 - #27: QR after panic (OPEN, Szenni)
 - #28: NTP timing (PARTIAL)
-- #31: Auto-reconnect (NEW, Hasi in progress)
+- #32: CLOSED (subscribe_all restored)
 
 ### Open Items
 
-- Auto-reconnect with exponential backoff
-- Multi-server management (remove hardcoded server)
-- Connect screen design, battery ADC
-- Evgeny relationship paused
+- 6 Queue Rotation fixes (Session 50)
+- Alpha firmware binary for simplego.dev/installer
+- Evgeny relationship paused, technical docs still referenced
 
 ---
 
-*Index updated: 2026-03-17 Session 48 -- Performance Fix + Statusbar + Matrix Screensaver*
+*Index updated: 2026-03-21 Session 49 -- Queue Rotation: From Zero to Working*
