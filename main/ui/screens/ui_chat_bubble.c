@@ -466,6 +466,12 @@ void chat_bubble_update_status(uint32_t msg_seq, int status)
 {
     for (int i = 0; i < MAX_TRACKED_MSGS; i++) {
         if (tracked_msgs[i].active && tracked_msgs[i].msg_seq == msg_seq) {
+            /* Defensive: label may have been freed if screen was destroyed
+             * between event queue and processing (Core 0/1 race). */
+            if (!tracked_msgs[i].status_label) {
+                tracked_msgs[i].active = false;
+                return;
+            }
             if (status >= 0 && status <= 3) {
                 static const char *st_text[] = {
                     ST_SENDING, ST_SENT, ST_DELIVERED, ST_FAILED

@@ -224,7 +224,12 @@ static void ui_poll_timer_cb(lv_timer_t *t)
                 ui_chat_set_contact(evt.text);
                 break;
             case UI_EVT_DELIVERY_STATUS:
-                ui_chat_update_status(evt.msg_seq, (int)evt.status);
+                /* Only update bubble status if chat screen is active.
+                 * Receipt events can arrive after navigating away from chat.
+                 * Stale events are harmless - next chat open loads from history. */
+                if (ui_manager_get_current() == UI_SCREEN_CHAT) {
+                    ui_chat_update_status(evt.msg_seq, (int)evt.status);
+                }
                 break;
             case UI_EVT_SHOW_QR:
                 // Session 33 Phase 4A: Show QR code on connect screen
@@ -308,11 +313,253 @@ static void ui_poll_timer_cb(lv_timer_t *t)
 }
 
 // ============== CONFIG ==============
-// Session 49: SMP_HOST/SMP_PORT removed. Server chosen dynamically
-// via smp_servers_pick_storage() from the multi-server list.
+// Session 49: SMP_HOST/SMP_PORT removed. Server chosen via
+// smp_servers_get_active() from NVS-persisted selection.
 static smp_server_t *s_active_server = NULL;
 
 // ============== Main SMP Connection ==============
+
+// #define TEST_DUAL_TLS   /* Session 49: Test done. Result: ~1500B per conn, 6351B remaining with 3 conns */
+
+#ifdef TEST_DUAL_TLS
+
+static void test_dual_tls(void)
+{
+    static const char *T = "DUAL-TLS";
+    int ret;
+
+    ESP_LOGI(T, "");
+    ESP_LOGI(T, "=== Dual TLS Connection Test ===");
+
+    /* Baseline: one TLS connection already active from smp_connect() */
+    uint32_t heap_baseline = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    ESP_LOGI(T, "SRAM baseline (after smp_connect): %" PRIu32 " bytes free", heap_baseline);
+
+    /* Connection #1: smp.simplego.dev */
+    ESP_LOGI(T, "--- Connection #1: smp.simplego.dev ---");
+
+    typedef struct {
+        mbedtls_ssl_context ssl;
+        mbedtls_ssl_config conf;
+        mbedtls_entropy_context entropy;
+        mbedtls_ctr_drbg_context ctr_drbg;
+        int sock;
+        uint8_t session_id[32];
+    } test_tls_ctx_t;
+
+    test_tls_ctx_t *ctx1 = heap_caps_calloc(1, sizeof(test_tls_ctx_t), MALLOC_CAP_INTERNAL);
+    if (!ctx1) {
+        ESP_LOGE(T, "Failed to allocate ctx1 in SRAM!");
+        return;
+    }
+
+    mbedtls_ssl_init(&ctx1->ssl);
+    mbedtls_ssl_config_init(&ctx1->conf);
+    mbedtls_entropy_init(&ctx1->entropy);
+    mbedtls_ctr_drbg_init(&ctx1->ctr_drbg);
+    ctx1->sock = -1;
+
+    ret = mbedtls_ctr_drbg_seed(&ctx1->ctr_drbg, mbedtls_entropy_func,
+                                 &ctx1->entropy, NULL, 0);
+    if (ret != 0) {
+        ESP_LOGE(T, "ctx1 DRBG seed failed: -0x%04x", -ret);
+        goto cleanup1;
+    }
+
+    ESP_LOGI(T, "Connecting to smp.simplego.dev:5223...");
+    ctx1->sock = smp_tcp_connect("smp.simplego.dev", 5223);
+    if (ctx1->sock < 0) {
+        ESP_LOGE(T, "ctx1 TCP connect failed");
+        goto cleanup1;
+    }
+
+    ret = mbedtls_ssl_config_defaults(&ctx1->conf, MBEDTLS_SSL_IS_CLIENT,
+                                       MBEDTLS_SSL_TRANSPORT_STREAM,
+                                       MBEDTLS_SSL_PRESET_DEFAULT);
+    if (ret != 0) { ESP_LOGE(T, "ctx1 config failed"); goto cleanup1; }
+
+    mbedtls_ssl_conf_min_tls_version(&ctx1->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_max_tls_version(&ctx1->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_ciphersuites(&ctx1->conf, ciphersuites);
+    mbedtls_ssl_conf_authmode(&ctx1->conf, MBEDTLS_SSL_VERIFY_NONE);
+    mbedtls_ssl_conf_rng(&ctx1->conf, mbedtls_ctr_drbg_random, &ctx1->ctr_drbg);
+
+    {
+        static const char *alpn_test[] = {"smp/1", NULL};
+        mbedtls_ssl_conf_alpn_protocols(&ctx1->conf, alpn_test);
+    }
+
+    ret = mbedtls_ssl_setup(&ctx1->ssl, &ctx1->conf);
+    if (ret != 0) { ESP_LOGE(T, "ctx1 ssl_setup failed"); goto cleanup1; }
+
+    mbedtls_ssl_set_hostname(&ctx1->ssl, "smp.simplego.dev");
+    mbedtls_ssl_set_bio(&ctx1->ssl, &ctx1->sock, my_send_cb, my_recv_cb, NULL);
+
+    while ((ret = mbedtls_ssl_handshake(&ctx1->ssl)) != 0) {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            ESP_LOGE(T, "ctx1 TLS handshake failed: -0x%04x", -ret);
+            goto cleanup1;
+        }
+    }
+    ESP_LOGI(T, "ctx1 TLS OK! ALPN: %s", mbedtls_ssl_get_alpn_protocol(&ctx1->ssl));
+
+    /* Read SMP ServerHello on ctx1 */
+    {
+        uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
+        if (block) {
+            int content_len = smp_read_block(&ctx1->ssl, block, 15000);
+            if (content_len >= 37) {
+                uint8_t *hello = block + 2;
+                if (hello[4] == 32) {
+                    memcpy(ctx1->session_id, &hello[5], 32);
+                    ESP_LOGI(T, "ctx1 SMP handshake [OK] (sessId=%02x%02x...)",
+                             ctx1->session_id[0], ctx1->session_id[1]);
+                }
+            } else {
+                ESP_LOGW(T, "ctx1 SMP: no ServerHello (len=%d)", content_len);
+            }
+            heap_caps_free(block);
+        }
+    }
+
+    uint32_t heap_after_ctx1 = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    ESP_LOGI(T, "SRAM after ctx1: %" PRIu32 " bytes free (delta: -%" PRIu32 ")",
+             heap_after_ctx1, heap_baseline - heap_after_ctx1);
+
+    /* Connection #2: smp8.simplex.im */
+    ESP_LOGI(T, "--- Connection #2: smp8.simplex.im ---");
+
+    test_tls_ctx_t *ctx2 = heap_caps_calloc(1, sizeof(test_tls_ctx_t), MALLOC_CAP_INTERNAL);
+    if (!ctx2) {
+        ESP_LOGE(T, "Failed to allocate ctx2 in SRAM!");
+        goto cleanup1;
+    }
+
+    mbedtls_ssl_init(&ctx2->ssl);
+    mbedtls_ssl_config_init(&ctx2->conf);
+    mbedtls_entropy_init(&ctx2->entropy);
+    mbedtls_ctr_drbg_init(&ctx2->ctr_drbg);
+    ctx2->sock = -1;
+
+    ret = mbedtls_ctr_drbg_seed(&ctx2->ctr_drbg, mbedtls_entropy_func,
+                                 &ctx2->entropy, NULL, 0);
+    if (ret != 0) {
+        ESP_LOGE(T, "ctx2 DRBG seed failed: -0x%04x", -ret);
+        goto cleanup2;
+    }
+
+    ESP_LOGI(T, "Connecting to smp8.simplex.im:5223...");
+    ctx2->sock = smp_tcp_connect("smp8.simplex.im", 5223);
+    if (ctx2->sock < 0) {
+        ESP_LOGE(T, "ctx2 TCP connect failed");
+        goto cleanup2;
+    }
+
+    ret = mbedtls_ssl_config_defaults(&ctx2->conf, MBEDTLS_SSL_IS_CLIENT,
+                                       MBEDTLS_SSL_TRANSPORT_STREAM,
+                                       MBEDTLS_SSL_PRESET_DEFAULT);
+    if (ret != 0) { ESP_LOGE(T, "ctx2 config failed"); goto cleanup2; }
+
+    mbedtls_ssl_conf_min_tls_version(&ctx2->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_max_tls_version(&ctx2->conf, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_ciphersuites(&ctx2->conf, ciphersuites);
+    mbedtls_ssl_conf_authmode(&ctx2->conf, MBEDTLS_SSL_VERIFY_NONE);
+    mbedtls_ssl_conf_rng(&ctx2->conf, mbedtls_ctr_drbg_random, &ctx2->ctr_drbg);
+
+    {
+        static const char *alpn_test2[] = {"smp/1", NULL};
+        mbedtls_ssl_conf_alpn_protocols(&ctx2->conf, alpn_test2);
+    }
+
+    ret = mbedtls_ssl_setup(&ctx2->ssl, &ctx2->conf);
+    if (ret != 0) { ESP_LOGE(T, "ctx2 ssl_setup failed"); goto cleanup2; }
+
+    mbedtls_ssl_set_hostname(&ctx2->ssl, "smp8.simplex.im");
+    mbedtls_ssl_set_bio(&ctx2->ssl, &ctx2->sock, my_send_cb, my_recv_cb, NULL);
+
+    while ((ret = mbedtls_ssl_handshake(&ctx2->ssl)) != 0) {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            ESP_LOGE(T, "ctx2 TLS handshake failed: -0x%04x", -ret);
+            goto cleanup2;
+        }
+    }
+    ESP_LOGI(T, "ctx2 TLS OK! ALPN: %s", mbedtls_ssl_get_alpn_protocol(&ctx2->ssl));
+
+    /* Read SMP ServerHello on ctx2 */
+    {
+        uint8_t *block = heap_caps_malloc(SMP_BLOCK_SIZE, MALLOC_CAP_SPIRAM);
+        if (block) {
+            int content_len = smp_read_block(&ctx2->ssl, block, 15000);
+            if (content_len >= 37) {
+                uint8_t *hello = block + 2;
+                if (hello[4] == 32) {
+                    memcpy(ctx2->session_id, &hello[5], 32);
+                    ESP_LOGI(T, "ctx2 SMP handshake [OK] (sessId=%02x%02x...)",
+                             ctx2->session_id[0], ctx2->session_id[1]);
+                }
+            } else {
+                ESP_LOGW(T, "ctx2 SMP: no ServerHello (len=%d)", content_len);
+            }
+            heap_caps_free(block);
+        }
+    }
+
+    uint32_t heap_after_ctx2 = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    ESP_LOGI(T, "SRAM after ctx2: %" PRIu32 " bytes free (delta: -%" PRIu32 ")",
+             heap_after_ctx2, heap_after_ctx1 - heap_after_ctx2);
+
+    /* Stability check: hold both connections for 30 seconds */
+    ESP_LOGI(T, "Holding both connections for 30s...");
+    for (int i = 0; i < 30; i++) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        if (i % 10 == 9) {
+            uint32_t heap_now = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+            ESP_LOGI(T, "  %ds - SRAM: %" PRIu32 " bytes free", i + 1, heap_now);
+        }
+    }
+
+    /* Summary */
+    ESP_LOGI(T, "");
+    ESP_LOGI(T, "=== Dual TLS Test Results ===");
+    ESP_LOGI(T, "SRAM baseline (1 conn active): %" PRIu32, heap_baseline);
+    ESP_LOGI(T, "SRAM after +ctx1:              %" PRIu32 " (-%" PRIu32 ")",
+             heap_after_ctx1, heap_baseline - heap_after_ctx1);
+    ESP_LOGI(T, "SRAM after +ctx2:              %" PRIu32 " (-%" PRIu32 ")",
+             heap_after_ctx2, heap_after_ctx1 - heap_after_ctx2);
+    ESP_LOGI(T, "Total SRAM for 2 extra conns:  %" PRIu32 " bytes",
+             heap_baseline - heap_after_ctx2);
+    ESP_LOGI(T, "SRAM remaining with 3 total:   %" PRIu32 " bytes", heap_after_ctx2);
+    ESP_LOGI(T, "=== Test Complete ===");
+    ESP_LOGI(T, "");
+
+cleanup2:
+    if (ctx2) {
+        mbedtls_ssl_close_notify(&ctx2->ssl);
+        mbedtls_ssl_free(&ctx2->ssl);
+        mbedtls_ssl_config_free(&ctx2->conf);
+        mbedtls_ctr_drbg_free(&ctx2->ctr_drbg);
+        mbedtls_entropy_free(&ctx2->entropy);
+        if (ctx2->sock >= 0) close(ctx2->sock);
+        heap_caps_free(ctx2);
+    }
+
+cleanup1:
+    if (ctx1) {
+        mbedtls_ssl_close_notify(&ctx1->ssl);
+        mbedtls_ssl_free(&ctx1->ssl);
+        mbedtls_ssl_config_free(&ctx1->conf);
+        mbedtls_ctr_drbg_free(&ctx1->ctr_drbg);
+        mbedtls_entropy_free(&ctx1->entropy);
+        if (ctx1->sock >= 0) close(ctx1->sock);
+        heap_caps_free(ctx1);
+    }
+
+    uint32_t heap_final = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    ESP_LOGI(T, "SRAM after cleanup: %" PRIu32 " bytes free (leaked: %" PRIu32 ")",
+             heap_final, heap_baseline - heap_final);
+}
+
+#endif /* TEST_DUAL_TLS */
 
 static void smp_connect(void) {
     int ret;
@@ -526,6 +773,9 @@ static void smp_connect(void) {
     }
 
     // This blocks forever (ring buffer read loop)
+#ifdef TEST_DUAL_TLS
+    test_dual_tls();
+#endif
     smp_app_run(kbd_msg_queue);
 
     ESP_LOGI(TAG, "");
@@ -755,7 +1005,7 @@ void app_main(void) {
     ui_splash_set_status("Loading servers...");
     ui_splash_set_progress(55);
     smp_servers_init();
-    s_active_server = smp_servers_pick_storage();
+    s_active_server = smp_servers_get_active();
     if (!s_active_server) {
         ESP_LOGE(TAG, "No storage server available! Cannot continue.");
         while (1) vTaskDelay(pdMS_TO_TICKS(10000));
@@ -782,6 +1032,22 @@ void app_main(void) {
             ESP_LOGI(TAG, "[OK] Session restored! Skipping queue creation. (peer=%s, hand=%s)",
                      peer_ok ? "[OK]" : "[WARN]",
                      hand_ok ? "[OK]" : "[WARN]");
+
+            // Session 49: Override active server with queue server.
+            // Queues live on our_queue.server_host - we MUST connect there,
+            // regardless of what the user selected as "active server".
+            // The user-selected server only applies to fresh starts (no contacts).
+            if (our_queue.server_host[0] != '\0') {
+                smp_server_t *queue_srv = smp_servers_find_by_host(our_queue.server_host);
+                if (queue_srv) {
+                    s_active_server = queue_srv;
+                    ESP_LOGI(TAG, "Session has queues on %s - connecting there (not user-selected server)",
+                             our_queue.server_host);
+                } else {
+                    ESP_LOGW(TAG, "Queue server %s not in server list - using as-is",
+                             our_queue.server_host);
+                }
+            }
 
             // Session 34 Phase 6: Load per-contact reply queues
             int rq_loaded = reply_queues_load_all();
