@@ -24,6 +24,7 @@
  */
 
 #include "smp_rotation.h"
+#include "smp_tasks.h"          // smp_tasks_reset_rotation_guard()
 #include "smp_servers.h"
 #include "smp_contacts.h"
 #include "smp_queue.h"
@@ -260,6 +261,9 @@ bool rotation_start(uint8_t target_server_idx)
     }
     memset(s_contacts, 0, 128 * sizeof(rotation_contact_data_t));
 
+    /* Session 50 Fix A: Reset the live-switch guard so it fires again */
+    smp_tasks_reset_rotation_guard();
+
     // Persist before any network ops (Evgeny's golden rule)
     save_context();
 
@@ -463,9 +467,9 @@ int rotation_build_qadd_payload(int contact_idx, uint8_t *buf, int buf_size)
     buf[p++] = 'A';
 
     // ---- sndQueues = length 1*(newQueueUri replacedSndQueue) ----
-    // TEST A: Single queue only (Main) to test if App responds to QADD
+    // Session 50: Two queues (Main + Reply Queue)
     if (p + 1 > buf_size) return -1;
-    buf[p++] = 1;   // One queue (Main only, RQ omitted for testing)
+    buf[p++] = 2;   // Two queues: Main (primary) + Reply Queue (secondary)
 
     // ==== Queue 1: Main receive queue ====
 
@@ -531,11 +535,9 @@ int rotation_build_qadd_payload(int contact_idx, uint8_t *buf, int buf_size)
     memcpy(&buf[p], old_rq->snd_id, old_rq->snd_id_len);
     p += old_rq->snd_id_len;
 
-    /* ==== Queue 2 (Reply Queue) DISABLED for Test A ====
-     * Re-enable after confirming App responds to single-queue QADD.
-     */
-#if 0
     // ==== Queue 2: Reply queue RQ[contact_idx] ====
+    // Session 50: Activated. The App's secondary sndQueue sends to our CQ.
+    // findQ in Haskell matches (SMPServer, SenderId) tuples against sqs.
 
     // clientVRange
     if (p + 4 > buf_size) return -1;
@@ -564,12 +566,13 @@ int rotation_build_qadd_payload(int contact_idx, uint8_t *buf, int buf_size)
     memcpy(&buf[p], rd->rq_new_e2e_public, 32);
     p += 32;
 
-    // replacedSndQueue for RQ: "1" + sndQueueAddr(old RQ)
-    // Old RQ uses same server as our_queue (they are on our server)
+    // replacedSndQueue for Queue 2: "1" + sndQueueAddr(old CQ on old server)
+    // The App's SECONDARY sndQueue sends to our CQ with senderId = our_queue.snd_id.
+    // This is the snd_id from the initial queue creation (invite link).
+    // findQ in Haskell matches (SMPServer, SenderId) - must match what App stored.
     if (p + 1 > buf_size) return -1;
     buf[p++] = '1';
 
-    // Old RQ server = same as our_queue server
     int old_rq_srv = encode_smp_server(&buf[p], buf_size - p,
                                         our_queue.server_host,
                                         our_queue.server_port,
@@ -577,32 +580,22 @@ int rotation_build_qadd_payload(int contact_idx, uint8_t *buf, int buf_size)
     if (old_rq_srv < 0) return -1;
     p += old_rq_srv;
 
-    // Old RQ senderId - need from reply_queue_get(contact_idx)
-    // NOTE: Caller must ensure reply_queue is loaded. We include the
-    // reply_queue.h dependency for this.
-    {
-        reply_queue_t *old_rq = reply_queue_get(contact_idx);
-        if (old_rq && old_rq->valid) {
-            // RQ snd_id is not stored separately - the contact knows it from
-            // their side. We use rcv_id as identifier (the entity ID on our server).
-            // Actually for replacedSndQueue, the ABNF says sndQueueAddr = smpServer senderId.
-            // The "senderId" from the contact's perspective is what they use to SEND to us,
-            // which in our data is our snd_id (what we gave them in the invite link).
-            // For RQ: the contact's send address to our RQ. This is stored in the
-            // reply_queue as snd_id if available, or we use rcv_id as entity identifier.
-            if (p + 1 + old_rq->rcv_id_len > buf_size) return -1;
-            buf[p++] = (uint8_t)old_rq->rcv_id_len;
-            memcpy(&buf[p], old_rq->rcv_id, old_rq->rcv_id_len);
-            p += old_rq->rcv_id_len;
-        } else {
-            // No valid RQ - use empty senderId (shouldn't happen in normal operation)
-            ESP_LOGW(TAG, "[ROT][%d] No valid RQ for old address, using empty", contact_idx);
-            buf[p++] = 0;
-        }
+    // SenderId = our_queue.snd_id (what the App uses to SEND to our CQ)
+    if (our_queue.snd_id_len > 0) {
+        if (p + 1 + our_queue.snd_id_len > buf_size) return -1;
+        buf[p++] = (uint8_t)our_queue.snd_id_len;
+        memcpy(&buf[p], our_queue.snd_id, our_queue.snd_id_len);
+        p += our_queue.snd_id_len;
+        ESP_LOGI(TAG, "[ROT][%d] Queue 2 replacedSndQueue: %s:%d sndId=%02x%02x%02x%02x... (%d bytes)",
+                 contact_idx, our_queue.server_host, our_queue.server_port,
+                 our_queue.snd_id[0], our_queue.snd_id[1],
+                 our_queue.snd_id[2], our_queue.snd_id[3], our_queue.snd_id_len);
+    } else {
+        ESP_LOGW(TAG, "[ROT][%d] No our_queue.snd_id, using empty", contact_idx);
+        buf[p++] = 0;
     }
-#endif  /* Queue 2 disabled for Test A */
 
-    ESP_LOGI(TAG, "[ROT][%d] QADD payload: %d bytes, new=%s:%d sndId=%02x%02x...",
+    ESP_LOGI(TAG, "[ROT][%d] QADD payload: %d bytes (count=2), new=%s:%d sndId=%02x%02x...",
              contact_idx, p, s_ctx.target_host, s_ctx.target_port,
              rd->new_snd_id[0], rd->new_snd_id[1]);
 
@@ -628,6 +621,7 @@ bool rotation_handle_qkey(int contact_idx, const uint8_t *qkey_data, int qkey_le
      * senderKey = length x509encoded
      *
      * We already consumed "QK" tag. qkey_data starts at sndQueueKeys.
+     * Session 50 Etappe 2: Parse count queues (1 or 2).
      */
 
     int p = 0;
@@ -639,74 +633,100 @@ bool rotation_handle_qkey(int contact_idx, const uint8_t *qkey_data, int qkey_le
         return false;
     }
 
-    // Skip newQueueInfo (version + smpServer + senderId + dhPublicKey)
-    // version = 2 bytes
-    if (p + 2 > qkey_len) return false;
-    p += 2;
+    ESP_LOGI(TAG, "[ROT][%d] QKEY: parsing %d queue(s)...", contact_idx, count);
 
-    // smpServer = hosts port keyHash
-    if (p >= qkey_len) return false;
-    uint8_t host_count = qkey_data[p++];
-    for (int h = 0; h < host_count; h++) {
+    for (int q = 0; q < count && q < 2; q++) {
+        ESP_LOGI(TAG, "[ROT][%d] QKEY Queue %d/%d at offset %d:", contact_idx, q + 1, count, p);
+
+        /* newQueueInfo: version(2) + smpServer + senderId + dhPublicKey */
+
+        /* version = 2 bytes */
+        if (p + 2 > qkey_len) {
+            ESP_LOGE(TAG, "[ROT][%d] QKEY Q%d: truncated at version", contact_idx, q + 1);
+            return false;
+        }
+        p += 2;
+
+        /* smpServer = hosts port keyHash */
         if (p >= qkey_len) return false;
-        uint8_t hlen = qkey_data[p++];
-        p += hlen;
+        uint8_t host_count = qkey_data[p++];
+        for (int h = 0; h < host_count; h++) {
+            if (p >= qkey_len) return false;
+            uint8_t hlen = qkey_data[p++];
+            p += hlen;
+        }
+        /* port */
+        if (p >= qkey_len) return false;
+        uint8_t port_len = qkey_data[p++];
+        p += port_len;
+        /* keyHash */
+        if (p >= qkey_len) return false;
+        uint8_t hash_len = qkey_data[p++];
+        p += hash_len;
+
+        /* senderId */
+        if (p >= qkey_len) return false;
+        uint8_t sid_len = qkey_data[p++];
+        p += sid_len;
+
+        /* dhPublicKey (X25519 SPKI: 12 hdr + 32 raw key) */
+        if (p >= qkey_len) return false;
+        uint8_t dh_len = qkey_data[p++];
+
+        /* Select target fields based on queue index */
+        uint8_t *dst_e2e = (q == 0) ? rd->peer_e2e_public : rd->rq_peer_e2e_public;
+        bool *dst_e2e_valid = (q == 0) ? &rd->has_peer_e2e_public : &rd->has_rq_peer_e2e_public;
+        const char *q_label = (q == 0) ? "Main" : "RQ";
+
+        if (dh_len == 44 && p + 44 <= qkey_len &&
+            memcmp(&qkey_data[p], "\x30\x2a\x30\x05\x06\x03\x2b\x65\x6e\x03\x21\x00", 12) == 0) {
+            memcpy(dst_e2e, &qkey_data[p + 12], 32);
+            *dst_e2e_valid = true;
+            ESP_LOGI(TAG, "[ROT][%d] QKEY Q%d (%s) dhPublicKey: %02x%02x%02x%02x...",
+                     contact_idx, q + 1, q_label,
+                     dst_e2e[0], dst_e2e[1], dst_e2e[2], dst_e2e[3]);
+        } else if (dh_len == 32 && p + 32 <= qkey_len) {
+            memcpy(dst_e2e, &qkey_data[p], 32);
+            *dst_e2e_valid = true;
+            ESP_LOGI(TAG, "[ROT][%d] QKEY Q%d (%s) dhPublicKey (raw 32B): %02x%02x%02x%02x...",
+                     contact_idx, q + 1, q_label,
+                     dst_e2e[0], dst_e2e[1], dst_e2e[2], dst_e2e[3]);
+        } else {
+            ESP_LOGW(TAG, "[ROT][%d] QKEY Q%d (%s) dhPublicKey: unexpected len=%d",
+                     contact_idx, q + 1, q_label, dh_len);
+        }
+        p += dh_len;
+
+        /* senderKey = length x509encoded (Ed25519 SPKI, 44 bytes) */
+        if (p >= qkey_len) {
+            ESP_LOGE(TAG, "[ROT][%d] QKEY Q%d: truncated at senderKey", contact_idx, q + 1);
+            return false;
+        }
+        uint8_t sender_key_len = qkey_data[p++];
+
+        uint8_t *dst_sk = (q == 0) ? rd->peer_sender_key : rd->rq_peer_sender_key;
+        bool *dst_sk_valid = (q == 0) ? &rd->has_peer_sender_key : &rd->has_rq_peer_sender_key;
+
+        if (sender_key_len == 44 && p + 44 <= qkey_len) {
+            memcpy(dst_sk, &qkey_data[p], 44);
+            *dst_sk_valid = true;
+            ESP_LOGI(TAG, "[ROT][%d] QKEY Q%d (%s) senderKey: %02x%02x%02x%02x...",
+                     contact_idx, q + 1, q_label,
+                     dst_sk[0], dst_sk[1], dst_sk[2], dst_sk[3]);
+        } else {
+            ESP_LOGW(TAG, "[ROT][%d] QKEY Q%d (%s) senderKey: unexpected len=%d",
+                     contact_idx, q + 1, q_label, sender_key_len);
+        }
+        p += sender_key_len;
     }
-    // port
-    if (p >= qkey_len) return false;
-    uint8_t port_len = qkey_data[p++];
-    p += port_len;
-    // keyHash
-    if (p >= qkey_len) return false;
-    uint8_t hash_len = qkey_data[p++];
-    p += hash_len;
 
-    // senderId
-    if (p >= qkey_len) return false;
-    uint8_t sid_len = qkey_data[p++];
-    p += sid_len;
-
-    // dhPublicKey (X25519 SPKI: 12 hdr + 32 raw key)
-    if (p >= qkey_len) return false;
-    uint8_t dh_len = qkey_data[p++];
-    if (dh_len == 44 && p + 44 <= qkey_len &&
-        memcmp(&qkey_data[p], "\x30\x2a\x30\x05\x06\x03\x2b\x65\x6e\x03\x21\x00", 12) == 0) {
-        memcpy(rd->peer_e2e_public, &qkey_data[p + 12], 32);
-        rd->has_peer_e2e_public = true;
-        ESP_LOGI(TAG, "[ROT][%d] QKEY dhPublicKey (E2E peer): %02x%02x%02x%02x...",
-                 contact_idx,
-                 rd->peer_e2e_public[0], rd->peer_e2e_public[1],
-                 rd->peer_e2e_public[2], rd->peer_e2e_public[3]);
-    } else if (dh_len == 32 && p + 32 <= qkey_len) {
-        memcpy(rd->peer_e2e_public, &qkey_data[p], 32);
-        rd->has_peer_e2e_public = true;
-        ESP_LOGI(TAG, "[ROT][%d] QKEY dhPublicKey (raw 32B): %02x%02x%02x%02x...",
-                 contact_idx,
-                 rd->peer_e2e_public[0], rd->peer_e2e_public[1],
-                 rd->peer_e2e_public[2], rd->peer_e2e_public[3]);
-    } else {
-        ESP_LOGW(TAG, "[ROT][%d] QKEY dhPublicKey: unexpected len=%d, skipping", contact_idx, dh_len);
-    }
-    p += dh_len;
-
-    // senderKey = length x509encoded (Ed25519 SPKI, 44 bytes)
-    if (p >= qkey_len) return false;
-    uint8_t sender_key_len = qkey_data[p++];
-    if (sender_key_len != 44 || p + 44 > qkey_len) {
-        ESP_LOGE(TAG, "[ROT][%d] QKEY: unexpected sender key length %d",
-                 contact_idx, sender_key_len);
-        return false;
-    }
-
-    memcpy(rd->peer_sender_key, &qkey_data[p], 44);
-    rd->has_peer_sender_key = true;
     rd->state = ROT_QKEY_RECEIVED;
     save_contact_data(contact_idx);
 
-    ESP_LOGI(TAG, "[ROT][%d] QKEY received! Sender key: %02x%02x%02x%02x...",
-             contact_idx,
-             rd->peer_sender_key[0], rd->peer_sender_key[1],
-             rd->peer_sender_key[2], rd->peer_sender_key[3]);
+    ESP_LOGI(TAG, "[ROT][%d] QKEY received! %d queue(s) parsed, Main=%s RQ=%s",
+             contact_idx, count,
+             rd->has_peer_sender_key ? "OK" : "MISSING",
+             rd->has_rq_peer_sender_key ? "OK" : "MISSING");
 
     return true;
 }
@@ -889,8 +909,10 @@ void rotation_complete(void)
          * Solution: save old DH to rq->peer_dh_* for peer_send, then update
          * contact->rcv_dh_* to new values for server-level decrypt. */
 
-        /* Save old DH keys for peer-send before overwriting */
-        if (rq) {
+        /* Save old DH keys for peer-send before overwriting.
+         * Only on FIRST rotation: peer server never changes, so it always
+         * expects the ORIGINAL keys. Second rotation must not overwrite. */
+        if (rq && !rq->has_peer_dh) {
             memcpy(rq->peer_dh_secret, c->rcv_dh_secret, 32);
             memcpy(rq->peer_dh_public, c->rcv_dh_public, 32);
             rq->has_peer_dh = true;
@@ -913,16 +935,32 @@ void rotation_complete(void)
         c->have_srv_dh = true;
 
         /* Reply queue: update IDs, server DH, shared secret, E2E keys.
-         * DO NOT touch rcv_auth_* - peer_send_chat_message() uses
-         * rq->rcv_auth_private for SEND signature on the PEER's server.
-         * DO NOT touch rcv_dh_* - same peer send dependency. */
+         * Auth keys and DH keys need backup before overwriting (peer-send
+         * still uses old values on the peer's server). */
         if (rq) {
             memcpy(rq->rcv_id, rd->rq_new_rcv_id, rd->rq_new_rcv_id_len);
             rq->rcv_id_len = rd->rq_new_rcv_id_len;
-            memcpy(rq->snd_id, rd->rq_new_snd_id, rd->rq_new_snd_id_len);
-            rq->snd_id_len = rd->rq_new_snd_id_len;
-            /* rcv_auth_public/private: DO NOT UPDATE - peer send signing key */
-            /* rcv_dh_public/private: DO NOT UPDATE - peer send E2E DH */
+            /* Session 50 Fix C: rq->snd_id must store the MAIN queue snd_id,
+             * not the RQ snd_id. Reason: rotation_build_qadd_payload() reads
+             * rq->snd_id for the replacedSndQueue field, and the App's findQ()
+             * matches against the snd_id from QUSE - which is the Main queue. */
+            memcpy(rq->snd_id, rd->new_snd_id, rd->new_snd_id_len);
+            rq->snd_id_len = rd->new_snd_id_len;
+
+            /* Session 50 Fix B: Save old auth keys for peer-send before overwriting.
+             * Only on FIRST rotation: peer server never changes, so it always
+             * expects the ORIGINAL keys. Second rotation must not overwrite. */
+            if (!rq->has_peer_auth) {
+                memcpy(rq->peer_auth_private, rq->rcv_auth_private, 64);
+                memcpy(rq->peer_auth_public, rq->rcv_auth_public, 32);
+                rq->has_peer_auth = true;
+            }
+
+            /* NOW update auth keys (SUB on new server needs them) */
+            memcpy(rq->rcv_auth_public, rd->rq_new_rcv_auth_public, 32);
+            memcpy(rq->rcv_auth_private, rd->rq_new_rcv_auth_private, 64);
+
+            /* rcv_dh_public/private: already backed up to peer_dh above */
             memcpy(rq->e2e_public, rd->rq_new_e2e_public, 32);
             memcpy(rq->e2e_private, rd->rq_new_e2e_private, 32);
             memcpy(rq->srv_dh_public, rd->rq_new_srv_dh_public, 32);
@@ -937,29 +975,33 @@ void rotation_complete(void)
 
     ESP_LOGI(TAG, "  Migrated: %d, Pending: %d", migrated, pending);
 
-    /* ---- Phase 1b: Update our_queue E2E keys for CQ decrypt ---- */
-    /* After rotation, messages on the new CQ are E2E encrypted with the
-     * NEW E2E keys we generated during QADD. Copy them to our_queue so
-     * the CQ decrypt pipeline can find them.
-     * Also save the peer's E2E DH key from QKEY for CQ E2E decrypt. */
+    /* ---- Phase 1b: CQ E2E key update after rotation ---- */
+    /* Session 50: BEIDE Operationen AKTIV + Cache-Invalidierung.
+     * Haskell-Analyse bestaetigt: DH(new_e2e_private, peer_e2e_public) korrekt. */
     for (int i = 0; i < 128; i++) {
         if (!contacts_db.contacts[i].active) continue;
         rotation_contact_data_t *rd = &s_contacts[i];
         if (rd->state != ROT_DONE && rd->state != ROT_QUSE_SENT) continue;
+
+        /* Operation 1: Update our E2E key to the one generated in QADD */
         memcpy(our_queue.e2e_public, rd->new_e2e_public, 32);
         memcpy(our_queue.e2e_private, rd->new_e2e_private, 32);
-        ESP_LOGI(TAG, "  our_queue.e2e_private updated from contact [%d]", i);
+        ESP_LOGI(TAG, "  Phase1b Op1: our_queue.e2e updated from contact [%d]", i);
+
+        /* Operation 2: Peer E2E Key aus QKEY */
         if (rd->has_peer_e2e_public) {
             memcpy(s_cq_peer_e2e, rd->peer_e2e_public, 32);
             s_has_cq_peer_e2e = true;
-            /* Persist to NVS so it survives reboot */
             smp_storage_save_blob_sync("cq_e2e_peer", s_cq_peer_e2e, 32);
-            ESP_LOGI(TAG, "  CQ E2E peer key saved: %02x%02x%02x%02x...",
-                     s_cq_peer_e2e[0], s_cq_peer_e2e[1],
-                     s_cq_peer_e2e[2], s_cq_peer_e2e[3]);
+            ESP_LOGI(TAG, "  Phase1b Op2: CQ E2E peer key saved");
         }
         break;  /* Single-contact MVP: first migrated contact */
     }
+
+    /* Session 50: Invalidate CQ E2E peer cache in smp_tasks.c so next
+     * CQ MSG reloads the fresh key written above. Without this, second
+     * rotation uses stale peer key from first rotation. */
+    smp_tasks_reset_rotation_guard();
 
     /* ---- Phase 2: Update our_queue server info ---- */
     strncpy(our_queue.server_host, s_ctx.target_host, sizeof(our_queue.server_host) - 1);

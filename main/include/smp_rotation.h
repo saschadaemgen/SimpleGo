@@ -84,10 +84,16 @@ typedef struct {
     bool    rq_created;             // True after RQ NEW command succeeded
 
     // --- Sender key received from contact (QKEY response) ---
+    // Queue 1 (Main/primary):
     uint8_t peer_sender_key[44];    // Ed25519 SPKI (12 hdr + 32 key)
     bool    has_peer_sender_key;
     uint8_t peer_e2e_public[32];    // X25519 E2E DH from QKEY dhPublicKey
     bool    has_peer_e2e_public;
+    // Queue 2 (Reply/secondary):
+    uint8_t rq_peer_sender_key[44]; // Sender key for RQ from QKEY
+    bool    has_rq_peer_sender_key;
+    uint8_t rq_peer_e2e_public[32]; // E2E DH key for RQ from QKEY
+    bool    has_rq_peer_e2e_public;
 
     // --- Retry tracking ---
     uint32_t retry_count;
