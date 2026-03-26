@@ -63,7 +63,7 @@ static const server_preset_t PRESETS[] = {
     {"smp6.simplexonflux.com", "PN7-uqLBToqlf1NxHEaiL35lV2vBpXq8Nj8BW11bU48=", SMP_OP_FLUX, SMP_SERVER_ROLE_ALL},
 
     // ---- SimpleGo (Operator 2) - Storage + Proxy, DEFAULT ----
-    {"smp.simplego.dev", "XfTKGkd9rBkebeTnXMKSnLMAh82tHjNubpJRylz7KXg=", SMP_OP_SIMPLEGO, SMP_SERVER_ROLE_ALL},
+    {"smp.simplego.dev", "7qw4hvuS+PvTHbotgtg/xiwrhFUk/s1q2upUQrGIWow=", SMP_OP_SIMPLEGO, SMP_SERVER_ROLE_ALL},
 };
 
 #define PRESET_COUNT  (sizeof(PRESETS) / sizeof(PRESETS[0]))
