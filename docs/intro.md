@@ -14,7 +14,7 @@ SimpleGo is a dedicated encrypted messaging device. No smartphone, no Android, n
 
 **Current hardware:** LilyGo T-Deck Plus (ESP32-S3, 320x240 display, QWERTY keyboard)
 
-**Current status:** Alpha v0.1.17 -- bidirectional encrypted messaging verified against the official SimpleX Chat App, 7 parallel contacts stable.
+**Current status:** Beta v0.2.0 -- bidirectional encrypted messaging verified against the official SimpleX Chat App, 7 parallel contacts stable.
 
 ## Documentation Sections
 
