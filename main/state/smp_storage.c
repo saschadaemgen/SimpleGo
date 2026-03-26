@@ -1,7 +1,7 @@
 /**
  * SimpleGo - smp_storage.c
  * Persistent Storage Module Implementation
- * v0.1.17-alpha
+ * v0.2.0-beta
  *
  * Two-Step Init Architecture:
  *   Step 1: smp_storage_init()    -> NVS only (before display, no SPI)

@@ -580,7 +580,7 @@ static void smp_connect(void) {
 
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "+----------------------------------------+");
-    ESP_LOGI(TAG, "|  SimpleGo v0.1.17-alpha Connection!    |");
+    ESP_LOGI(TAG, "|  SimpleGo v0.2.0-beta Connection!    |");
     ESP_LOGI(TAG, "+----------------------------------------+");
     ESP_LOGI(TAG, "");
 
@@ -797,7 +797,7 @@ cleanup:
 
 void app_main(void) {
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "SimpleGo v0.1.17-alpha starting...");
+    ESP_LOGI(TAG, "SimpleGo v0.2.0-beta starting...");
 
     if (sodium_init() < 0) {
         ESP_LOGE(TAG, "libsodium init failed!");

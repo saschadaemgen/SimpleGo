@@ -12,9 +12,10 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License"></a>
   <a href="#license"><img src="https://img.shields.io/badge/Hardware-CERN--OHL--W--2.0-green.svg" alt="Hardware License"></a>
-  <a href="#status"><img src="https://img.shields.io/badge/version-0.1.17--alpha-orange.svg" alt="Version"></a>
+  <a href="#status"><img src="https://img.shields.io/badge/version-0.2.0--beta-orange.svg" alt="Version"></a>
   <a href="#getting-started"><img src="https://img.shields.io/badge/platform-ESP32--S3-lightgrey.svg" alt="Platform"></a>
   <a href="https://wiki.simplego.dev"><img src="https://img.shields.io/badge/docs-wiki.simplego.dev-blue.svg" alt="Documentation"></a>
+  <a href="https://simplego.dev/installer"><img src="https://img.shields.io/badge/flash-Web%20Installer-brightgreen.svg" alt="Web Installer"></a>
 </p>
 
 ---
@@ -29,18 +30,17 @@ Built entirely in C. Runs on affordable off-the-shelf hardware. Operates its own
 
 ## Encryption Stack
 
-Every message passes through four independent cryptographic layers before it leaves the device.
+Every message passes through five independent cryptographic layers before it leaves the device.
 
 | Layer | Algorithm | What it protects against |
 |:------|:----------|:------------------------|
 | **End-to-End** | X3DH (X448) + Double Ratchet + AES-256-GCM | Interception. Every message has its own key. Perfect forward secrecy + post-compromise security. |
+| **Post-Quantum** | sntrup761 KEM hybrid with X448 | Future quantum computers. Key exchange is quantum-resistant from the first message. |
 | **Per-Queue** | X25519 + XSalsa20 + Poly1305 | Traffic correlation between message queues. Knowledge of Queue A reveals nothing about Queue B. |
 | **Server-to-Recipient** | NaCl cryptobox (X25519) | Correlation of incoming and outgoing server traffic, even with full server access. |
-| **Transport** | TLS 1.3 (mbedTLS) | Network-level attackers. No downgrade possible. |
+| **Transport** | TLS 1.3 (mbedTLS) | Network-level attackers. No downgrade possible. Server identity verified via SHA-256 key hash pinning. |
 
 All messages are padded to a fixed 16 KB block size at every layer. A network observer sees only equal-sized packets.
-
-Post-quantum key exchange using **sntrup761** (Streamlined NTRU Prime) is integrated and active, providing quantum-resistant encryption from the first message.
 
 ---
 
@@ -66,7 +66,20 @@ Post-quantum key exchange using **sntrup761** (Streamlined NTRU Prime) is integr
 
 ## Getting Started
 
-### What you need
+### Option 1: Web Installer (Recommended)
+
+Flash SimpleGo directly from your browser. No tools, no command line, no drivers (on most systems).
+
+1. Open [simplego.dev/installer](https://simplego.dev/installer) in **Chrome 89+** or **Edge 89+**
+2. Choose **Open Mode** (development) or **Vault Mode** (hardware-secured)
+3. Connect your T-Deck Plus via USB-C
+4. Click **Install Firmware**
+
+The web installer downloads the correct merged binary, erases the flash, writes the firmware at 921,600 baud, and reboots the device. Total time: approximately 60-90 seconds.
+
+### Option 2: Build from Source
+
+#### What you need
 
 | Item | Details |
 |:-----|:--------|
@@ -77,7 +90,7 @@ Post-quantum key exchange using **sntrup761** (Streamlined NTRU Prime) is integr
 
 ---
 
-### Installation on Windows
+#### Installation on Windows
 
 **1. Install ESP-IDF**
 
@@ -101,8 +114,17 @@ SimpleX relay servers use ED25519 certificates which ESP-IDF's mbedTLS does not 
 
 **4. Build**
 
+The default build includes NVS encryption and eFuse auto-provisioning. For development, use the Open overlay:
+
 ```powershell
+# Default build (production-ready, NVS encryption enabled)
 idf.py build
+
+# Open Mode (development, no NVS encryption, unlimited reflash)
+idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.open" build
+
+# Vault Mode (hardware-secured, HMAC eFuse protection)
+idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.vault" build
 ```
 
 **5. Flash**
@@ -121,7 +143,7 @@ The device shows a WiFi setup screen. Select your network and enter the password
 
 ---
 
-### Installation on Linux
+#### Installation on Linux
 
 **1. Install ESP-IDF**
 
@@ -146,8 +168,6 @@ cd SimpleGo
 
 **3. Apply mbedTLS patches**
 
-SimpleX relay servers use ED25519 certificates which ESP-IDF's mbedTLS does not support natively. These patches are required for the TLS connection to work. See [patches/README.md](patches/README.md) for details.
-
 ```bash
 chmod +x patches/apply_patches.sh
 ./patches/apply_patches.sh
@@ -156,7 +176,14 @@ chmod +x patches/apply_patches.sh
 **4. Build**
 
 ```bash
+# Default build (production-ready)
 idf.py build
+
+# Open Mode (development)
+idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.open" build
+
+# Vault Mode (hardware-secured)
+idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.vault" build
 ```
 
 **5. Set serial port permissions**
@@ -189,6 +216,24 @@ The device shows a WiFi setup screen. Select your network and enter the password
 
 ---
 
+#### Creating Release Images
+
+To create merged binary images for distribution or the web installer:
+
+```bash
+# Build first (any mode), then merge with correct app offset 0x110000:
+python -m esptool --chip esp32s3 merge_bin \
+  -o simplego-tdeck-plus-v0.2.0-beta-open.bin \
+  --flash_mode dio --flash_freq 80m --flash_size 16MB \
+  0x0 build/bootloader/bootloader.bin \
+  0x8000 build/partition_table/partition-table.bin \
+  0x110000 build/simplex_client.bin
+```
+
+The app offset is `0x110000` (not `0x10000`). This is determined by the custom partition table. Verify with `cat build/flash_args`.
+
+---
+
 ## Security Modes
 
 SimpleGo supports three security configurations using ESP32-S3 hardware security features. The base configuration (`sdkconfig.defaults`) already includes NVS encryption and eFuse auto-provisioning. The Open and Vault configs are overlays that modify these settings.
@@ -199,31 +244,33 @@ SimpleGo supports three security configurations using ESP32-S3 hardware security
 | **Open** | Disables NVS encryption and eFuse auto-provisioning. For development and debugging where you need unlimited reflash and NVS access. |
 | **Vault** | NVS encryption with HMAC-based eFuse key protection (BLOCK_KEY1). The strongest hardware-backed configuration. |
 
-**Windows:**
-```powershell
-idf.py build                                                                                    # Default
-idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.open" build                 # Open
-idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.vault" build                # Vault
-```
-
-**Linux:**
-```bash
-idf.py build                                                                                    # Default
-idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.open" build                 # Open
-idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.vault" build                # Vault
-```
-
 | Feature | Default | Open | Vault |
 |:--------|:-------:|:----:|:-----:|
-| Encrypted messaging (4 layers) | Yes | Yes | Yes |
+| Encrypted messaging (5 layers) | Yes | Yes | Yes |
 | SD card encryption (AES-256-GCM) | Yes | Yes | Yes |
-| Post-quantum key exchange | Yes | Yes | Yes |
+| Post-quantum key exchange (sntrup761) | Yes | Yes | Yes |
 | NVS encryption | Yes | No | Yes (HMAC) |
 | eFuse auto-provisioning | Yes | No | Yes |
 | Reflash | Unlimited | Unlimited | Limited |
-| Estimated physical attack cost | ~$15 | ~$15 | ~$30,000 |
+| Estimated physical attack cost | ~$15 | ~$15 | ~$30,000+ |
 
 > **Warning:** Vault mode permanently burns eFuse fuses on the ESP32-S3. This is irreversible. A wrong configuration will brick the device. Read the full documentation at [wiki.simplego.dev/security](https://wiki.simplego.dev/security) before using Vault mode.
+
+---
+
+## Multi-Server Infrastructure
+
+SimpleGo ships with 21 preset SMP relay servers from three operators:
+
+| Operator | Servers | Purpose |
+|:---------|:-------:|:--------|
+| SimpleX Chat | 14 | Global relay network |
+| Flux | 6 | Decentralized hosting |
+| SimpleGo | 1 | Project relay at smp.simplego.dev |
+
+Single active server model with radio-button selection. Server switching triggers live Queue Rotation - contacts are migrated to the new server without disconnection or message loss. No reboot required.
+
+Server identity is verified via SHA-256 key hash pinning at four TLS connection points (SEC-07).
 
 ---
 
@@ -254,7 +301,7 @@ Custom PCB designs with triple-vendor hardware secure elements (Microchip ATECC6
 |          Messaging  /  IoT Sensors  /  Remote Control         |
 +---------------------------------------------------------------+
 |                      PROTOCOL LAYER                           |
-|     4-Layer Encryption  /  Key Management  /  Data Channels   |
+|     5-Layer Encryption  /  Key Management  /  Data Channels   |
 +---------------------------------------------------------------+
 |               HARDWARE ABSTRACTION LAYER                      |
 |       hal_display / hal_input / hal_network / hal_storage     |
@@ -274,7 +321,8 @@ SimpleGo/
 |   +-- include/        # Shared header files
 |   +-- net/            # TLS 1.3 transport, WiFi manager
 |   +-- protocol/       # SMP protocol, Double Ratchet, handshake
-|   +-- state/          # Contact management, history, peer connections
+|   +-- state/          # Contact management, history, peer connections,
+|   |                   # queue rotation, server management
 |   +-- ui/             # LVGL screens, themes, custom fonts
 |   +-- util/           # Shared utilities
 +-- devices/
@@ -284,29 +332,34 @@ SimpleGo/
 +-- patches/            # mbedTLS ED25519 compatibility patches
 +-- docs/               # Protocol analysis, architecture documentation
 +-- wiki/               # Docusaurus wiki source (wiki.simplego.dev)
++-- ost/                # SimpleGo Original Soundtrack (5 tracks)
 ```
 
 ---
 
 ## Status
 
-Alpha software under active development. Core messaging is functional and tested with multiple simultaneous contacts across devices.
+Beta software under active development. Core messaging is functional and tested with multiple simultaneous contacts across devices. Queue Rotation verified with four consecutive server migrations.
 
 | Component | Status |
 |:----------|:-------|
-| Encrypted messaging (4-layer) | Working |
-| Multi-contact management (128 slots) | Working |
+| Encrypted messaging (5-layer) | Working |
 | Post-quantum key exchange (sntrup761) | Working |
 | Double Ratchet with X448 | Working |
-| Delivery receipts | Working |
+| Multi-contact management (128 slots) | Working |
+| Delivery receipts (two checkmarks) | Working |
+| Multi-server infrastructure (21 presets) | Working |
+| Queue Rotation (live server migration) | Working |
 | WiFi manager (multi-network, WPA3) | Working |
 | Encrypted SD card storage (AES-256-GCM) | Working |
-| Screen lock (60s inactivity) | Working |
+| Screen lock (configurable timeout) | Working |
+| NVS encryption (eFuse HMAC, Vault mode) | Working |
+| TLS fingerprint verification (SEC-07) | Working |
 | Cross-platform build (Windows + Linux) | Working |
+| Web Serial Installer | Working |
 | IoT sensor channels | Design phase |
 | Remote device control | Design phase |
 | LoRa connectivity | Planned |
-| Web Serial Installer | Planned |
 | Desktop terminal (10" touchscreen) | Planned |
 
 ---
@@ -318,6 +371,7 @@ Alpha software under active development. Core messaging is functional and tested
 | Full documentation | [wiki.simplego.dev](https://wiki.simplego.dev) |
 | Architecture and security model | [wiki.simplego.dev/architecture](https://wiki.simplego.dev/architecture) |
 | Hardware specifications | [wiki.simplego.dev/hardware](https://wiki.simplego.dev/hardware) |
+| Web Serial Installer | [simplego.dev/installer](https://simplego.dev/installer) |
 | mbedTLS patch documentation | [patches/README.md](patches/README.md) |
 | Coding rules | [CODING_RULES.md](CODING_RULES.md) |
 | Contributing guidelines | [CONTRIBUTING.md](CONTRIBUTING.md) |

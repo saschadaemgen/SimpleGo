@@ -881,7 +881,7 @@ void settings_create_info(lv_obj_t *parent)
 
     /* === Row 1: Version | Hardware === */
     create_dual_row(s_list,
-        "Version", "0.1.17-a", UI_COLOR_PRIMARY,
+        "Version", "0.2.0-b", UI_COLOR_PRIMARY,
         "Hardware", "ESP32-S3", UI_COLOR_PRIMARY,
         NULL, NULL);
 

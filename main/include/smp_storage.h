@@ -1,7 +1,7 @@
 /**
  * SimpleGo - smp_storage.h
  * Persistent Storage Module (NVS + SD Card)
- * v0.1.17-alpha
+ * v0.2.0-beta
  *
  * Architecture:
  *   NVS (internal flash)  → Crypto-critical data (Ratchet State, Queue Creds, Keys)
