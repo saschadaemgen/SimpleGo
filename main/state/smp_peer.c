@@ -519,9 +519,13 @@ bool send_agent_confirmation(contact_t *contact, int contact_idx) {
     if (peer_contact_idx >= 0) {
         reply_queue_t *rq_auth = reply_queue_get(peer_contact_idx);
         if (rq_auth && rq_auth->valid) {
-            sender_auth_public = rq_auth->rcv_auth_public;
-            sender_auth_private = rq_auth->rcv_auth_private;
-            ESP_LOGI(TAG, "   Using RQ[%d] auth key for PrivHeader", peer_contact_idx);
+            /* Session 50: After rotation, use old auth keys for peer-send */
+            sender_auth_public = rq_auth->has_peer_auth
+                               ? rq_auth->peer_auth_public : rq_auth->rcv_auth_public;
+            sender_auth_private = rq_auth->has_peer_auth
+                                ? rq_auth->peer_auth_private : rq_auth->rcv_auth_private;
+            ESP_LOGI(TAG, "   Using RQ[%d] auth key for PrivHeader%s",
+                     peer_contact_idx, rq_auth->has_peer_auth ? " (peer backup)" : "");
         }
     }
 
@@ -859,7 +863,9 @@ bool peer_send_hello(contact_t *contact) {
     if (hello_cidx >= 0) {
         reply_queue_t *rq = reply_queue_get(hello_cidx);
         if (rq && rq->valid) {
-            hello_auth_private = rq->rcv_auth_private;
+            /* Session 50: After rotation, use old auth keys for peer-send */
+            hello_auth_private = rq->has_peer_auth
+                               ? rq->peer_auth_private : rq->rcv_auth_private;
             if (rq->has_peer_dh) {
                 memcpy(our_dh_private, rq->peer_dh_secret, 32);
                 memcpy(our_dh_public,  rq->peer_dh_public,  32);
@@ -936,7 +942,9 @@ bool peer_send_chat_message(contact_t *contact, const char *message) {
     if (msg_cidx >= 0) {
         reply_queue_t *rq = reply_queue_get(msg_cidx);
         if (rq && rq->valid) {
-            msg_auth_private = rq->rcv_auth_private;
+            /* Session 50: After rotation, use old auth keys for peer-send */
+            msg_auth_private = rq->has_peer_auth
+                             ? rq->peer_auth_private : rq->rcv_auth_private;
             /* Session 49: After rotation, contact->rcv_dh has NEW values
              * for decrypt on new server. Peer-send needs OLD values. */
             if (rq->has_peer_dh) {
@@ -1037,7 +1045,9 @@ bool peer_send_receipt(contact_t *contact, uint64_t peer_snd_msg_id, const uint8
     if (rcpt_cidx >= 0) {
         reply_queue_t *rq = reply_queue_get(rcpt_cidx);
         if (rq && rq->valid) {
-            rcpt_auth_private = rq->rcv_auth_private;
+            /* Session 50: After rotation, use old auth keys for peer-send */
+            rcpt_auth_private = rq->has_peer_auth
+                              ? rq->peer_auth_private : rq->rcv_auth_private;
             if (rq->has_peer_dh) {
                 memcpy(our_dh_private, rq->peer_dh_secret, 32);
                 memcpy(our_dh_public,  rq->peer_dh_public,  32);
@@ -1138,7 +1148,9 @@ bool peer_send_raw_agent_msg(contact_t *contact,
     if (cidx >= 0) {
         reply_queue_t *rq = reply_queue_get(cidx);
         if (rq && rq->valid) {
-            auth_private = rq->rcv_auth_private;
+            /* Session 50: After rotation, use old auth keys for peer-send */
+            auth_private = rq->has_peer_auth
+                         ? rq->peer_auth_private : rq->rcv_auth_private;
             /* Session 49: After rotation, use old DH for peer-send */
             if (rq->has_peer_dh) {
                 memcpy(our_dh_private, rq->peer_dh_secret, 32);

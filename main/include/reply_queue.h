@@ -54,6 +54,13 @@ typedef struct {
     uint8_t peer_dh_secret[DH_PUBLIC_SIZE];     // old rcv_dh_secret for peer send
     uint8_t peer_dh_public[DH_PUBLIC_SIZE];     // old rcv_dh_public for peer send
     bool    has_peer_dh;                         // true if peer_dh fields are valid
+
+    // Session 50: Old auth keys preserved for peer-send after queue rotation.
+    // Same pattern as peer_dh: after rotation, rcv_auth_* gets new values
+    // (for SUB on new server), but peer-send still needs old values.
+    uint8_t peer_auth_private[64];              // old rcv_auth_private for peer send
+    uint8_t peer_auth_public[AUTH_KEY_SIZE];    // old rcv_auth_public for peer send
+    bool    has_peer_auth;                       // true if peer_auth fields are valid
 } reply_queue_t;
 
 // PSRAM-allocated array: one reply_queue_t per contact slot
