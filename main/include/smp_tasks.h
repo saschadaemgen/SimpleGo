@@ -168,6 +168,13 @@ int smp_get_active_contact(void);
 int smp_request_add_contact(const char *name);
 
 /**
+ * @brief Reset the rotation completion guard (s_complete_logged).
+ * Must be called at the start of each new rotation so the live-switch
+ * block in app_rotation_step() can fire again.
+ */
+void smp_tasks_reset_rotation_guard(void);
+
+/**
  * @brief Get slot index of a pending (not yet scanned) contact.
  * @return Slot index (0-127), or -1 if no pending contact
  */

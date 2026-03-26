@@ -141,6 +141,19 @@ static volatile int s_history_load_pending = -1;  // slot to load, -1 = none
 // Session 48: Pending contact delete (UI -> App Task, NVS-safe)
 static volatile int s_pending_delete_slot = -1;
 
+// Session 50: Rotation completion guard (was function-local in app_rotation_step)
+static bool s_complete_logged = false;
+
+void smp_tasks_reset_rotation_guard(void)
+{
+    s_complete_logged = false;
+    /* Session 50: Force reload of CQ E2E peer key from NVS after next
+     * rotation completes. Without this, the stale peer key from the
+     * previous rotation is used (s_cq_e2e_peer_valid stays true). */
+    s_cq_e2e_peer_valid = false;
+    ESP_LOGI("SMP_TASKS", "Rotation guard + CQ E2E peer cache reset");
+}
+
 // Shared buffer for history batch (App Task writes, UI timer reads)
 history_message_t *smp_history_batch      = NULL;
 int                smp_history_batch_count = 0;
@@ -1864,8 +1877,7 @@ static void app_rotation_step(void)
     }
 
     if (ready_count == active_count && active_count > 0) {
-        /* Only trigger the live-switch once */
-        static bool s_complete_logged = false;
+        /* Only trigger the live-switch once (guard reset by smp_tasks_reset_rotation_guard) */
         if (!s_complete_logged) {
             s_complete_logged = true;
 
