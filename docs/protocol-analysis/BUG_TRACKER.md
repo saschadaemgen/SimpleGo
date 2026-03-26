@@ -3836,3 +3836,149 @@ Queue Rotation: one extra connection during rotation, closed after
 *Total bugs documented: 81 (Bug #32 closed, 6 rotation issues known) + Bug E*
 *270 lessons learned*
 *Session 49: Queue Rotation from Zero to Working -- First outside Haskell*
+
+---
+
+## Session 50 -- 2026-03-22 to 2026-03-26 (Queue Rotation Multi-Fix)
+
+### First Multiple Queue Rotation on ESP32-S3 with Post-Quantum Crypto
+
+### 6 Fixes for Unlimited Consecutive Rotations
+
+```
+Fix A: s_complete_logged function-local, never reset
+  Second rotation skipped entire live-switch block.
+  Fix: file-static + smp_tasks_reset_rotation_guard() in rotation_start()
+
+Fix B: Auth/DH backup overwrites originals at 2nd rotation
+  Unconditional backup saved Rot1 keys instead of originals.
+  Peer server NEVER changes, expects ORIGINAL keys always.
+  Fix: conditional if (!has_peer_auth), first rotation only.
+  New: peer_auth_private[64], peer_auth_public[32], has_peer_auth
+  5 locations in smp_peer.c updated with has_peer_auth ternary.
+
+Fix C: rq->snd_id = RQ snd_id instead of Main Queue snd_id
+  rotation_complete() wrote rd->rq_new_snd_id. But QADD uses rq->snd_id
+  for replacedSndQueue, and findQ() matches against QUSE's rd->new_snd_id.
+  First rotation matched by coincidence.
+  Fix: rq->snd_id = rd->new_snd_id
+
+Fix D: CQ E2E peer cache (s_cq_e2e_peer_valid) never invalidated
+  Stayed true after Rotation 1. Stale key in cache.
+  Fix: reset in smp_tasks_reset_rotation_guard()
+
+Phase 1b: CQ pipeline needs new E2E keys after rotation
+  our_queue.e2e_private = rd->new_e2e_private + peer key from QKEY
+
+CACHE TIMING (ROOT CAUSE):
+  Fix D reset cache at rotation_start(). But DURING rotation,
+  QTEST arrived via CQ. Pipeline saw valid=false, loaded OLD key
+  (82488db3) from NVS, set valid=true. Phase 1b wrote NEW key
+  (8fca4b2e) AFTER cache was already filled. Cache never re-invalidated.
+  Fix: second smp_tasks_reset_rotation_guard() call AFTER Phase 1b
+  in rotation_complete(). One line in smp_rotation.c.
+```
+
+### Mausi Error: 1 Day Lost on Wrong Bug Classification
+
+```
+Hasi classified CQ E2E failure as "pre-existing, fails after EVERY rotation."
+Mausi accepted WITHOUT checking against known fact: first rotation WORKED.
+
+Result: ~8 hours wasted on:
+  - Phase 1b override test (still ret=-5)
+  - Various key source tests (all ret=-5)
+  - Queue 2 activation (4 stages planned)
+  - Haskell NonEmpty Head analysis
+  - Dispatch redirection (rejected)
+
+Correction: Mein Prinz: "Die erste Rotation funktioniert doch die ganze Zeit!"
+Bug was ONLY in second rotation, not pre-existing.
+
+Rule for future: Before writing ANY task:
+  1. What KNOWN works? Don't touch it.
+  2. EXACT difference between works and doesn't work?
+  3. What STATE changed between the two?
+```
+
+### DIAG-Based Root Cause Analysis
+
+```
+First Rotation (WORKS):
+  e2e_priv: f0d9ef51    (Phase 1b Rot 1)
+  e2e_peer: 82488db3    (QKEY Rot 1)
+  DH: 2c6eb124 -> SUCCESS
+
+Second Rotation Phase 1b writes:
+  our_priv: dfbc4872    (new Rot 2)
+  peer_pub: 8fca4b2e    (QKEY Rot 2)
+
+Second Rotation Decrypt USES:
+  e2e_priv: dfbc4872    <- CORRECT
+  e2e_peer: 82488db3    <- WRONG! Rotation 1's key!
+  DH: 932dbfa8 -> ret=-5
+
+Root cause: cache filled with stale key between start and complete.
+Fix: invalidate cache TWICE (start + after Phase 1b).
+```
+
+### corrId Encoding Discovery
+
+```
+corrId = '0' (0x30) = Maybe Nothing = pre-shared key expected
+  After rotation: app uses keys from QADD/QKEY exchange
+corrId = '1' (0x31) = Maybe Just = inline SPKI key included
+  Before rotation: app sends key inline in message
+```
+
+### Haskell Reference (X3DH + Ratchet for GoChat)
+
+```
+X3DH: 4 DH operations (not 3 like Signal):
+  DH1 = X448(Bob_K1_priv, Alice_K1_pub)
+  DH2 = X448(Bob_K1_priv, Alice_K2_pub)
+  DH3 = X448(Bob_K2_priv, Alice_K1_pub)
+  DH4 = X448(Bob_K2_priv, Alice_K2_pub)
+  + optional 5th: sntrup761 KEM (PQ)
+
+KDF: HKDF-SHA512, Salt=32 zeros, Info="SimpleXX3DH", Out=96B (RK+HK+NHK)
+MK: HKDF-SHA256, Info="SimpleXMK"
+CK: HKDF-SHA256, Info="SimpleXCK"
+Ratchet: AES-256-GCM, 12B counter-nonce, 2346B fixed header
+Zstd: Level 3, always active
+```
+
+### GoChat Support
+
+```
+GoChat (github.com/saschadaemgen/GoChat) - Go SimpleX implementation.
+Technical questions answered:
+  X448 mandatory (OID 1.3.101.111)
+  e2eEncryption_ byte layout (Maybe-Tag + Version + SPKI + KEM)
+  X3DH 4-DH schema
+  HKDF-SHA512 parameters
+  AES-256-GCM counter-nonce
+  2346-byte fixed header
+  Zstd level 3 always
+Layer-by-layer reference dump offered for Session 51.
+```
+
+### New Lessons Learned (Session 50)
+
+271. **Never accept bug classification without verifying against known facts** - "Fails after every rotation" contradicted known working first rotation. 1 day lost. Rule: (1) What works? (2) Exact difference? (3) What state changed? (Session 50)
+272. **Cache invalidation at rotation_start() is insufficient** - Incoming QTEST during rotation refills cache with stale data. Must invalidate AGAIN after Phase 1b key write. The window between start and complete is the danger zone (Session 50)
+273. **Peer-send credentials must stay ORIGINAL across all rotations** - Conditional backup if (!has_peer_auth), first time only. Unconditional backup at second rotation saves Rot1 keys instead of originals -> ERR AUTH (Session 50)
+274. **DIAG beats hypothesis testing** - Hex-dump actual keys, byte-by-byte comparison between working and failing. 82488db3 appearing where 8fca4b2e should be immediately reveals the stale cache (Session 50)
+275. **rq->snd_id = Main Queue snd_id, not Reply Queue** - rd->new_snd_id, not rd->rq_new_snd_id. findQ() matches (SMPServer, SenderId). First rotation matches by coincidence (Session 50)
+276. **App processes only Queue 1 from QADD** - Haskell NonEmpty Head: (qUri, Just addr) :| _. Queue 2 ignored. Don't spend time on Queue 2 activation (Session 50)
+277. **corrId='0' = pre-shared key, '1' = inline key** - After rotation app switches to pre-shared mode (keys from QADD/QKEY exchange). 0x30/0x31 = Haskell Maybe Nothing/Just encoding (Session 50)
+
+---
+
+*Bug Tracker v46.0*
+*Last updated: March 26, 2026 - Session 50*
+*Total bugs documented: 81 (rotation issues resolved) + Bug E*
+*277 lessons learned*
+*Session 50: Unlimited consecutive Queue Rotations with PQ crypto*
+*4 consecutive rotations verified*
+*1 day lost on Mausi error (honest documentation)*

@@ -8,20 +8,20 @@ This directory contains the complete, unabridged documentation of SimpleGo's dev
 
 ---
 
-## LATEST: Queue Rotation from Zero to Working (2026-03-21 Session 49)
+## LATEST: Queue Rotation Multi-Fix (2026-03-26 Session 50)
 
 ```
-4-day session (longest). Queue Rotation: QADD/QKEY/QUSE/QTEST operational.
-Live server switch: no reboot, credentials RAM+NVS+reconnect.
-7 QADD format iterations, 3 critical protocol rules discovered:
-  1. SMP Client versions v1-v4 (NOT v6-v17)
-  2. replacedSndQueue=Nothing forbidden
-  3. Per-contact snd_id required (not global)
-21 preset servers, SEC-07 fingerprint at 4 TLS points.
-Bug #32 closed. DH key separation (new server vs old peer keys).
-13 lessons (#258-#270). 6 known rotation issues for S50.
-First SMP Queue Rotation implementation outside Haskell.
+Unlimited consecutive Queue Rotations working.
+6 fixes: cache timing, conditional backup, snd_id semantics, Phase 1b keys.
+Root cause: stale CQ E2E peer key cache filled during rotation by QTEST.
+Cache invalidation needed TWICE: at start AND after Phase 1b key write.
+1 day lost on Mausi error (wrong bug classification, honest documentation).
+4 consecutive rotations verified with PQ crypto on fresh device.
+GoChat support started (X3DH, HKDF, Ratchet, Zstd reference).
+7 lessons (#271-#277). 7 files changed.
 ```
+
+## Session 49: Queue Rotation from Zero to Working (2026-03-21)
 
 ## Session 48: Performance + Statusbar + Splash + Matrix + Reconnect (2026-03-17)
 
@@ -588,6 +588,34 @@ SimpleX Chat represents a groundbreaking achievement in privacy-preserving commu
 | **47** | **Mar 15-16** | **UX Overhaul: NVS 1 MB, QR 16-Stage, PQ UI, 7 Bugs** | **7 lessons, Per-Contact PQ abandoned** |
 | **48** | **Mar 16-17** | **16h Mega: Performance + Statusbar + Splash + Matrix + Reconnect** | **7 lessons, Bug #30+#31 closed** |
 | **49** | **Mar 18-21** | **Queue Rotation: QADD/QKEY/QUSE/QTEST, Live Switch (4 days)** | **13 lessons, Bug #32, 3 protocol rules** |
+| **50** | **Mar 22-26** | **Queue Rotation Multi-Fix: Unlimited Consecutive Rotations** | **7 lessons, cache timing root cause, GoChat** |
+
+---
+
+## Session 50 Key Achievements -- Queue Rotation Multi-Fix
+
+```
+Unlimited consecutive Queue Rotations (4 verified with PQ crypto)
+6 fixes for consecutive rotation support:
+  Fix A: s_complete_logged reset (function-local -> file-static + API)
+  Fix B: Conditional auth/DH backup (first rotation only, originals preserved)
+  Fix C: rq->snd_id semantics (Main Queue, not Reply Queue)
+  Fix D: CQ E2E cache invalidation at rotation_start()
+  Phase 1b: New E2E keys pipeline for CQ after rotation
+  Cache timing: Second invalidation AFTER Phase 1b key write
+
+Root cause: stale peer key cache filled by incoming QTEST
+  between rotation_start() and rotation_complete()
+  82488db3 (Rot 1 key) in cache where 8fca4b2e (Rot 2) expected
+
+Mausi error: accepted "fails after every rotation" without checking
+  Known fact: first rotation worked. 1 day (~8h) lost.
+  Rule: (1) What works? (2) Exact difference? (3) What state changed?
+
+DIAG analysis: hex-dump keys, byte-by-byte comparison -> immediate fix
+GoChat support: X3DH 4-DH, HKDF-SHA512, AES-256-GCM, Zstd L3
+7 files changed, 7 lessons (#271-#277)
+```
 
 ---
 
@@ -1809,4 +1837,4 @@ This documentation is part of SimpleGo, licensed under AGPL-3.0.
 
 ---
 
-*Last updated: March 21, 2026 - Session 49 (Queue Rotation: QADD/QKEY/QUSE/QTEST, First Outside Haskell)*
+*Last updated: March 26, 2026 - Session 50 (Queue Rotation Multi-Fix: Unlimited Consecutive Rotations)*

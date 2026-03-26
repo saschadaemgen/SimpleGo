@@ -4,16 +4,18 @@
 
 **Project:** SimpleGo - Native ESP32 SMP Implementation
 **Version:** v0.1.18-alpha
-**Last Updated:** 2026-03-21 (Session 49 -- Queue Rotation: From Zero to Working)
+**Last Updated:** 2026-03-26 (Session 50 -- Queue Rotation Multi-Fix: Unlimited Consecutive Rotations)
 
 ---
 
-## LATEST: Queue Rotation from Zero to Working (Session 49)
+## LATEST: Queue Rotation Multi-Fix (Session 50)
 
-Longest session (4 days). Queue Rotation implemented: QADD/QKEY/QUSE/QTEST protocol with live server switch, no reboot. 7 QADD format iterations uncovered 3 critical undocumented rules (client versions v1-v4, replacedSndQueue=Nothing forbidden, per-contact snd_id required). Multi-server: 21 presets, radio-button UI, SEC-07 fingerprint at 4 TLS points. Bug #32 closed. Dual-TLS confirmed ~1,500 bytes SRAM per connection. Bidirectional chat verified after live server switch with PQ crypto.
+Made Queue Rotation work for unlimited consecutive rotations. 6 fixes across 7 files. Root cause: CQ E2E peer key cache filled with stale data during rotation by incoming QTEST messages - cache invalidation at rotation_start() insufficient, needed second invalidation after Phase 1b key write. One day lost on Mausi error (accepted wrong bug classification without checking known facts). 4 consecutive rotations verified with PQ crypto on fresh device. GoChat support started.
 
-Bugs: 81 total (Bug #32 closed, 6 rotation issues known)
-Lessons: 270 total (13 new in S49: #258-#270)
+Bugs: 81 total (rotation issues resolved, count unchanged)
+Lessons: 277 total (7 new in S50: #271-#277)
+
+## PREVIOUS: Queue Rotation from Zero to Working (Session 49)
 
 ## PREVIOUS: Performance + Statusbar + Splash + Matrix + Reconnect (Session 48)
 
@@ -98,7 +100,7 @@ On February 24, 2026, Session 35 fixed all remaining multi-contact bugs:
 
 ## Documentation Structure
 
-The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 46 parts:
+The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 47 parts:
 
 | Part | File | Lines | Content |
 |------|------|-------|---------|
@@ -148,6 +150,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 46 
 | **44** | [**46_PART44_SESSION_47.md**](46_PART44_SESSION_47.md) | **~200** | ** UX Overhaul: NVS 1 MB, QR 16-Stage Flow, PQ UI** |
 | **45** | [**47_PART45_SESSION_48.md**](47_PART45_SESSION_48.md) | **~190** | ** Performance + Statusbar + Splash + Matrix + Reconnect (16h)** |
 | **46** | [**48_PART46_SESSION_49.md**](48_PART46_SESSION_49.md) | **~220** | ** Queue Rotation: QADD/QKEY/QUSE/QTEST, Live Server Switch** |
+| **47** | [**49_PART47_SESSION_50.md**](49_PART47_SESSION_50.md) | **~230** | ** Queue Rotation Multi-Fix: Unlimited Consecutive Rotations** |
 | **Total** | | **~33,000+** | **670+ Sections** |
 
 ---
@@ -212,6 +215,7 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 46 
 | **47** | **Mar 15-16, 2026** | **UX** | ** 7 Bugs, NVS 1 MB, QR 16-Stage Flow, PQ UI, Per-Contact PQ Abandoned** |
 | **48** | **Mar 16-17, 2026** | **MEGA SESSION** | ** Bug #30+#31, Statusbar, Splash, Matrix, Reconnect (16h, 23 files)** |
 | **49** | **Mar 18-21, 2026** | **QUEUE ROTATION** | ** QADD/QKEY/QUSE/QTEST, Live Server Switch, 21 Servers, SEC-07 (4 days)** |
+| **50** | **Mar 22-26, 2026** | **ROTATION FIX** | ** Unlimited Consecutive Rotations, Cache Timing Root Cause, GoChat** |
 
 ---
 
@@ -381,6 +385,13 @@ The complete protocol analysis (~33,000+ lines, 670+ sections) is split into 46 
 - **3 Critical Protocol Rules: v1-v4 versions, Nothing forbidden, per-contact snd_id** 🔄
 - **Dual-TLS: ~1,500 bytes SRAM per connection confirmed** 🔄
 - **DH Key Separation (new server keys vs old peer keys)** 🔄
+- **Unlimited Consecutive Queue Rotations (4 verified with PQ)** 🔄
+- **Cache Timing Root Cause: Invalidate AFTER Phase 1b, Not Just at Start** 🔄
+- **Conditional Auth/DH Backup (first rotation only, originals preserved)** 🔄
+- **rq->snd_id Semantics Fixed (Main Queue, not Reply Queue)** 🔄
+- **DIAG-Based Analysis: Hex-Dump Key Comparison, Byte-by-Byte** 🔄
+- **GoChat Support Started (X3DH, HKDF, Ratchet, Zstd documentation)** 🔄
+- **Mausi Error Documented: Wrong Bug Classification Cost 1 Day** 🔄
 
 ### Session 23: The 7-Step Handshake
 ```
@@ -587,21 +598,26 @@ SimpleGo is confirmed as the **FIRST native SMP protocol implementation** outsid
 
 ---
 
-## Next Steps (Session 50)
+## Next Steps (Session 51)
 
-### Phase 1: Queue Rotation Fixes (6 Known Issues)
+### Phase 1: Rotation Polish
 ```
-P0: Second rotation crash (state/keys not reset after cleanup)
-P1: RQ SUB non-matching frame (auth keys on new server)
-P2: Chat 10s delay (RQ retries blocking App Task)
-P3: Refresh timer stops, CQ E2E per-contact keys
-P4: Late-arrival flow (second TLS to old server for offline contacts)
+P0: Late-arrival flow (offline contacts during rotation, second TLS)
+P1: Refresh timer stop after DONE
+P2: Legacy RQ SUB FAILED after rotation
+P3: Rotation error handling (timeouts, retries)
 ```
 
-### Phase 2: Polish
+### Phase 2: Cleanup
 ```
-P5: Row-update optimization
-P6: Alpha firmware binary for simplego.dev/installer
+P4: sdmmc DMA errors during tight SRAM windows
+P5: smp.simplego.dev fingerprint update
+P6: GoChat reference dump (layer-by-layer)
+```
+
+### Phase 3: Alpha Release
+```
+P7: Alpha firmware binary for simplego.dev/installer
 ```
 
 ---
@@ -638,13 +654,13 @@ P6: Alpha firmware binary for simplego.dev/installer
 
 ## Current Project Status
 
-**Version:** v0.1.18-alpha | **Last updated:** 2026-03-21 Session 49
+**Version:** v0.1.18-alpha | **Last updated:** 2026-03-26 Session 50
 
 ### Firmware
 
 - Post-quantum Double Ratchet (sntrup761, five encryption layers)
-- **Queue Rotation: QADD/QKEY/QUSE/QTEST with live server switch**
-- **21 preset SMP servers, SEC-07 TLS fingerprint at 4 connection points**
+- **Queue Rotation: unlimited consecutive with live server switch**
+- 21 preset SMP servers, SEC-07 TLS fingerprint at 4 connection points
 - NVS 1 MB (128 PQ contacts), HMAC vault, device-bound HKDF
 - QR 16-stage connection flow, shared statusbar, animated splash
 - Matrix screensaver, configurable lock timer, auto-reconnect
@@ -652,21 +668,15 @@ P6: Alpha firmware binary for simplego.dev/installer
 
 ### Queue Rotation Status
 
-- Bidirectional chat verified after live server switch (send, receive, receipts, PQ)
-- 6 known issues for Session 50 (second rotation, RQ auth, delays, late-arrivals)
-
-### Bugs
-
-- #27: QR after panic (OPEN, Szenni)
-- #28: NTP timing (PARTIAL)
-- #32: CLOSED (subscribe_all restored)
+- 4 consecutive rotations verified (send, receive, receipts, PQ crypto)
+- Remaining: late-arrival flow, RQ SUB, timer cleanup, error handling
 
 ### Open Items
 
-- 6 Queue Rotation fixes (Session 50)
+- Late-arrival flow for offline contacts during rotation
+- GoChat reference dump (layer-by-layer)
 - Alpha firmware binary for simplego.dev/installer
-- Evgeny relationship paused, technical docs still referenced
 
 ---
 
-*Index updated: 2026-03-21 Session 49 -- Queue Rotation: From Zero to Working*
+*Index updated: 2026-03-26 Session 50 -- Queue Rotation Multi-Fix: Unlimited Consecutive Rotations*

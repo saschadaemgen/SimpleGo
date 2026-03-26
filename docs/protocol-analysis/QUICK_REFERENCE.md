@@ -4051,3 +4051,127 @@ One contact rotated at a time to manage SRAM budget.
 *22 Milestones Achieved*
 *270 Lessons Learned*
 *Next: Session 50 -- 6 Queue Rotation fixes*
+
+---
+
+## Section 49: Session 50 -- Queue Rotation Multi-Fix
+
+### 49.1 Cache Invalidation Timing Pattern
+
+```
+WRONG (Session 49):
+  rotation_start() -> invalidate cache -> ... rotation runs ...
+  -> QTEST arrives during rotation -> cache refilled with OLD key
+  -> Phase 1b writes NEW key -> cache still has OLD -> ret=-5
+
+RIGHT (Session 50):
+  rotation_start() -> invalidate cache (first time)
+  -> ... rotation runs, cache may be refilled ...
+  -> Phase 1b writes NEW key
+  -> invalidate cache AGAIN (second time)  <-- THE FIX
+  -> next decrypt loads NEW key from NVS
+
+One line: smp_tasks_reset_rotation_guard() at end of Phase 1b
+in rotation_complete() in smp_rotation.c.
+```
+
+### 49.2 Conditional Auth/DH Backup Pattern
+
+```
+WRONG: Unconditional backup at every rotation
+  Rotation 1: saves originals (correct)
+  Rotation 2: saves Rotation 1 keys (WRONG! overwrites originals)
+  Peer server expects ORIGINAL keys -> ERR AUTH
+
+RIGHT: Conditional, first rotation only
+  if (!rq->has_peer_auth) {
+      memcpy(rq->peer_auth_private, rq->rcv_auth_private, 64);
+      memcpy(rq->peer_auth_public, rq->rcv_auth_public, 32);
+      rq->has_peer_auth = true;
+  }
+  // Same for has_peer_dh
+
+Peer-send always uses: rq->has_peer_auth ? peer_auth : rcv_auth
+5 locations in smp_peer.c with ternary operator.
+```
+
+### 49.3 rq->snd_id After Rotation
+
+```
+rotation_complete() must write:
+  rq->snd_id = rd->new_snd_id      (Main Queue snd_id)
+  NOT: rq->snd_id = rd->rq_new_snd_id  (Reply Queue snd_id)
+
+Why: rotation_build_qadd_payload() reads rq->snd_id for
+replacedSndQueue. App's findQ() matches (server, snd_id) from QUSE.
+QUSE sends rd->new_snd_id. Must match.
+
+First rotation: matched by coincidence (same value).
+Second rotation: diverged -> A_QUEUE error.
+```
+
+### 49.4 corrId Encoding (CQ E2E Layer 2)
+
+```
+corrId = '0' (0x30):
+  Haskell Maybe Nothing
+  Pre-shared key mode (after rotation)
+  App uses keys from QADD/QKEY exchange
+  No inline SPKI key in message
+
+corrId = '1' (0x31):
+  Haskell Maybe Just
+  Inline key mode (before rotation / initial connection)
+  44-byte X25519 SPKI key included in message
+```
+
+### 49.5 Mausi's Three Questions Rule
+
+```
+Before writing ANY task for Hasi:
+
+1. What KNOWN WORKS right now?
+   -> Do not touch, do not change, do not analyze
+
+2. What is the EXACT difference between works and doesn't work?
+   -> First rotation works, second doesn't
+   -> NOT "it fails after every rotation"
+
+3. What STATE changed between the two?
+   -> Static caches, NVS values, struct fields after rotation_complete()
+   -> This is where the bug lives
+```
+
+### 49.6 Haskell X3DH Reference (for GoChat)
+
+```
+4 DH operations (NOT 3 like Signal):
+  DH1 = X448(Bob_Key1_Private, Alice_Key1_Public)
+  DH2 = X448(Bob_Key1_Private, Alice_Key2_Public)
+  DH3 = X448(Bob_Key2_Private, Alice_Key1_Public)
+  DH4 = X448(Bob_Key2_Private, Alice_Key2_Public)
+  + optional DH5: sntrup761 KEM shared secret (post-quantum)
+
+KDF: HKDF-SHA512
+  Salt = 32 zero bytes
+  Info = "SimpleXX3DH"
+  Output = 96 bytes: root_key[32] + header_key[32] + next_header_key[32]
+
+Message Key: HKDF-SHA256, Info = "SimpleXMK"
+Chain Key:   HKDF-SHA256, Info = "SimpleXCK"
+
+Ratchet Encrypt: AES-256-GCM
+  Counter-based 12-byte nonce
+  Fixed 2346-byte header (56B X448 + 4B pn + 4B ns + padding)
+
+Compression: Zstd level 3, always active (even first message)
+```
+
+---
+
+*Quick Reference v46.0*
+*Last updated: March 26, 2026 - Session 50*
+*Status: Queue Rotation Multi-Fix -- Unlimited Consecutive Rotations*
+*22 Milestones Achieved*
+*277 Lessons Learned*
+*Next: Session 51 -- Late-arrival flow, timer cleanup, GoChat dump*
