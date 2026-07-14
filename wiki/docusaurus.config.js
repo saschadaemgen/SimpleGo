@@ -72,11 +72,9 @@ const config = {
       items: [
         {to: '/', label: 'Docs', position: 'left', activeBaseRegex: '^/$'},
         {href: 'https://simplego.dev', label: 'Home', position: 'right'},
-        {href: 'https://simplego.dev/product', label: 'Product', position: 'right'},
-        {href: 'https://simplego.dev/crypto', label: 'Crypto', position: 'right'},
+        {href: 'https://simplego.dev/#crypto', label: 'Crypto', position: 'right'},
+        {href: 'https://simplego.dev/#network', label: 'Network', position: 'right'},
         {href: 'https://simplego.dev/installer', label: 'Flash Tool', position: 'right'},
-        {href: 'https://simplego.dev/network', label: 'Network', position: 'right'},
-        {href: 'https://simplego.dev/pro', label: 'Pro', position: 'right'},
         {href: 'https://github.com/saschadaemgen/SimpleGo', label: 'GitHub', position: 'right'},
       ],
     },
@@ -101,8 +99,15 @@ const config = {
             {label: 'simplego.dev', href: 'https://simplego.dev'},
             {label: 'GitHub', href: 'https://github.com/saschadaemgen/SimpleGo'},
             {label: 'Flash Tool', href: 'https://simplego.dev/installer'},
-            {label: 'Network', href: 'https://simplego.dev/network'},
+            {label: 'Network', href: 'https://simplego.dev/#network'},
             {label: 'X / Twitter', href: 'https://x.com/simplegodev'},
+          ],
+        },
+        {
+          title: 'Partner Projects',
+          items: [
+            {label: 'Carvilon', href: 'https://carvilon.com'},
+            {label: 'Cyb3rD3sk', href: 'https://cyb3rd3sk.com'},
           ],
         },
         {
