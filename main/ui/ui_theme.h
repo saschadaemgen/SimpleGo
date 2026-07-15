@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#define UI_VERSION "v0.2.0-beta"
+#define UI_VERSION "v0.2.1-beta"
 
 /* Colors - Cyberpunk Neon */
 #define UI_COLOR_BG           lv_color_hex(0x000000)
